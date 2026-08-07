@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, X, ArrowUpRight, ShieldCheck } from 'lucide-react';
+import { Menu, X, ArrowUpRight } from 'lucide-react';
 import './Navbar.css';
 
 export default function Navbar({ currentView, onNavClick, onOpenContact, onOpenAdmin }) {
@@ -50,13 +50,6 @@ export default function Navbar({ currentView, onNavClick, onOpenContact, onOpenA
               {item.name}
             </button>
           ))}
-          <button
-            className={`nav-item nav-btn admin-nav-link ${currentView === 'admin' ? 'active-nav-btn' : ''}`}
-            onClick={onOpenAdmin}
-          >
-            <ShieldCheck size={14} className="admin-link-shield" />
-            <span>Admin Portal</span>
-          </button>
         </nav>
 
         {/* Right CTA */}
@@ -93,15 +86,6 @@ export default function Navbar({ currentView, onNavClick, onOpenContact, onOpenA
                 {item.name}
               </button>
             ))}
-            <button
-              className="mobile-nav-item nav-btn admin-mobile-link"
-              onClick={() => {
-                onOpenAdmin();
-                setMobileMenuOpen(false);
-              }}
-            >
-              🔒 Admin Portal Dashboard
-            </button>
 
             <button
               className="btn btn-primary mobile-cta-btn"

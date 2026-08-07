@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, Store, Utensils, PhoneCall, Sparkles, Sprout, ShieldCheck } from 'lucide-react';
+import { Home, Store, Utensils, PhoneCall, Sparkles, Sprout } from 'lucide-react';
 import './FloatingQuickNav.css';
 
 export default function FloatingQuickNav({ currentView, onNavClick, onOpenShowcase }) {
@@ -49,15 +49,6 @@ export default function FloatingQuickNav({ currentView, onNavClick, onOpenShowca
         >
           <Sparkles size={18} className="spin-magic-icon" />
           <span>Explore</span>
-        </button>
-
-        <button
-          className={`quick-nav-btn admin-quick-btn ${currentView === 'admin' ? 'active-quick-btn' : ''}`}
-          onClick={() => onNavClick('admin')}
-          title="Admin Panel"
-        >
-          <ShieldCheck size={18} className="admin-icon-green" />
-          <span>Admin</span>
         </button>
 
         <button
