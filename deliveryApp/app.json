@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "name": "deliveryApp",
+    "slug": "deliveryApp",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "ios": { "supportsTablet": true },
+    "android": { "adaptiveIcon": { "backgroundColor": "#0f172a" } },
+    "web": { "favicon": "./assets/favicon.png" }
+  }
+}
