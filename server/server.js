@@ -209,6 +209,51 @@ app.post('/api/login', (req, res) => {
   }
 });
 
+// --- Admin Endpoints ---
+
+// Get all data for Admin Dashboard
+app.get('/api/admin/data', (req, res) => {
+  res.json({
+    success: true,
+    data: {
+      applications,
+      jobApplications,
+      users,
+      contactInquiries
+    }
+  });
+});
+
+// Update Application Status
+app.post('/api/admin/update-status', (req, res) => {
+  const { id, type, status } = req.body;
+  
+  if (!id || !type || !status) {
+    return res.status(400).json({ success: false, message: 'Missing parameters' });
+  }
+
+  let found = false;
+  if (type === 'partner') {
+    const idx = applications.findIndex(a => a.id === id);
+    if (idx !== -1) {
+      applications[idx].status = status;
+      found = true;
+    }
+  } else if (type === 'job') {
+    const idx = jobApplications.findIndex(j => j.id === id);
+    if (idx !== -1) {
+      jobApplications[idx].status = status;
+      found = true;
+    }
+  }
+
+  if (found) {
+    res.json({ success: true, message: `Status updated to ${status}` });
+  } else {
+    res.status(404).json({ success: false, message: 'Record not found' });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`🌾 Farmart MERN Backend Server running on http://localhost:${PORT}`);
 });

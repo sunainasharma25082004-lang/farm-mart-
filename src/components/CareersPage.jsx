@@ -44,26 +44,17 @@ export default function CareersPage({ onOpenContact }) {
     notes: ''
   });
 
-  // 7 Hiring Category Openings
+  const [promoterFormData, setPromoterFormData] = useState({
+    fullName: '',
+    phone: '',
+    location: '',
+    selectedRole: '', // Dropdown for role
+    experience: ''
+  });
+  const [promoterSubmitted, setPromoterSubmitted] = useState(false);
+
+  // 6 Hiring Category Openings
   const jobRoles = [
-    {
-      id: 'job-7',
-      title: 'Farmart Growth Development Promoter',
-      category: 'Leadership Opportunities',
-      location: 'Pan India / Remote',
-      type: 'Full-Time (Management)',
-      exp: '2+ Years',
-      salary: 'Fixed Salary + Performance Incentives',
-      coverImg: '/farmart_store_hero.jpg',
-      desc: 'Owner-led hiring program for management teams to oversee multiple sectors (Delivery, Operations, Hubs) across the platform.',
-      skills: ['Team Management', 'Cross-functional Leadership', 'Delivery Operations', 'Growth Strategy'],
-      responsibilities: [
-        'Manage and scale multiple delivery and operations teams across designated regions.',
-        'Ensure seamless execution of all platform services (B2B, B2C, Village Hubs).',
-        'Drive localized growth and maintain high performance metrics.',
-        'Report directly to leadership with data-driven performance updates.'
-      ]
-    },
     {
       id: 'job-3',
       title: 'Cluster Operations Manager — Village Hubs',
@@ -220,6 +211,39 @@ export default function CareersPage({ onOpenContact }) {
     }
   };
 
+  const handlePromoterSubmit = async (e) => {
+    e.preventDefault();
+    if (!promoterFormData.selectedRole) {
+      alert("Please select a role you are applying for.");
+      return;
+    }
+    try {
+      const response = await fetch('http://localhost:5000/api/apply-job', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jobId: 'promoter-01',
+          jobTitle: `Growth Promoter - ${promoterFormData.selectedRole}`,
+          fullName: promoterFormData.fullName,
+          phone: promoterFormData.phone,
+          location: promoterFormData.location,
+          experience: promoterFormData.experience,
+          email: 'N/A', // email not required in this quick form
+          resumeName: 'Will provide later'
+        })
+      });
+      const data = await response.json();
+      if (data.success) {
+        setPromoterSubmitted(true);
+      } else {
+        alert(data.message || 'Something went wrong.');
+      }
+    } catch (error) {
+      console.error(error);
+      alert('Could not connect to server.');
+    }
+  };
+
   return (
     <div className="careers-page-wrapper">
       {/* 1. Hero Banner */}
@@ -234,6 +258,87 @@ export default function CareersPage({ onOpenContact }) {
             <p className="careers-hero-desc">
               Be a catalyst for agricultural transformation. Join a passionate team empowering 50,000+ farmers and building Bharat's premier community commerce grid.
             </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Embedded Promoter Form Section */}
+      <section className="promoter-embedded-section section-padding" style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+        <div className="container">
+          <div className="promoter-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px', alignItems: 'center' }}>
+            
+            <div className="promoter-info">
+              <div className="badge-tag" style={{ marginBottom: '16px', display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#e0e7ff', color: '#4f46e5', padding: '6px 12px', borderRadius: '20px', fontSize: '13px', fontWeight: '600' }}>
+                <TrendingUp size={16} />
+                <span>Premium Opportunity</span>
+              </div>
+              <h2 style={{ fontSize: '32px', color: '#0f172a', marginBottom: '16px', lineHeight: '1.3' }}>Farmart Growth Development Promoter</h2>
+              <p style={{ fontSize: '16px', color: '#475569', marginBottom: '24px', lineHeight: '1.6' }}>
+                Join our elite owner-led hiring program. We are hiring Management Teams to oversee multiple fast-growing sectors across our ecosystem. Enjoy fixed salaries coupled with lucrative performance-based incentives.
+              </p>
+              <ul style={{ listStyle: 'none', padding: 0, gap: '12px', display: 'flex', flexDirection: 'column', color: '#334155', fontSize: '15px' }}>
+                <li style={{ display: 'flex', gap: '8px', alignItems: 'center' }}><CheckCircle2 size={18} color="#16a34a" /> Manage large-scale operations</li>
+                <li style={{ display: 'flex', gap: '8px', alignItems: 'center' }}><CheckCircle2 size={18} color="#16a34a" /> Fixed Salary + High Incentives</li>
+                <li style={{ display: 'flex', gap: '8px', alignItems: 'center' }}><CheckCircle2 size={18} color="#16a34a" /> Direct reporting to core leadership</li>
+              </ul>
+            </div>
+
+            <div className="promoter-form-card" style={{ background: '#ffffff', padding: '32px', borderRadius: '16px', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)' }}>
+              {promoterSubmitted ? (
+                <div style={{ textAlign: 'center', padding: '20px' }}>
+                  <CheckCircle2 size={56} color="#16a34a" style={{ margin: '0 auto 16px' }} />
+                  <h3 style={{ fontSize: '20px', color: '#0f172a', marginBottom: '8px' }}>Application Received!</h3>
+                  <p style={{ color: '#64748b' }}>We will review your profile and contact you soon.</p>
+                </div>
+              ) : (
+                <form onSubmit={handlePromoterSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <h3 style={{ fontSize: '20px', color: '#0f172a', marginBottom: '8px' }}>Apply Now</h3>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '13px', fontWeight: '600', color: '#475569' }}>Apply For Role *</label>
+                    <select 
+                      required 
+                      value={promoterFormData.selectedRole}
+                      onChange={(e) => setPromoterFormData({...promoterFormData, selectedRole: e.target.value})}
+                      style={{ padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '15px', color: '#0f172a', background: '#f8fafc' }}
+                    >
+                      <option value="" disabled>-- Select Management Role --</option>
+                      <option value="Delivery Team Management">Delivery Team Management</option>
+                      <option value="Village Hub Operations">Village Hub Operations</option>
+                      <option value="B2B Supply Chain Leads">B2B Supply Chain Leads</option>
+                      <option value="Franchise Growth Management">Franchise Growth Management</option>
+                    </select>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '16px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
+                      <label style={{ fontSize: '13px', fontWeight: '600', color: '#475569' }}>Full Name *</label>
+                      <input type="text" required placeholder="Ramesh Patel" value={promoterFormData.fullName} onChange={(e) => setPromoterFormData({...promoterFormData, fullName: e.target.value})} style={{ padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '15px' }} />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
+                      <label style={{ fontSize: '13px', fontWeight: '600', color: '#475569' }}>Phone *</label>
+                      <input type="tel" required placeholder="9876543210" value={promoterFormData.phone} onChange={(e) => setPromoterFormData({...promoterFormData, phone: e.target.value})} style={{ padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '15px' }} />
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '16px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
+                      <label style={{ fontSize: '13px', fontWeight: '600', color: '#475569' }}>City *</label>
+                      <input type="text" required placeholder="Lucknow" value={promoterFormData.location} onChange={(e) => setPromoterFormData({...promoterFormData, location: e.target.value})} style={{ padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '15px' }} />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
+                      <label style={{ fontSize: '13px', fontWeight: '600', color: '#475569' }}>Experience *</label>
+                      <input type="text" required placeholder="e.g. 5 Years" value={promoterFormData.experience} onChange={(e) => setPromoterFormData({...promoterFormData, experience: e.target.value})} style={{ padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '15px' }} />
+                    </div>
+                  </div>
+
+                  <button type="submit" style={{ background: '#16a34a', color: '#fff', border: 'none', padding: '14px', borderRadius: '8px', fontSize: '16px', fontWeight: '600', cursor: 'pointer', marginTop: '8px' }}>
+                    Submit Application
+                  </button>
+                </form>
+              )}
+            </div>
+            
           </div>
         </div>
       </section>
