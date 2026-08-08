@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Switch } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Switch, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { usePartner } from '../context/PartnerContext';
 import { colors } from '../theme/colors';
@@ -32,18 +32,20 @@ export const AddProductScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 4 }}>
-          <Ionicons name="arrow-back" size={22} color={colors.textPrimary} />
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn} activeOpacity={0.7}>
+          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Add New Listing to Customer App</Text>
+        <Text style={styles.headerTitle}>Add New Listing</Text>
+        <View style={{ width: 24 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.formCard}>
           <Text style={styles.label}>Product / Dish / Produce Name</Text>
           <TextInput
             style={styles.input}
-            placeholder="e.g. Special Sarson Saag, A2 Ghee, Fresh Carrots"
+            placeholder="e.g. Special Sarson Saag, A2 Ghee"
+            placeholderTextColor={colors.textMuted}
             value={name}
             onChangeText={setName}
           />
@@ -53,14 +55,16 @@ export const AddProductScreen = ({ navigation }) => {
             style={styles.input}
             value={category}
             onChangeText={setCategory}
+            placeholderTextColor={colors.textMuted}
           />
 
           <View style={styles.row}>
-            <View style={{ flex: 1 }}>
+            <View style={{ flex: 1, marginRight: 12 }}>
               <Text style={styles.label}>Selling Price (₹)</Text>
               <TextInput
                 style={styles.input}
                 placeholder="120"
+                placeholderTextColor={colors.textMuted}
                 keyboardType="numeric"
                 value={price}
                 onChangeText={setPrice}
@@ -68,11 +72,12 @@ export const AddProductScreen = ({ navigation }) => {
             </View>
 
             <View style={{ flex: 1 }}>
-              <Text style={styles.label}>Unit (kg, g, thali, loaf)</Text>
+              <Text style={styles.label}>Unit (kg, thali)</Text>
               <TextInput
                 style={styles.input}
                 value={unit}
                 onChangeText={setUnit}
+                placeholderTextColor={colors.textMuted}
               />
             </View>
           </View>
@@ -81,13 +86,14 @@ export const AddProductScreen = ({ navigation }) => {
           <TextInput
             style={styles.input}
             placeholder="e.g. 50"
+            placeholderTextColor={colors.textMuted}
             keyboardType="numeric"
             value={stock}
             onChangeText={setStock}
           />
 
-          <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit}>
-            <Ionicons name="cloud-upload-outline" size={18} color="#ffffff" />
+          <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit} activeOpacity={0.85}>
+            <Ionicons name="cloud-upload-outline" size={20} color="#ffffff" />
             <Text style={styles.submitBtnText}>Publish to Customer App</Text>
           </TouchableOpacity>
         </View>
@@ -102,29 +108,29 @@ export const InventoryScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Your Active Items ({inventory.length})</Text>
-        <TouchableOpacity onPress={() => navigation.navigate('AddProduct')}>
-          <Ionicons name="add-circle" size={24} color={colors.primary} />
+        <Text style={styles.headerTitle}>Active Items ({inventory.length})</Text>
+        <TouchableOpacity onPress={() => navigation.navigate('AddProduct')} style={styles.iconBtn}>
+          <Ionicons name="add-circle" size={28} color={colors.primary} />
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {inventory.map((item) => (
           <View key={item.id} style={styles.itemCard}>
             <View style={{ flex: 1 }}>
               <Text style={styles.itemTitle}>{item.name}</Text>
               <Text style={styles.itemCategory}>{item.category} • ₹{item.price} / {item.unit}</Text>
-              <Text style={styles.itemStock}>Available Stock: {item.stock} units</Text>
+              <Text style={styles.itemStock}>Available: <Text style={{ fontWeight: '700' }}>{item.stock}</Text> units</Text>
             </View>
 
             <View style={styles.toggleSection}>
-              <Text style={[styles.toggleText, { color: item.isAvailable ? colors.secondary : colors.textMuted }]}>
+              <Text style={[styles.toggleText, { color: item.isAvailable ? '#10b981' : colors.textMuted }]}>
                 {item.isAvailable ? 'IN STOCK' : 'OUT'}
               </Text>
               <Switch
                 value={item.isAvailable}
                 onValueChange={() => toggleItemAvailability(item.id)}
-                trackColor={{ false: '#cbd5e1', true: '#16a34a' }}
+                trackColor={{ false: '#e2e8f0', true: '#10b981' }}
                 thumbColor="#ffffff"
               />
             </View>
@@ -136,62 +142,153 @@ export const InventoryScreen = ({ navigation }) => {
 };
 
 export const SettlementsScreen = ({ navigation }) => {
-  const { vendor } = usePartner();
+  const { vendor, settlementHistory } = usePartner();
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Wednesday Settlement & Earnings</Text>
+        <Text style={styles.headerTitleLarge}>Wednesdays Settlements</Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.wedCard}>
-          <Ionicons name="calendar-outline" size={28} color={colors.primary} />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.wedTitle}>Upcoming Wednesday Payout</Text>
+          <View style={styles.wedIconBox}>
+            <Ionicons name="calendar" size={32} color={colors.primary} />
+          </View>
+          <View style={{ flex: 1, paddingLeft: 16 }}>
+            <Text style={styles.wedTitle}>Upcoming Payout</Text>
             <Text style={styles.wedAmount}>₹{vendor.wednesdaySettlement}</Text>
-            <Text style={styles.wedSub}>Direct Transfer to Registered Bank Account</Text>
+            <Text style={styles.wedSub}>Direct Transfer to Bank A/c ending 4321</Text>
           </View>
         </View>
 
-        <Text style={styles.sectionTitle}>Previous Payout Settlements</Text>
-        <View style={styles.historyCard}>
-          <Text style={styles.hisDate}>Wed, Aug 5, 2026</Text>
-          <Text style={styles.hisVal}>₹4,120 (PAID)</Text>
-        </View>
-
-        <View style={styles.historyCard}>
-          <Text style={styles.hisDate}>Wed, Jul 29, 2026</Text>
-          <Text style={styles.hisVal}>₹3,890 (PAID)</Text>
-        </View>
+        <Text style={styles.sectionTitle}>Previous Settlements</Text>
+        {settlementHistory.map((item, idx) => (
+          <View key={idx} style={styles.settleCard}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Text style={styles.settleDate}>{item.date}</Text>
+              <Text style={styles.settleTotal}>₹{item.total}</Text>
+            </View>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 }}>
+              <View style={styles.settleStatusBadge}>
+                <Text style={styles.settleStatusText}>{item.status}</Text>
+              </View>
+              <Text style={styles.settleRef}>Ref: {item.ref}</Text>
+            </View>
+          </View>
+        ))}
       </ScrollView>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 14, backgroundColor: colors.card, borderBottomWidth: 1, borderBottomColor: colors.border },
-  headerTitle: { fontSize: 15, fontWeight: '800', color: colors.textPrimary },
-  scrollContent: { padding: 16 },
-  formCard: { backgroundColor: colors.card, padding: 16, borderRadius: 16, borderWidth: 1, borderColor: colors.border },
-  label: { fontSize: 12, fontWeight: '700', color: colors.textPrimary, marginTop: 10, marginBottom: 4 },
-  input: { backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, fontSize: 13 },
-  row: { flexDirection: 'row', gap: 10 },
-  submitBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary, borderRadius: 12, paddingVertical: 12, marginTop: 18, gap: 6 },
-  submitBtnText: { color: '#ffffff', fontSize: 14, fontWeight: '800' },
-  itemCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.card, padding: 14, borderRadius: 14, marginBottom: 10, borderWidth: 1, borderColor: colors.border },
-  itemTitle: { fontSize: 14, fontWeight: '700', color: colors.textPrimary },
-  itemCategory: { fontSize: 11, color: colors.textSecondary, marginTop: 2 },
-  itemStock: { fontSize: 11, color: colors.primaryDark, fontWeight: '600', marginTop: 4 },
-  toggleSection: { alignItems: 'flex-end', gap: 4 },
-  toggleText: { fontSize: 9, fontWeight: '900', letterSpacing: 0.5 },
-  wedCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.primaryLight, padding: 16, borderRadius: 16, borderWidth: 1, borderColor: '#fde68a', gap: 12, marginBottom: 16 },
-  wedTitle: { fontSize: 13, color: colors.primaryDark, fontWeight: '700' },
-  wedAmount: { fontSize: 24, fontWeight: '800', color: colors.primaryDark, marginTop: 2 },
-  wedSub: { fontSize: 10, color: colors.textSecondary, marginTop: 2 },
-  sectionTitle: { fontSize: 15, fontWeight: '800', color: colors.textPrimary, marginBottom: 10 },
-  historyCard: { flexDirection: 'row', justifyContent: 'space-between', backgroundColor: colors.card, padding: 12, borderRadius: 12, marginBottom: 8, borderWidth: 1, borderColor: colors.border },
-  hisDate: { fontSize: 12, color: colors.textPrimary, fontWeight: '700' },
-  hisVal: { fontSize: 12, color: colors.secondary, fontWeight: '800' }
+  container: { flex: 1, backgroundColor: '#f8fafc' },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: '#ffffff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4 },
+      android: { elevation: 2 }
+    })
+  },
+  iconBtn: { padding: 4 },
+  headerTitle: { fontSize: 18, fontWeight: '600', color: colors.textPrimary },
+  headerTitleLarge: { fontSize: 20, fontWeight: '700', color: colors.textPrimary },
+  scrollContent: { padding: 20, paddingBottom: 40 },
+  formCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    padding: 24,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 8 },
+      android: { elevation: 3 }
+    })
+  },
+  label: { fontSize: 13, fontWeight: '600', color: colors.textPrimary, marginBottom: 8, marginTop: 16 },
+  input: {
+    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 15,
+    color: colors.textPrimary,
+    fontWeight: '500'
+  },
+  row: { flexDirection: 'row', alignItems: 'center' },
+  submitBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary,
+    borderRadius: 30,
+    paddingVertical: 16,
+    marginTop: 32,
+    gap: 8,
+    ...Platform.select({
+      ios: { shadowColor: colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8 },
+      android: { elevation: 4 }
+    })
+  },
+  submitBtnText: { color: '#ffffff', fontSize: 15, fontWeight: '600' },
+  
+  itemCard: {
+    flexDirection: 'row',
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 8 },
+      android: { elevation: 3 }
+    })
+  },
+  itemTitle: { fontSize: 16, fontWeight: '600', color: colors.textPrimary },
+  itemCategory: { fontSize: 13, color: colors.textSecondary, marginTop: 4, fontWeight: '500' },
+  itemStock: { fontSize: 12, color: colors.textMuted, marginTop: 4 },
+  toggleSection: { alignItems: 'center' },
+  toggleText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.5, marginBottom: 4 },
+  
+  wedCard: {
+    flexDirection: 'row',
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 24,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 8 },
+      android: { elevation: 2 }
+    })
+  },
+  wedIconBox: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#f0fdf4', alignItems: 'center', justifyContent: 'center' },
+  wedTitle: { fontSize: 14, fontWeight: '600', color: colors.textSecondary },
+  wedAmount: { fontSize: 32, fontWeight: '700', color: colors.primaryDark, marginTop: 2 },
+  wedSub: { fontSize: 12, color: colors.textMuted, marginTop: 4 },
+  sectionTitle: { fontSize: 16, fontWeight: '600', color: colors.textPrimary, marginBottom: 16 },
+  settleCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#f1f5f9'
+  },
+  settleDate: { fontSize: 14, fontWeight: '600', color: colors.textPrimary },
+  settleTotal: { fontSize: 16, fontWeight: '700', color: colors.textPrimary },
+  settleStatusBadge: { backgroundColor: '#ecfdf5', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
+  settleStatusText: { fontSize: 11, fontWeight: '600', color: '#10b981' },
+  settleRef: { fontSize: 12, color: colors.textSecondary, fontWeight: '500' }
 });

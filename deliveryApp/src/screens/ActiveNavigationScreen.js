@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDelivery } from '../context/DeliveryContext';
 import { colors } from '../theme/colors';
@@ -11,9 +11,12 @@ export const ActiveNavigationScreen = ({ navigation }) => {
   if (!currentTask) {
     return (
       <View style={[styles.container, styles.center]}>
-        <Ionicons name="checkmark-circle-outline" size={54} color={colors.secondary} />
+        <View style={styles.iconCircleWrapperLarge}>
+          <Ionicons name="checkmark-circle-outline" size={64} color={colors.secondary} />
+        </View>
         <Text style={styles.emptyTitle}>No Active Delivery Assigned</Text>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.navigate('Duty')}>
+        <Text style={styles.emptySub}>You are currently available for new orders.</Text>
+        <TouchableOpacity style={styles.backBtnPill} onPress={() => navigation.navigate('Duty')} activeOpacity={0.8}>
           <Text style={styles.backBtnText}>Return to Duty Queue</Text>
         </TouchableOpacity>
       </View>
@@ -22,12 +25,10 @@ export const ActiveNavigationScreen = ({ navigation }) => {
 
   const handleArrivedVendor = () => {
     updateTaskStatus(currentTask.id, 'ARRIVED_AT_VENDOR');
-    Alert.alert('Status Updated', 'Arrived at vendor location.');
   };
 
   const handlePickedUp = () => {
     updateTaskStatus(currentTask.id, 'OUT_FOR_DELIVERY');
-    Alert.alert('Order Picked Up!', 'Proceed to customer delivery address.');
   };
 
   const handleComplete = () => {
@@ -44,16 +45,16 @@ export const ActiveNavigationScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 4 }}>
-          <Ionicons name="arrow-back" size={22} color={colors.textPrimary} />
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn} activeOpacity={0.7}>
+          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Live Trip Route ({currentTask.id})</Text>
+        <Text style={styles.headerTitle}>Live Trip: #{currentTask.id}</Text>
         <View style={styles.statusBadge}>
           <Text style={styles.statusText}>{currentTask.status.replace(/_/g, ' ')}</Text>
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Visual Simulated Route Map Box */}
         <View style={styles.mapSimulatedBox}>
           <View style={styles.mapPinRow}>
@@ -73,20 +74,23 @@ export const ActiveNavigationScreen = ({ navigation }) => {
 
         {/* Pickup Details */}
         <View style={styles.card}>
-          <Text style={styles.cardHeaderTitle}>Pickup Point</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+            <Ionicons name="storefront" size={18} color={colors.accent} />
+            <Text style={styles.cardHeaderTitle}>PICKUP POINT</Text>
+          </View>
           <Text style={styles.cardMainText}>{currentTask.pickupLocation}</Text>
           <Text style={styles.cardSubText}>{currentTask.pickupAddress}</Text>
 
           {currentTask.status === 'ASSIGNED' && (
-            <TouchableOpacity style={styles.actionBtn} onPress={handleArrivedVendor}>
-              <Ionicons name="pin-outline" size={18} color="#ffffff" />
+            <TouchableOpacity style={styles.actionBtnPill} onPress={handleArrivedVendor} activeOpacity={0.85}>
+              <Ionicons name="location-outline" size={20} color="#ffffff" />
               <Text style={styles.actionBtnText}>Confirm Arrived at Vendor</Text>
             </TouchableOpacity>
           )}
 
           {currentTask.status === 'ARRIVED_AT_VENDOR' && (
-            <TouchableOpacity style={[styles.actionBtn, { backgroundColor: colors.secondary }]} onPress={handlePickedUp}>
-              <Ionicons name="bag-check-outline" size={18} color="#ffffff" />
+            <TouchableOpacity style={[styles.actionBtnPill, { backgroundColor: '#10b981' }]} onPress={handlePickedUp} activeOpacity={0.85}>
+              <Ionicons name="bag-check-outline" size={20} color="#ffffff" />
               <Text style={styles.actionBtnText}>Confirm Items Picked Up</Text>
             </TouchableOpacity>
           )}
@@ -94,7 +98,10 @@ export const ActiveNavigationScreen = ({ navigation }) => {
 
         {/* Customer Delivery Details */}
         <View style={styles.card}>
-          <Text style={styles.cardHeaderTitle}>Delivery Point</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+            <Ionicons name="person" size={18} color={colors.primary} />
+            <Text style={styles.cardHeaderTitle}>DELIVERY POINT</Text>
+          </View>
           <Text style={styles.cardMainText}>{currentTask.customerName} ({currentTask.customerPhone})</Text>
           <Text style={styles.cardSubText}>{currentTask.deliveryAddress}</Text>
 
@@ -117,8 +124,8 @@ export const ActiveNavigationScreen = ({ navigation }) => {
                 value={otpInput}
                 onChangeText={setOtpInput}
               />
-              <TouchableOpacity style={styles.completeBtn} onPress={handleComplete}>
-                <Ionicons name="checkmark-done" size={18} color="#ffffff" />
+              <TouchableOpacity style={styles.completeBtnPill} onPress={handleComplete} activeOpacity={0.85}>
+                <Ionicons name="checkmark-done" size={20} color="#ffffff" />
                 <Text style={styles.completeBtnText}>Verify OTP & Complete Delivery</Text>
               </TouchableOpacity>
             </View>
@@ -135,22 +142,24 @@ export const EarningsScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Rider Earnings & Wednesday Payouts</Text>
+        <Text style={styles.headerTitleLarge}>Payouts & Earnings</Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.payBox}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <View style={styles.payBoxGradient}>
           <Text style={styles.payLabel}>Total Earnings Today</Text>
           <Text style={styles.payAmount}>₹{profile.todayEarnings}</Text>
           <Text style={styles.paySub}>Scheduled for Wednesday Direct Settlement</Text>
         </View>
 
-        <Text style={styles.sectionTitle}>Weekly Delivery Trip History</Text>
+        <Text style={styles.sectionTitle}>Weekly Trip History</Text>
         {weeklyEarningsHistory.map((item, idx) => (
           <View key={idx} style={styles.earnCard}>
             <View style={styles.earnHeader}>
               <Text style={styles.earnDate}>{item.date}</Text>
-              <Text style={styles.earnStatus}>{item.status}</Text>
+              <View style={styles.earnStatusBadge}>
+                <Text style={styles.earnStatus}>{item.status}</Text>
+              </View>
             </View>
             <View style={styles.earnDetailsRow}>
               <Text style={styles.earnDetailText}>{item.trips} Trips Completed</Text>
@@ -164,48 +173,83 @@ export const EarningsScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
+  container: { flex: 1, backgroundColor: '#f8fafc' },
   center: { justifyContent: 'center', alignItems: 'center', padding: 24 },
-  emptyTitle: { fontSize: 16, fontWeight: '800', color: colors.textPrimary, marginTop: 12 },
-  backBtn: { backgroundColor: colors.primary, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10, marginTop: 16 },
-  backBtnText: { color: '#ffffff', fontWeight: '800' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 14, backgroundColor: colors.card, borderBottomWidth: 1, borderBottomColor: colors.border },
-  headerTitle: { fontSize: 15, fontWeight: '800', color: colors.textPrimary },
-  statusBadge: { backgroundColor: colors.primaryLight, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
-  statusText: { fontSize: 10, fontWeight: '800', color: colors.primaryDark },
-  scrollContent: { padding: 16 },
-  mapSimulatedBox: { backgroundColor: colors.card, borderRadius: 16, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: colors.border },
-  mapPinRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 4 },
-  pinDotGreen: { width: 12, height: 12, borderRadius: 6, backgroundColor: colors.secondary },
-  pinDotRed: { width: 12, height: 12, borderRadius: 6, backgroundColor: colors.error },
-  mapPinText: { fontSize: 13, fontWeight: '700', color: colors.textPrimary },
-  mapLine: { width: 2, height: 20, backgroundColor: colors.border, marginLeft: 5 },
-  navBarFooter: { flexDirection: 'row', alignItems: 'center', gap: 6, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 10, marginTop: 10 },
-  navText: { fontSize: 11, fontWeight: '700', color: colors.textSecondary },
-  card: { backgroundColor: colors.card, borderRadius: 16, padding: 14, marginBottom: 14, borderWidth: 1, borderColor: colors.border },
-  cardHeaderTitle: { fontSize: 10, fontWeight: '800', color: colors.textMuted, letterSpacing: 0.5 },
-  cardMainText: { fontSize: 14, fontWeight: '700', color: colors.textPrimary, marginTop: 4 },
-  cardSubText: { fontSize: 11, color: colors.textSecondary, marginTop: 2 },
-  actionBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary, borderRadius: 10, paddingVertical: 10, marginTop: 12, gap: 6 },
-  actionBtnText: { color: '#ffffff', fontSize: 13, fontWeight: '800' },
-  itemsBox: { backgroundColor: colors.cardLight, padding: 10, borderRadius: 10, marginTop: 10 },
-  itemsBoxTitle: { fontSize: 11, fontWeight: '700', color: colors.textPrimary, marginBottom: 4 },
-  itemText: { fontSize: 11, color: colors.textSecondary },
-  otpContainer: { marginTop: 14, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 12 },
-  otpLabel: { fontSize: 12, fontWeight: '700', color: colors.textPrimary, marginBottom: 6 },
-  otpInput: { backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 10, fontSize: 14, color: colors.textPrimary, marginBottom: 10, textAlign: 'center', letterSpacing: 2 },
-  completeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.secondary, borderRadius: 10, paddingVertical: 12, gap: 6 },
-  completeBtnText: { color: '#ffffff', fontSize: 13, fontWeight: '800' },
-  payBox: { backgroundColor: colors.primaryDark, padding: 16, borderRadius: 16, marginBottom: 16, alignItems: 'center' },
-  payLabel: { fontSize: 12, color: '#e0f2fe' },
-  payAmount: { fontSize: 28, fontWeight: '800', color: '#ffffff', marginTop: 4 },
-  paySub: { fontSize: 10, color: '#bae6fd', marginTop: 4 },
-  sectionTitle: { fontSize: 15, fontWeight: '800', color: colors.textPrimary, marginBottom: 12 },
-  earnCard: { backgroundColor: colors.card, padding: 12, borderRadius: 12, marginBottom: 10, borderWidth: 1, borderColor: colors.border },
-  earnHeader: { flexDirection: 'row', justifyContent: 'space-between' },
-  earnDate: { fontSize: 13, fontWeight: '700', color: colors.textPrimary },
-  earnStatus: { fontSize: 10, fontWeight: '800', color: colors.secondary },
-  earnDetailsRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 },
-  earnDetailText: { fontSize: 11, color: colors.textSecondary },
-  earnTotalText: { fontSize: 13, fontWeight: '800', color: colors.textPrimary }
+  iconCircleWrapperLarge: { width: 100, height: 100, borderRadius: 50, backgroundColor: '#f1f5f9', alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
+  emptyTitle: { fontSize: 18, fontWeight: '600', color: colors.textPrimary, marginTop: 12 },
+  emptySub: { fontSize: 14, color: colors.textSecondary, marginTop: 6, marginBottom: 24 },
+  backBtnPill: { backgroundColor: colors.primary, paddingHorizontal: 24, paddingVertical: 14, borderRadius: 30 },
+  backBtnText: { color: '#ffffff', fontWeight: '600', fontSize: 15 },
+  header: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    padding: 16, 
+    backgroundColor: '#ffffff', 
+    borderBottomWidth: 1, 
+    borderBottomColor: '#f1f5f9',
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4 },
+      android: { elevation: 2 }
+    })
+  },
+  iconBtn: { padding: 4 },
+  headerTitle: { fontSize: 16, fontWeight: '600', color: colors.textPrimary },
+  headerTitleLarge: { fontSize: 20, fontWeight: '700', color: colors.textPrimary },
+  statusBadge: { backgroundColor: '#e0e7ff', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
+  statusText: { fontSize: 11, fontWeight: '600', color: '#4338ca' },
+  scrollContent: { padding: 20 },
+  mapSimulatedBox: { 
+    backgroundColor: '#ffffff', 
+    borderRadius: 20, 
+    padding: 20, 
+    marginBottom: 20, 
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 8 },
+      android: { elevation: 3 }
+    })
+  },
+  mapPinRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginVertical: 4 },
+  pinDotGreen: { width: 14, height: 14, borderRadius: 7, backgroundColor: '#10b981' },
+  pinDotRed: { width: 14, height: 14, borderRadius: 7, backgroundColor: '#ef4444' },
+  mapPinText: { fontSize: 14, fontWeight: '600', color: colors.textPrimary },
+  mapLine: { width: 2, height: 24, backgroundColor: '#e2e8f0', marginLeft: 6 },
+  navBarFooter: { flexDirection: 'row', alignItems: 'center', gap: 8, borderTopWidth: 1, borderTopColor: '#f1f5f9', paddingTop: 14, marginTop: 14 },
+  navText: { fontSize: 12, fontWeight: '600', color: colors.textSecondary },
+  card: { 
+    backgroundColor: '#ffffff', 
+    borderRadius: 20, 
+    padding: 20, 
+    marginBottom: 16, 
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 8 },
+      android: { elevation: 3 }
+    })
+  },
+  cardHeaderTitle: { fontSize: 11, fontWeight: '700', color: colors.textMuted, letterSpacing: 1 },
+  cardMainText: { fontSize: 16, fontWeight: '600', color: colors.textPrimary, marginTop: 4 },
+  cardSubText: { fontSize: 13, color: colors.textSecondary, marginTop: 4, lineHeight: 18 },
+  actionBtnPill: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary, borderRadius: 30, paddingVertical: 14, marginTop: 20, gap: 8 },
+  actionBtnText: { color: '#ffffff', fontSize: 14, fontWeight: '600' },
+  itemsBox: { backgroundColor: '#f8fafc', padding: 14, borderRadius: 12, marginTop: 16 },
+  itemsBoxTitle: { fontSize: 13, fontWeight: '600', color: colors.textPrimary, marginBottom: 6 },
+  itemText: { fontSize: 13, color: colors.textSecondary, marginBottom: 4 },
+  otpContainer: { marginTop: 20, borderTopWidth: 1, borderTopColor: '#f1f5f9', paddingTop: 16 },
+  otpLabel: { fontSize: 13, fontWeight: '600', color: colors.textPrimary, marginBottom: 10 },
+  otpInput: { backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 12, padding: 14, fontSize: 16, color: colors.textPrimary, marginBottom: 16, textAlign: 'center', letterSpacing: 4, fontWeight: '600' },
+  completeBtnPill: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#10b981', borderRadius: 30, paddingVertical: 14, gap: 8 },
+  completeBtnText: { color: '#ffffff', fontSize: 14, fontWeight: '600' },
+  payBoxGradient: { backgroundColor: '#0f172a', padding: 24, borderRadius: 24, marginBottom: 24, alignItems: 'center' },
+  payLabel: { fontSize: 13, color: '#94a3b8', fontWeight: '500' },
+  payAmount: { fontSize: 36, fontWeight: '700', color: '#ffffff', marginTop: 8 },
+  paySub: { fontSize: 11, color: '#cbd5e1', marginTop: 8 },
+  sectionTitle: { fontSize: 16, fontWeight: '600', color: colors.textPrimary, marginBottom: 16 },
+  earnCard: { backgroundColor: '#ffffff', padding: 16, borderRadius: 16, marginBottom: 12, ...Platform.select({ ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.03, shadowRadius: 4 }, android: { elevation: 1 } }) },
+  earnHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  earnDate: { fontSize: 14, fontWeight: '600', color: colors.textPrimary },
+  earnStatusBadge: { backgroundColor: '#ecfdf5', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+  earnStatus: { fontSize: 10, fontWeight: '700', color: '#10b981' },
+  earnDetailsRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10, alignItems: 'center' },
+  earnDetailText: { fontSize: 13, color: colors.textSecondary },
+  earnTotalText: { fontSize: 16, fontWeight: '700', color: colors.textPrimary }
 });
