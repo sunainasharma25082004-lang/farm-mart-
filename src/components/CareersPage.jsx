@@ -22,34 +22,27 @@ export default function CareersPage({ onOpenContact }) {
     phone: '',
     email: '',
     location: '',
-    selectedRole: '', // Dropdown for role
     experience: '',
-    qualification: '',
-    notes: ''
+    qualification: ''
   });
   const [resumeName, setResumeName] = useState('');
   const [promoterSubmitted, setPromoterSubmitted] = useState(false);
 
   const handlePromoterSubmit = async (e) => {
     e.preventDefault();
-    if (!promoterFormData.selectedRole) {
-      alert("Please select a role you are applying for.");
-      return;
-    }
     try {
       const response = await fetch('http://localhost:5000/api/apply-job', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           jobId: 'promoter-01',
-          jobTitle: `Growth Promoter - ${promoterFormData.selectedRole}`,
+          jobTitle: 'Farmart Growth Development Promoter',
           fullName: promoterFormData.fullName,
           phone: promoterFormData.phone,
           email: promoterFormData.email,
           location: promoterFormData.location,
           experience: promoterFormData.experience,
           qualification: promoterFormData.qualification,
-          notes: promoterFormData.notes,
           resumeName: resumeName || 'Not uploaded'
         })
       });
@@ -155,22 +148,7 @@ export default function CareersPage({ onOpenContact }) {
                     <p style={{ color: '#64748b', fontSize: '15px' }}>Please fill out all the details accurately to apply for the management team.</p>
                   </div>
                   
-                  {/* Select Role */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <label style={{ fontSize: '14px', fontWeight: '600', color: '#475569' }}>Apply For Specific Role *</label>
-                    <select 
-                      required 
-                      value={promoterFormData.selectedRole}
-                      onChange={(e) => setPromoterFormData({...promoterFormData, selectedRole: e.target.value})}
-                      style={{ padding: '14px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '16px', color: '#0f172a', background: '#f8fafc', outline: 'none' }}
-                    >
-                      <option value="" disabled>-- Select Management Area --</option>
-                      <option value="Delivery Team Management">Delivery Team Management</option>
-                      <option value="Village Hub Operations">Village Hub Operations</option>
-                      <option value="B2B Supply Chain Leads">B2B Supply Chain Leads</option>
-                      <option value="Franchise Growth Management">Franchise Growth Management</option>
-                    </select>
-                  </div>
+                  {/* Select Role Removed as per client request */}
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                     {/* Full Name */}
@@ -223,19 +201,7 @@ export default function CareersPage({ onOpenContact }) {
                     </div>
                   </div>
 
-                  {/* LinkedIn / Notes */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <label style={{ fontSize: '14px', fontWeight: '600', color: '#475569' }}>
-                      LinkedIn Profile / Additional Details (Optional)
-                    </label>
-                    <textarea 
-                      placeholder="Paste your LinkedIn URL or add any notes about your previous roles..."
-                      rows="3"
-                      value={promoterFormData.notes}
-                      onChange={(e) => setPromoterFormData({...promoterFormData, notes: e.target.value})}
-                      style={{ padding: '14px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '16px', outline: 'none', resize: 'vertical' }}
-                    ></textarea>
-                  </div>
+                  {/* LinkedIn / Notes Removed as per client request */}
 
                   {/* Resume Upload Box */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>

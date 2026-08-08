@@ -19,6 +19,18 @@ const contactInquiries = [];
 const users = []; // In-memory users store
 const jobApplications = []; // In-memory job applications store
 
+// In-memory Admins store (RBAC)
+const admins = [
+  {
+    id: 'super-admin-01',
+    username: 'superadmin',
+    password: 'superadmin123',
+    role: 'superadmin',
+    name: 'Super Admin',
+    access: ['users', 'partners', 'riders', 'jobs'] // Superadmin has all access
+  }
+];
+
 const razorpayInstance = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID || 'dummy_key',
   key_secret: process.env.RAZORPAY_KEY_SECRET || 'dummy_secret',
@@ -210,6 +222,49 @@ app.post('/api/login', (req, res) => {
 });
 
 // --- Admin Endpoints ---
+
+// Admin Login
+app.post('/api/admin/login', (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) {
+    return res.status(400).json({ success: false, message: 'Username and password required' });
+  }
+
+  const adminUser = admins.find(a => a.username === username && a.password === password);
+  if (adminUser) {
+    // Return admin without password
+    const { password: _, ...adminData } = adminUser;
+    res.json({ success: true, message: 'Admin login successful', admin: adminData });
+  } else {
+    res.status(401).json({ success: false, message: 'Invalid admin credentials' });
+  }
+});
+
+// Create Sub Admin (Only SuperAdmin should call this in a real app)
+app.post('/api/admin/create-subadmin', (req, res) => {
+  const { username, password, name, access } = req.body;
+  
+  if (!username || !password || !name || !access) {
+    return res.status(400).json({ success: false, message: 'All fields are required' });
+  }
+
+  // Check if username exists
+  if (admins.some(a => a.username === username)) {
+    return res.status(400).json({ success: false, message: 'Username already exists' });
+  }
+
+  const newAdmin = {
+    id: `subadmin-${Date.now()}`,
+    username,
+    password,
+    role: 'subadmin',
+    name,
+    access
+  };
+
+  admins.push(newAdmin);
+  res.status(201).json({ success: true, message: 'Sub Admin created successfully', admin: { ...newAdmin, password: undefined } });
+});
 
 // Get all data for Admin Dashboard
 app.get('/api/admin/data', (req, res) => {
