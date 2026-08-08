@@ -69,11 +69,11 @@ const styles = StyleSheet.create({
   },
   text: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '500',
     color: colors.textSecondary
   },
   selectedText: {
     color: colors.primaryDark,
-    fontWeight: '800'
+    fontWeight: '500'
   }
 });

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -24,6 +24,23 @@ export const HomeScreen = ({ navigation }) => {
   const [selectedCat, setSelectedCat] = useState('all');
   const [selectedService, setSelectedService] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+
+  const scrollViewRef = useRef(null);
+  const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      let nextIndex = currentBannerIndex + 1;
+      if (nextIndex >= 3) {
+        nextIndex = 0;
+      }
+      setCurrentBannerIndex(nextIndex);
+      // Banner width (280) + marginRight (12) = 292
+      scrollViewRef.current?.scrollTo({ x: nextIndex * 292, animated: true });
+    }, 3000);
+
+    return () => clearInterval(timer);
+  }, [currentBannerIndex]);
 
   const filteredProducts = products.filter((p) => {
     const matchesService = selectedService === 'all' || p.service === selectedService;
@@ -81,40 +98,9 @@ export const HomeScreen = ({ navigation }) => {
           </View>
         </View>
 
-        {/* Services grid */}
-        <View style={styles.servicesContainer}>
-          <Text style={styles.superAppHeading}>FARMART SERVICES</Text>
-          <View style={styles.servicesGrid}>
-            {services.map((serv) => {
-              const isSelected = selectedService === serv.id;
-              return (
-                <TouchableOpacity
-                  key={serv.id}
-                  style={[
-                    styles.serviceTile,
-                    { backgroundColor: serv.bg },
-                    isSelected && styles.selectedServiceTile
-                  ]}
-                  onPress={() => setSelectedService(isSelected ? 'all' : serv.id)}
-                  activeOpacity={0.85}
-                >
-                  <View style={[styles.serviceIconCircle, { backgroundColor: serv.color }]}>
-                    <Ionicons name={serv.icon} size={18} color="#ffffff" />
-                  </View>
-                  <Text style={styles.serviceTitle} numberOfLines={1}>
-                    {serv.title}
-                  </Text>
-                  <Text style={styles.serviceSub} numberOfLines={1}>
-                    {serv.subtitle}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
-
         {/* Promo banners */}
         <ScrollView
+          ref={scrollViewRef}
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.bannerSlider}
@@ -171,6 +157,38 @@ export const HomeScreen = ({ navigation }) => {
           </ImageBackground>
         </ScrollView>
 
+        {/* Services grid */}
+        <View style={styles.servicesContainer}>
+          <Text style={styles.superAppHeading}>FARMART SERVICES</Text>
+          <View style={styles.servicesGrid}>
+            {services.map((serv) => {
+              const isSelected = selectedService === serv.id;
+              return (
+                <TouchableOpacity
+                  key={serv.id}
+                  style={[
+                    styles.serviceTile,
+                    { backgroundColor: serv.bg },
+                    isSelected && styles.selectedServiceTile
+                  ]}
+                  onPress={() => setSelectedService(isSelected ? 'all' : serv.id)}
+                  activeOpacity={0.85}
+                >
+                  <View style={[styles.serviceIconCircle, { backgroundColor: serv.color }]}>
+                    <Ionicons name={serv.icon} size={18} color="#ffffff" />
+                  </View>
+                  <Text style={styles.serviceTitle} numberOfLines={2}>
+                    {serv.title}
+                  </Text>
+                  <Text style={styles.serviceSub} numberOfLines={1}>
+                    {serv.subtitle}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
         {/* Categories */}
         <CategoryChip selectedCategory={selectedCat} onSelectCategory={setSelectedCat} />
 
@@ -216,7 +234,7 @@ export const HomeScreen = ({ navigation }) => {
                   <ProductCard
                     product={product}
                     compact
-                    onPress={() => navigation.navigate('Catalog')}
+                    onPress={() => navigation.navigate('ProductDetails', { product })}
                   />
                 </View>
               ))}
@@ -259,7 +277,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '500',
     color: colors.textPrimary,
     padding: 0
   },
@@ -287,7 +305,7 @@ const styles = StyleSheet.create({
   },
   infoText: {
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: '500',
     color: colors.textSecondary
   },
   infoDot: {
@@ -302,7 +320,7 @@ const styles = StyleSheet.create({
   },
   superAppHeading: {
     fontSize: 11,
-    fontWeight: '900',
+    fontWeight: '500',
     color: colors.textMuted,
     letterSpacing: 1.1,
     marginBottom: 10
@@ -317,10 +335,18 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     padding: 12,
     borderWidth: 1.5,
-    borderColor: 'transparent'
+    borderColor: 'rgba(255,255,255,0.8)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
+    justifyContent: 'center'
   },
   selectedServiceTile: {
-    borderColor: colors.primary
+    borderColor: colors.primary,
+    shadowColor: colors.primary,
+    shadowOpacity: 0.1,
   },
   serviceIconCircle: {
     width: 34,
@@ -331,9 +357,10 @@ const styles = StyleSheet.create({
     marginBottom: 8
   },
   serviceTitle: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: colors.textPrimary
+    fontSize: 11,
+    fontWeight: '500',
+    color: colors.textPrimary,
+    lineHeight: 16
   },
   serviceSub: {
     fontSize: 10,
@@ -371,11 +398,11 @@ const styles = StyleSheet.create({
   pillText: {
     color: '#ffffff',
     fontSize: 9,
-    fontWeight: '800'
+    fontWeight: '500'
   },
   heroTitle: {
-    fontSize: 16,
-    fontWeight: '800',
+    fontSize: 15,
+    fontWeight: '500',
     color: '#ffffff'
   },
   heroSub: {
@@ -392,8 +419,8 @@ const styles = StyleSheet.create({
     marginBottom: 12
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '800',
+    fontSize: 15,
+    fontWeight: '500',
     color: colors.textPrimary
   },
   sectionSub: {
@@ -409,7 +436,7 @@ const styles = StyleSheet.create({
   },
   resetFilterText: {
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '500',
     color: colors.secondary
   },
   productRow: {
@@ -429,6 +456,6 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 13,
     color: colors.textSecondary,
-    fontWeight: '600'
+    fontWeight: '500'
   }
 });

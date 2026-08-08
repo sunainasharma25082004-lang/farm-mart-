@@ -18,15 +18,19 @@ export const AppProvider = ({ children }) => {
     { date: 'Wed, 2026-07-29', amount: 2100, type: 'Wednesday Settlement', status: 'PAID' }
   ]);
 
-  const [userProfile, setUserProfile] = useState({
-    name: 'Harpreet Singh',
-    phone: '+91 98765 43210',
-    city: 'Ludhiana',
-    district: 'Ludhiana',
-    villageHub: 'Village Hub - Ludhiana Rural',
-    referralCode: 'FARMART-HARP99',
-    referralEarnings: 350
-  });
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userProfile, setUserProfile] = useState(null);
+
+  const loginUser = (user) => {
+    setUserProfile(user);
+    setIsAuthenticated(true);
+  };
+
+  const logoutUser = () => {
+    setUserProfile(null);
+    setIsAuthenticated(false);
+    clearCart();
+  };
 
   const addToCart = (product) => {
     setCart((prevCart) => {
@@ -118,7 +122,10 @@ export const AppProvider = ({ children }) => {
         walletBalance,
         weeklyPayouts,
         userProfile,
-        setUserProfile
+        setUserProfile,
+        isAuthenticated,
+        loginUser,
+        logoutUser
       }}
     >
       {children}

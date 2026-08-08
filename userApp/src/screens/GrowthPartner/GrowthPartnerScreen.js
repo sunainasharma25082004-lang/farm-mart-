@@ -92,7 +92,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     alignItems: 'center'
   },
-  heroTitle: { fontSize: 17, fontWeight: '800', color: '#ffffff', marginTop: 8 },
+  heroTitle: { fontSize: 17, fontWeight: '500', color: '#ffffff', marginTop: 8 },
   heroSub: { fontSize: 11, color: '#94a3b8', marginTop: 2, textAlign: 'center' },
   rankPill: {
     backgroundColor: colors.accent + '30',
@@ -101,7 +101,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginTop: 10
   },
-  rankText: { color: colors.accent, fontSize: 11, fontWeight: '800' },
+  rankText: { color: colors.accent, fontSize: 11, fontWeight: '500' },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 16 },
   statCard: {
     width: '48%',
@@ -112,9 +112,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border
   },
-  statNum: { fontSize: 18, fontWeight: '800', color: colors.primaryDark },
+  statNum: { fontSize: 18, fontWeight: '500', color: colors.primaryDark },
   statTitle: { fontSize: 11, color: colors.textSecondary, marginTop: 4 },
-  sectionTitle: { fontSize: 16, fontWeight: '800', color: colors.textPrimary },
+  sectionTitle: { fontSize: 16, fontWeight: '500', color: colors.textPrimary },
   sectionSub: { fontSize: 11, color: colors.textSecondary, marginBottom: 12 },
   rewardCard: {
     backgroundColor: colors.card,
@@ -126,11 +126,11 @@ const styles = StyleSheet.create({
   },
   rewardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   rewardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  rewardTitle: { fontSize: 15, fontWeight: '800', color: colors.textPrimary },
-  rewardTarget: { fontSize: 11, fontWeight: '700', color: colors.accent },
-  rewardPrize: { fontSize: 13, fontWeight: '700', color: colors.primaryDark, marginTop: 6 },
+  rewardTitle: { fontSize: 15, fontWeight: '500', color: colors.textPrimary },
+  rewardTarget: { fontSize: 11, fontWeight: '500', color: colors.accent },
+  rewardPrize: { fontSize: 13, fontWeight: '500', color: colors.primaryDark, marginTop: 6 },
   rewardDesc: { fontSize: 11, color: colors.textSecondary, marginTop: 2, marginBottom: 10 },
   progressBg: { height: 8, backgroundColor: colors.border, borderRadius: 4, overflow: 'hidden' },
   progressFill: { height: '100%', backgroundColor: colors.accent, borderRadius: 4 },
-  percentText: { fontSize: 10, fontWeight: '700', color: colors.textMuted, marginTop: 4, textAlign: 'right' }
+  percentText: { fontSize: 10, fontWeight: '500', color: colors.textMuted, marginTop: 4, textAlign: 'right' }
 });

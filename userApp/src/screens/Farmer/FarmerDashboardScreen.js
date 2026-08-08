@@ -148,7 +148,7 @@ const styles = StyleSheet.create({
     gap: 12,
     marginBottom: 14
   },
-  bannerTitle: { fontSize: 16, fontWeight: '800', color: '#ffffff' },
+  bannerTitle: { fontSize: 16, fontWeight: '500', color: '#ffffff' },
   bannerDesc: { fontSize: 11, color: '#dcfce7', marginTop: 2 },
   statsRow: { flexDirection: 'row', gap: 10, marginBottom: 14 },
   statBox: {
@@ -160,7 +160,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border
   },
-  statVal: { fontSize: 15, fontWeight: '800', color: colors.primaryDark },
+  statVal: { fontSize: 15, fontWeight: '500', color: colors.primaryDark },
   statLabel: { fontSize: 10, color: colors.textSecondary, marginTop: 2 },
   addBtn: {
     flexDirection: 'row',
@@ -172,8 +172,8 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 16
   },
-  addBtnText: { color: '#ffffff', fontSize: 14, fontWeight: '800' },
-  sectionTitle: { fontSize: 15, fontWeight: '800', color: colors.textPrimary, marginBottom: 10 },
+  addBtnText: { color: '#ffffff', fontSize: 14, fontWeight: '500' },
+  sectionTitle: { fontSize: 15, fontWeight: '500', color: colors.textPrimary, marginBottom: 10 },
   listingCard: {
     backgroundColor: colors.card,
     borderRadius: 14,
@@ -183,16 +183,16 @@ const styles = StyleSheet.create({
     borderColor: colors.border
   },
   listingHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  cropTitle: { fontSize: 15, fontWeight: '700', color: colors.textPrimary },
+  cropTitle: { fontSize: 15, fontWeight: '500', color: colors.textPrimary },
   statusPill: { backgroundColor: colors.primaryLight, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
-  statusText: { fontSize: 10, fontWeight: '800', color: colors.primaryDark },
+  statusText: { fontSize: 10, fontWeight: '500', color: colors.primaryDark },
   detailsRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 },
-  detailText: { fontSize: 12, color: colors.textSecondary, fontWeight: '600' },
+  detailText: { fontSize: 12, color: colors.textSecondary, fontWeight: '500' },
   hubText: { fontSize: 11, color: colors.textMuted, marginTop: 6 },
   formCard: { backgroundColor: colors.card, padding: 16, borderRadius: 16, borderWidth: 1, borderColor: colors.border },
-  formTitle: { fontSize: 16, fontWeight: '800', color: colors.textPrimary, marginBottom: 14 },
-  label: { fontSize: 12, fontWeight: '700', color: colors.textPrimary, marginTop: 10, marginBottom: 4 },
+  formTitle: { fontSize: 16, fontWeight: '500', color: colors.textPrimary, marginBottom: 14 },
+  label: { fontSize: 12, fontWeight: '500', color: colors.textPrimary, marginTop: 10, marginBottom: 4 },
   input: { backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, fontSize: 13 },
   submitBtn: { backgroundColor: colors.primary, borderRadius: 12, paddingVertical: 12, alignItems: 'center', marginTop: 18 },
-  submitBtnText: { color: '#ffffff', fontSize: 14, fontWeight: '800' }
+  submitBtnText: { color: '#ffffff', fontSize: 14, fontWeight: '500' }
 });

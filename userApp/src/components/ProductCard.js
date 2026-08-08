@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
   discountText: {
     color: '#ffffff',
     fontSize: 9,
-    fontWeight: '900'
+    fontWeight: '500'
   },
   ratingPill: {
     position: 'absolute',
@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
   },
   ratingText: {
     fontSize: 10,
-    fontWeight: '800',
+    fontWeight: '500',
     color: colors.textPrimary
   },
   details: {
@@ -147,7 +147,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '500',
     color: colors.textPrimary,
     lineHeight: 17,
     minHeight: 34
@@ -168,7 +168,7 @@ const styles = StyleSheet.create({
   farmerText: {
     fontSize: 10,
     color: colors.primaryDark,
-    fontWeight: '600',
+    fontWeight: '500',
     flex: 1
   },
   footer: {
@@ -178,7 +178,7 @@ const styles = StyleSheet.create({
   },
   price: {
     fontSize: 15,
-    fontWeight: '800',
+    fontWeight: '500',
     color: colors.textPrimary
   },
   addButton: {
@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
   addButtonText: {
     color: colors.primaryDark,
     fontSize: 12,
-    fontWeight: '900'
+    fontWeight: '500'
   },
   qtyControl: {
     flexDirection: 'row',
@@ -210,7 +210,7 @@ const styles = StyleSheet.create({
   },
   qtyText: {
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '500',
     color: '#ffffff',
     minWidth: 20,
     textAlign: 'center'

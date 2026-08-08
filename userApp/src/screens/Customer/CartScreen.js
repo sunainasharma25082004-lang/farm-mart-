@@ -27,13 +27,7 @@ export const CartScreen = ({ navigation }) => {
 
   const handleCheckout = () => {
     if (cart.length === 0) return;
-    const newOrder = placeOrder(paymentMethod, deliveryAddress);
-    Alert.alert('Order Placed!', `Your order ${newOrder.id} has been received.`, [
-      {
-        text: 'Track Order',
-        onPress: () => navigation.navigate('MainTabs', { screen: 'OrderTracking' })
-      }
-    ]);
+    navigation.navigate('Checkout');
   };
 
   return (
@@ -208,7 +202,7 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: '500',
     color: colors.textPrimary
   },
   emptyDesc: {
@@ -230,12 +224,12 @@ const styles = StyleSheet.create({
   },
   shopBtnText: {
     color: '#ffffff',
-    fontWeight: '800',
+    fontWeight: '500',
     fontSize: 14
   },
   sectionTitle: {
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '500',
     color: colors.textPrimary,
     marginTop: 8,
     marginBottom: 10
@@ -262,18 +256,18 @@ const styles = StyleSheet.create({
   },
   itemTitle: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '500',
     color: colors.textPrimary
   },
   itemFarmer: {
     fontSize: 10,
     color: colors.primaryDark,
     marginTop: 2,
-    fontWeight: '600'
+    fontWeight: '500'
   },
   itemPrice: {
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '500',
     color: colors.textPrimary,
     marginTop: 4
   },
@@ -304,7 +298,7 @@ const styles = StyleSheet.create({
   },
   qtyText: {
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '500',
     minWidth: 22,
     textAlign: 'center',
     color: colors.primaryDark
@@ -329,7 +323,7 @@ const styles = StyleSheet.create({
   },
   addressHub: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '500',
     color: colors.primaryDark
   },
   addressInput: {
@@ -359,7 +353,7 @@ const styles = StyleSheet.create({
   paymentText: {
     flex: 1,
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '500',
     color: colors.textPrimary
   },
   billCard: {
@@ -380,13 +374,13 @@ const styles = StyleSheet.create({
   },
   billVal: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '500',
     color: colors.textPrimary
   },
   freeHint: {
     fontSize: 11,
     color: colors.orange,
-    fontWeight: '600',
+    fontWeight: '500',
     marginBottom: 8
   },
   totalRow: {
@@ -398,12 +392,12 @@ const styles = StyleSheet.create({
   },
   totalLabel: {
     fontSize: 15,
-    fontWeight: '800',
+    fontWeight: '500',
     color: colors.textPrimary
   },
   totalVal: {
     fontSize: 17,
-    fontWeight: '800',
+    fontWeight: '500',
     color: colors.primaryDark
   },
   bottomBar: {
@@ -428,11 +422,11 @@ const styles = StyleSheet.create({
   bottomLabel: {
     fontSize: 11,
     color: colors.textSecondary,
-    fontWeight: '600'
+    fontWeight: '500'
   },
   bottomTotal: {
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: '500',
     color: colors.textPrimary
   },
   checkoutBtn: {
@@ -447,6 +441,6 @@ const styles = StyleSheet.create({
   checkoutText: {
     color: '#ffffff',
     fontSize: 14,
-    fontWeight: '800'
+    fontWeight: '500'
   }
 });

@@ -10,6 +10,12 @@ import { HomeRestroScreen } from '../screens/Customer/HomeRestroScreen';
 import { CartScreen } from '../screens/Customer/CartScreen';
 import { OrderTrackingScreen } from '../screens/Customer/OrderTrackingScreen';
 import { ProfileWalletScreen } from '../screens/Customer/ProfileWalletScreen';
+import { ProductDetailsScreen } from '../screens/Customer/ProductDetailsScreen';
+import { CheckoutScreen } from '../screens/Customer/CheckoutScreen';
+import { RazorpayCheckoutWebView } from '../screens/Customer/RazorpayCheckoutWebView';
+import { LoginScreen } from '../screens/Auth/LoginScreen';
+import { SignupScreen } from '../screens/Auth/SignupScreen';
+import { useApp } from '../context/AppContext';
 import { colors } from '../theme/colors';
 
 const Stack = createNativeStackNavigator();
@@ -32,7 +38,7 @@ const MainTabs = () => {
         tabBarInactiveTintColor: colors.textMuted,
         tabBarLabelStyle: {
           fontSize: 10,
-          fontWeight: '700',
+          fontWeight: '500',
           marginTop: 2
         },
         tabBarStyle: {
@@ -80,10 +86,26 @@ const MainTabs = () => {
 };
 
 export const RootNavigator = () => {
+  const { isAuthenticated } = useApp();
+
   return (
     <Stack.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
-      <Stack.Screen name="MainTabs" component={MainTabs} />
-      <Stack.Screen name="Cart" component={CartScreen} />
+      {!isAuthenticated ? (
+        // Auth Stack
+        <>
+          <Stack.Screen name="Login" component={LoginScreen} />
+          <Stack.Screen name="Signup" component={SignupScreen} />
+        </>
+      ) : (
+        // App Stack
+        <>
+          <Stack.Screen name="MainTabs" component={MainTabs} />
+          <Stack.Screen name="Cart" component={CartScreen} />
+          <Stack.Screen name="ProductDetails" component={ProductDetailsScreen} />
+          <Stack.Screen name="Checkout" component={CheckoutScreen} />
+          <Stack.Screen name="RazorpayCheckout" component={RazorpayCheckoutWebView} options={{ presentation: 'modal' }} />
+        </>
+      )}
     </Stack.Navigator>
   );
 };

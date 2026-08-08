@@ -103,15 +103,18 @@ const styles = StyleSheet.create({
   },
   centerSection: {
     flex: 1,
-    minWidth: 0
+    minWidth: 0,
+    justifyContent: 'center',
+    overflow: 'hidden'
   },
   pageTitle: {
     fontSize: 16,
-    fontWeight: '800',
+    fontWeight: '500',
     color: colors.textPrimary
   },
   locationSection: {
-    flex: 1
+    justifyContent: 'center',
+    width: '100%'
   },
   deliveryRow: {
     flexDirection: 'row',
@@ -120,12 +123,12 @@ const styles = StyleSheet.create({
   },
   deliveryLabel: {
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '500',
     color: colors.secondary
   },
   addressTitle: {
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '500',
     color: colors.textPrimary,
     marginTop: 1
   },
@@ -166,6 +169,6 @@ const styles = StyleSheet.create({
   badgeText: {
     color: '#ffffff',
     fontSize: 9,
-    fontWeight: '800'
+    fontWeight: '500'
   }
 });

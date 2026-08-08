@@ -109,7 +109,7 @@ export const HomeRestroScreen = ({ navigation }) => {
                 <ProductCard
                   product={item}
                   compact
-                  onPress={() => navigation.navigate('Catalog')}
+                  onPress={() => navigation.navigate('ProductDetails', { product: item })}
                 />
               </View>
             ))}
@@ -156,7 +156,7 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     fontSize: 17,
-    fontWeight: '800',
+    fontWeight: '500',
     color: '#9d174d'
   },
   heroDesc: {
@@ -184,12 +184,12 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#9d174d'
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: '800',
+    fontWeight: '500',
     color: colors.textPrimary,
     marginBottom: 12
   },
@@ -216,7 +216,7 @@ const styles = StyleSheet.create({
   },
   chefName: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '500',
     color: colors.textPrimary,
     textAlign: 'center'
   },
@@ -234,7 +234,7 @@ const styles = StyleSheet.create({
   },
   chefRating: {
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: '500',
     color: colors.accent
   },
   productRow: {

@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 16,
-    fontWeight: '800',
+    fontWeight: '500',
     color: colors.textPrimary
   },
   emptyText: {
@@ -186,7 +186,7 @@ const styles = StyleSheet.create({
   },
   orderId: {
     fontSize: 15,
-    fontWeight: '800',
+    fontWeight: '500',
     color: colors.textPrimary
   },
   orderDate: {
@@ -201,7 +201,7 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 11,
-    fontWeight: '800'
+    fontWeight: '500'
   },
   itemsBox: {
     backgroundColor: colors.background,
@@ -218,12 +218,12 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 12,
     color: colors.textPrimary,
-    fontWeight: '600',
+    fontWeight: '500',
     marginRight: 8
   },
   itemPrice: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '500',
     color: colors.textSecondary
   },
   totalLine: {
@@ -235,12 +235,12 @@ const styles = StyleSheet.create({
   },
   totalLabel: {
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '500',
     color: colors.textPrimary
   },
   totalPrice: {
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '500',
     color: colors.primaryDark
   },
   timeline: {
@@ -271,7 +271,7 @@ const styles = StyleSheet.create({
   },
   stepTitle: {
     fontSize: 9,
-    fontWeight: '700',
+    fontWeight: '500',
     color: colors.textMuted,
     marginTop: 4,
     textAlign: 'center'
@@ -301,6 +301,6 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 11,
     color: colors.textSecondary,
-    fontWeight: '600'
+    fontWeight: '500'
   }
 });

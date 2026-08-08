@@ -80,7 +80,7 @@ export const RoleSelectorModal = () => {
                     <Text
                       style={[
                         styles.roleName,
-                        isSelected && { color: role.color, fontWeight: '800' }
+                        isSelected && { color: role.color, fontWeight: '500' }
                       ]}
                     >
                       {role.name}
@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 17,
-    fontWeight: '800',
+    fontWeight: '500',
     color: colors.textPrimary
   },
   modalSubtitle: {
@@ -183,7 +183,7 @@ const styles = StyleSheet.create({
   },
   roleName: {
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: '500',
     color: colors.textPrimary
   },
   roleDesc: {

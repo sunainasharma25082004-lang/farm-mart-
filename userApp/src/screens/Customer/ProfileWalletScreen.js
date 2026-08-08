@@ -163,11 +163,11 @@ const styles = StyleSheet.create({
   avatarText: {
     color: '#ffffff',
     fontSize: 22,
-    fontWeight: '800'
+    fontWeight: '500'
   },
   userName: {
     fontSize: 16,
-    fontWeight: '800',
+    fontWeight: '500',
     color: colors.textPrimary
   },
   userPhone: {
@@ -184,7 +184,7 @@ const styles = StyleSheet.create({
   userHub: {
     fontSize: 11,
     color: colors.primaryDark,
-    fontWeight: '600',
+    fontWeight: '500',
     flex: 1
   },
   customerBadge: {
@@ -195,7 +195,7 @@ const styles = StyleSheet.create({
   },
   customerBadgeText: {
     fontSize: 10,
-    fontWeight: '800',
+    fontWeight: '500',
     color: colors.primaryDark
   },
   walletBox: {
@@ -212,11 +212,11 @@ const styles = StyleSheet.create({
   walletLabel: {
     fontSize: 12,
     color: '#94a3b8',
-    fontWeight: '600'
+    fontWeight: '500'
   },
   walletVal: {
     fontSize: 28,
-    fontWeight: '800',
+    fontWeight: '500',
     color: '#ffffff',
     marginTop: 4
   },
@@ -262,7 +262,7 @@ const styles = StyleSheet.create({
   },
   actionLabel: {
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: '500',
     color: colors.textPrimary
   },
   card: {
@@ -281,7 +281,7 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: 15,
-    fontWeight: '800',
+    fontWeight: '500',
     color: colors.textPrimary
   },
   cardDesc: {
@@ -302,7 +302,7 @@ const styles = StyleSheet.create({
   },
   codeText: {
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '500',
     color: colors.accent,
     letterSpacing: 0.5
   },
@@ -318,7 +318,7 @@ const styles = StyleSheet.create({
   shareText: {
     color: '#ffffff',
     fontSize: 12,
-    fontWeight: '800'
+    fontWeight: '500'
   },
   payoutRow: {
     flexDirection: 'row',
@@ -331,7 +331,7 @@ const styles = StyleSheet.create({
   },
   payoutDate: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '500',
     color: colors.textPrimary
   },
   payoutType: {
@@ -341,7 +341,7 @@ const styles = StyleSheet.create({
   },
   payoutAmount: {
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '500',
     color: colors.success
   },
   paidBadge: {
@@ -353,7 +353,7 @@ const styles = StyleSheet.create({
   },
   payoutStatus: {
     fontSize: 10,
-    fontWeight: '800',
+    fontWeight: '500',
     color: colors.primaryDark
   }
 });

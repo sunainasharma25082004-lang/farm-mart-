@@ -66,7 +66,11 @@ export const CatalogScreen = ({ navigation }) => {
         showsVerticalScrollIndicator={false}
         renderItem={({ item }) => (
           <View style={styles.cardWrap}>
-            <ProductCard product={item} compact />
+            <ProductCard 
+              product={item} 
+              compact 
+              onPress={() => navigation.navigate('ProductDetails', { product: item })}
+            />
           </View>
         )}
         ListEmptyComponent={
@@ -103,7 +107,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '500',
     color: colors.textPrimary,
     padding: 0
   },
@@ -114,7 +118,7 @@ const styles = StyleSheet.create({
   },
   countText: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '500',
     color: colors.textSecondary
   },
   listContainer: {
@@ -135,7 +139,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: '500',
     color: colors.textPrimary,
     marginTop: 10
   },
