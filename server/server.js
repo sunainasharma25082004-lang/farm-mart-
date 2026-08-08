@@ -17,6 +17,7 @@ app.use(express.json());
 const applications = [];
 const contactInquiries = [];
 const users = []; // In-memory users store
+const jobApplications = []; // In-memory job applications store
 
 const razorpayInstance = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID || 'dummy_key',
@@ -85,6 +86,40 @@ app.post('/api/contact', (req, res) => {
     success: true,
     message: 'Inquiry received successfully!',
     inquiryId: newInquiry.id
+  });
+});
+
+// Submit Job Application API
+app.post('/api/apply-job', (req, res) => {
+  const { jobId, jobTitle, fullName, email, phone, location, experience, qualification, notes, resumeName } = req.body;
+
+  if (!fullName || !phone || !experience || !location) {
+    return res.status(400).json({ success: false, message: 'Please provide all required fields.' });
+  }
+
+  const newJobApp = {
+    id: `FMT-JOB-${Date.now()}`,
+    jobId,
+    jobTitle,
+    fullName,
+    email,
+    phone,
+    location,
+    experience,
+    qualification,
+    notes,
+    resumeName: resumeName || 'Not uploaded',
+    status: 'RECEIVED',
+    appliedAt: new Date()
+  };
+
+  jobApplications.push(newJobApp);
+  console.log(`New Job Application Received for ${jobTitle}:`, newJobApp.fullName);
+
+  res.status(201).json({
+    success: true,
+    message: 'Job application received successfully!',
+    applicationId: newJobApp.id
   });
 });
 

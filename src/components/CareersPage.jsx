@@ -44,8 +44,26 @@ export default function CareersPage({ onOpenContact }) {
     notes: ''
   });
 
-  // 6 Hiring Category Openings
+  // 7 Hiring Category Openings
   const jobRoles = [
+    {
+      id: 'job-7',
+      title: 'Farmart Growth Development Promoter',
+      category: 'Leadership Opportunities',
+      location: 'Pan India / Remote',
+      type: 'Full-Time (Management)',
+      exp: '2+ Years',
+      salary: 'Fixed Salary + Performance Incentives',
+      coverImg: '/farmart_store_hero.jpg',
+      desc: 'Owner-led hiring program for management teams to oversee multiple sectors (Delivery, Operations, Hubs) across the platform.',
+      skills: ['Team Management', 'Cross-functional Leadership', 'Delivery Operations', 'Growth Strategy'],
+      responsibilities: [
+        'Manage and scale multiple delivery and operations teams across designated regions.',
+        'Ensure seamless execution of all platform services (B2B, B2C, Village Hubs).',
+        'Drive localized growth and maintain high performance metrics.',
+        'Report directly to leadership with data-driven performance updates.'
+      ]
+    },
     {
       id: 'job-3',
       title: 'Cluster Operations Manager — Village Hubs',
@@ -177,9 +195,29 @@ export default function CareersPage({ onOpenContact }) {
     return matchesTab && matchesSearch;
   });
 
-  const handleJobSubmit = (e) => {
+  const handleJobSubmit = async (e) => {
     e.preventDefault();
-    setSubmitted(true);
+    try {
+      const response = await fetch('http://localhost:5000/api/apply-job', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jobId: selectedJob.id,
+          jobTitle: selectedJob.title,
+          ...jobFormData,
+          resumeName
+        })
+      });
+      const data = await response.json();
+      if (data.success) {
+        setSubmitted(true);
+      } else {
+        alert(data.message || 'Something went wrong while submitting.');
+      }
+    } catch (error) {
+      console.error(error);
+      alert('Could not connect to server. Ensure backend is running.');
+    }
   };
 
   return (
