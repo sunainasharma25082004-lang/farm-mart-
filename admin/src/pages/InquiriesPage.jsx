@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../AuthContext';
-import { MessageSquare, Phone, Mail, Clock, RefreshCw, Filter, ExternalLink } from 'lucide-react';
+import { MessageSquare, Phone, Mail, Clock, RefreshCw, X, User, Calendar, Tag, ExternalLink } from 'lucide-react';
 import { API_BASE_URL } from '../config';
 
 export default function InquiriesPage() {
@@ -9,6 +9,7 @@ export default function InquiriesPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
+  const [selectedInquiry, setSelectedInquiry] = useState(null);
 
   const fetchData = () => {
     setLoading(true);
@@ -57,7 +58,7 @@ export default function InquiriesPage() {
       <header style={styles.header} className="responsive-flex-header">
         <div>
           <h1 style={styles.title}>Live Website Inquiries & Leads</h1>
-          <p style={styles.subtitle}>Manage real-time customer inquiries, partner requests, and regional callbacks.</p>
+          <p style={styles.subtitle}>Click any inquiry card to view full details, location, and message logs.</p>
         </div>
         <button style={styles.refreshBtn} onClick={fetchData}>
           <RefreshCw size={16} />
@@ -106,7 +107,7 @@ export default function InquiriesPage() {
       ) : (
         <div style={styles.grid}>
           {filtered.map(inq => (
-            <div key={inq.id} style={styles.card}>
+            <div key={inq.id} style={styles.card} onClick={() => setSelectedInquiry(inq)}>
               <div style={styles.cardHeader}>
                 <div style={styles.typeBadge}>{inq.inquiryType || 'General Inquiry'}</div>
                 <div style={styles.refId}>{inq.id}</div>
@@ -115,21 +116,25 @@ export default function InquiriesPage() {
               <h3 style={styles.userName}>{inq.name}</h3>
 
               <div style={styles.contactDetails}>
-                <a href={`tel:${inq.phone}`} style={styles.detailRowLink}>
+                <div style={styles.detailRowLink}>
                   <Phone size={15} color="#16a34a" />
                   <span style={styles.detailTextPhone}>{inq.phone}</span>
-                </a>
+                </div>
                 {inq.email && inq.email !== 'N/A' && (
-                  <a href={`mailto:${inq.email}`} style={styles.detailRowLink}>
+                  <div style={styles.detailRowLink}>
                     <Mail size={15} color="#0284c7" />
                     <span style={styles.detailTextEmail}>{inq.email}</span>
-                  </a>
+                  </div>
                 )}
               </div>
 
               <div style={styles.messageBox}>
                 <MessageSquare size={16} color="#64748b" style={{ marginTop: '2px', flexShrink: 0 }} />
-                <p style={styles.messageText}>{inq.message}</p>
+                <p style={styles.messageTextPreview}>
+                  {inq.message && inq.message.length > 100 
+                    ? `${inq.message.substring(0, 100)}...` 
+                    : inq.message}
+                </p>
               </div>
 
               <div style={styles.cardFooter}>
@@ -139,13 +144,88 @@ export default function InquiriesPage() {
                     {inq.createdAt ? new Date(inq.createdAt).toLocaleString() : 'Recent'}
                   </span>
                 </div>
-                <a href={`tel:${inq.phone}`} style={styles.callBtn}>
-                  <Phone size={14} />
-                  <span>Call Back</span>
-                </a>
+                <button style={styles.viewBtn} onClick={(e) => { e.stopPropagation(); setSelectedInquiry(inq); }}>
+                  <span>View Full Details</span>
+                  <ExternalLink size={13} />
+                </button>
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Full Detail Modal Popup */}
+      {selectedInquiry && (
+        <div style={styles.modalBackdrop} onClick={() => setSelectedInquiry(null)}>
+          <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <div style={styles.modalHeader}>
+              <div>
+                <div style={styles.modalBadgeRow}>
+                  <span style={styles.typeBadge}>{selectedInquiry.inquiryType || 'General Inquiry'}</span>
+                  <span style={styles.refIdModal}>{selectedInquiry.id}</span>
+                </div>
+                <h2 style={styles.modalTitle}>{selectedInquiry.name}</h2>
+              </div>
+              <button style={styles.closeBtn} onClick={() => setSelectedInquiry(null)}>
+                <X size={20} color="#64748b" />
+              </button>
+            </div>
+
+            <div style={styles.modalBody}>
+              <div style={styles.modalGridRow}>
+                <div style={styles.modalField}>
+                  <label style={styles.modalLabel}><User size={14} /> Full Name</label>
+                  <div style={styles.modalValue}>{selectedInquiry.name}</div>
+                </div>
+
+                <div style={styles.modalField}>
+                  <label style={styles.modalLabel}><Phone size={14} /> Phone Number</label>
+                  <a href={`tel:${selectedInquiry.phone}`} style={styles.modalValueLinkPhone}>
+                    {selectedInquiry.phone}
+                  </a>
+                </div>
+              </div>
+
+              <div style={styles.modalGridRow}>
+                <div style={styles.modalField}>
+                  <label style={styles.modalLabel}><Mail size={14} /> Email Address</label>
+                  <a href={`mailto:${selectedInquiry.email}`} style={styles.modalValueLinkEmail}>
+                    {selectedInquiry.email || 'N/A'}
+                  </a>
+                </div>
+
+                <div style={styles.modalField}>
+                  <label style={styles.modalLabel}><Calendar size={14} /> Received Timestamp</label>
+                  <div style={styles.modalValue}>
+                    {selectedInquiry.createdAt ? new Date(selectedInquiry.createdAt).toLocaleString() : 'N/A'}
+                  </div>
+                </div>
+              </div>
+
+              <div style={styles.modalFieldFull}>
+                <label style={styles.modalLabel}><MessageSquare size={14} /> Full Message & Inquiry Details</label>
+                <div style={styles.modalMessageText}>
+                  {selectedInquiry.message}
+                </div>
+              </div>
+            </div>
+
+            <div style={styles.modalFooter}>
+              <a href={`tel:${selectedInquiry.phone}`} style={styles.modalCallBtn}>
+                <Phone size={16} />
+                <span>Call Candidate Now</span>
+              </a>
+              {selectedInquiry.email && selectedInquiry.email.includes('@') && (
+                <a href={`mailto:${selectedInquiry.email}`} style={styles.modalEmailBtn}>
+                  <Mail size={16} />
+                  <span>Send Email</span>
+                </a>
+              )}
+              <button style={styles.modalCloseFooterBtn} onClick={() => setSelectedInquiry(null)}>
+                Close
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -166,7 +246,7 @@ const styles = {
   loading: { padding: '40px', fontSize: '16px', color: '#64748b', textAlign: 'center', fontWeight: '600' },
   emptyCard: { backgroundColor: '#ffffff', padding: '60px', borderRadius: '16px', textAlign: 'center', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' },
   grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '20px' },
-  card: { backgroundColor: '#ffffff', borderRadius: '18px', padding: '24px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', gap: '14px' },
+  card: { backgroundColor: '#ffffff', borderRadius: '18px', padding: '24px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', gap: '14px', cursor: 'pointer', transition: 'all 0.2s ease' },
   cardHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
   typeBadge: { backgroundColor: '#dcfce7', color: '#15803d', fontSize: '12px', fontWeight: '800', padding: '4px 12px', borderRadius: '20px' },
   refId: { fontSize: '12px', fontWeight: '700', color: '#94a3b8', fontFamily: 'monospace' },
@@ -176,9 +256,31 @@ const styles = {
   detailTextPhone: { fontSize: '15px', fontWeight: '700', color: '#16a34a' },
   detailTextEmail: { fontSize: '14px', fontWeight: '600', color: '#0284c7' },
   messageBox: { display: 'flex', alignItems: 'flex-start', gap: '10px', backgroundColor: '#f8fafc', padding: '14px', borderRadius: '12px', border: '1px solid #f1f5f9' },
-  messageText: { fontSize: '14px', color: '#334155', margin: 0, lineHeight: '20px', whiteSpace: 'pre-wrap', fontWeight: '500' },
+  messageTextPreview: { fontSize: '14px', color: '#334155', margin: 0, lineHeight: '20px', fontWeight: '500' },
   cardFooter: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid #f1f5f9', paddingTop: '14px', marginTop: 'auto' },
   timeWrapper: { display: 'flex', alignItems: 'center', gap: '6px' },
   timeText: { fontSize: '12px', color: '#94a3b8', fontWeight: '600' },
-  callBtn: { display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#16a34a', color: '#ffffff', padding: '8px 14px', borderRadius: '20px', textDecoration: 'none', fontSize: '12px', fontWeight: '700' }
+  viewBtn: { display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#f1f5f9', color: '#0f172a', padding: '8px 14px', borderRadius: '20px', border: 'none', fontSize: '12px', fontWeight: '700', cursor: 'pointer' },
+  
+  /* Modal Overlay Styles */
+  modalBackdrop: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999, padding: '20px' },
+  modalContent: { backgroundColor: '#ffffff', borderRadius: '20px', width: '100%', maxWidth: '640px', maxHeight: '90vh', overflowY: 'auto', border: '1px solid #e2e8f0', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)', display: 'flex', flexDirection: 'column' },
+  modalHeader: { padding: '24px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' },
+  modalBadgeRow: { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' },
+  refIdModal: { fontSize: '12px', fontWeight: '700', color: '#94a3b8', fontFamily: 'monospace' },
+  modalTitle: { fontSize: '24px', fontWeight: '800', color: '#0f172a', margin: 0 },
+  closeBtn: { backgroundColor: '#f1f5f9', border: 'none', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' },
+  modalBody: { padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' },
+  modalGridRow: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' },
+  modalField: { display: 'flex', flexDirection: 'column', gap: '6px' },
+  modalFieldFull: { display: 'flex', flexDirection: 'column', gap: '8px' },
+  modalLabel: { fontSize: '12px', fontWeight: '700', color: '#64748b', display: 'flex', alignItems: 'center', gap: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' },
+  modalValue: { fontSize: '16px', fontWeight: '700', color: '#0f172a' },
+  modalValueLinkPhone: { fontSize: '16px', fontWeight: '700', color: '#16a34a', textDecoration: 'none' },
+  modalValueLinkEmail: { fontSize: '16px', fontWeight: '700', color: '#0284c7', textDecoration: 'none' },
+  modalMessageText: { backgroundColor: '#f8fafc', padding: '18px', borderRadius: '14px', border: '1px solid #e2e8f0', fontSize: '15px', color: '#0f172a', lineHeight: '24px', whiteSpace: 'pre-wrap', fontWeight: '500' },
+  modalFooter: { padding: '20px 24px', borderTop: '1px solid #f1f5f9', display: 'flex', gap: '12px', justifyContent: 'flex-end', flexWrap: 'wrap' },
+  modalCallBtn: { display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#16a34a', color: '#ffffff', padding: '12px 20px', borderRadius: '10px', textDecoration: 'none', fontSize: '14px', fontWeight: '700' },
+  modalEmailBtn: { display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#0284c7', color: '#ffffff', padding: '12px 20px', borderRadius: '10px', textDecoration: 'none', fontSize: '14px', fontWeight: '700' },
+  modalCloseFooterBtn: { backgroundColor: '#f1f5f9', color: '#475569', padding: '12px 20px', borderRadius: '10px', border: 'none', fontSize: '14px', fontWeight: '700', cursor: 'pointer' }
 };
