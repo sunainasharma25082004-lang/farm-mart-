@@ -5,6 +5,11 @@ import './CareersSection.css';
 export default function CareersSection() {
   const [selectedRole, setSelectedRole] = useState(null);
   const [appliedRole, setAppliedRole] = useState(null);
+  const [formData, setFormData] = useState({
+    fullName: '',
+    email: '',
+    linkedin: ''
+  });
 
   const jobOpenings = [
     {
@@ -129,22 +134,67 @@ export default function CareersSection() {
 
                     <form
                       className="quick-job-form"
-                      onSubmit={(e) => {
+                      onSubmit={async (e) => {
                         e.preventDefault();
-                        setAppliedRole(selectedRole.id);
+                        try {
+                          const response = await fetch('http://localhost:5000/api/apply-job', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              jobId: selectedRole.id,
+                              jobTitle: selectedRole.title,
+                              fullName: formData.fullName,
+                              email: formData.email,
+                              phone: 'N/A',
+                              location: selectedRole.location,
+                              experience: selectedRole.experience,
+                              qualification: 'N/A',
+                              notes: `LinkedIn / Portfolio: ${formData.linkedin}`,
+                              resumeName: 'LinkedIn Profile Linked'
+                            })
+                          });
+                          const data = await response.json();
+                          if (data.success) {
+                            setAppliedRole(selectedRole.id);
+                            setFormData({ fullName: '', email: '', linkedin: '' });
+                          } else {
+                            alert(data.message || 'Something went wrong.');
+                          }
+                        } catch (error) {
+                          console.error(error);
+                          alert('Could not connect to server.');
+                        }
                       }}
                     >
                       <div className="form-group">
                         <label>Your Full Name *</label>
-                        <input type="text" required placeholder="Enter full name" />
+                        <input
+                          type="text"
+                          required
+                          placeholder="Enter full name"
+                          value={formData.fullName}
+                          onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                        />
                       </div>
                       <div className="form-group">
                         <label>Email Address *</label>
-                        <input type="email" required placeholder="Enter email" />
+                        <input
+                          type="email"
+                          required
+                          placeholder="Enter email"
+                          value={formData.email}
+                          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        />
                       </div>
                       <div className="form-group">
                         <label>LinkedIn / Portfolio Link *</label>
-                        <input type="url" required placeholder="https://linkedin.com/in/..." />
+                        <input
+                          type="url"
+                          required
+                          placeholder="https://linkedin.com/in/..."
+                          value={formData.linkedin}
+                          onChange={(e) => setFormData({ ...formData, linkedin: e.target.value })}
+                        />
                       </div>
                       <button type="submit" className="btn btn-primary full-btn">
                         Submit Application

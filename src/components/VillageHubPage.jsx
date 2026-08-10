@@ -76,9 +76,33 @@ export default function VillageHubPage({ onOpenContact, onBackToEcosystem }) {
     { title: 'Continuous Field Training', desc: 'Dedicated field officer support and ongoing business development workshops.' }
   ];
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setSubmitted(true);
+    try {
+      const response = await fetch('http://localhost:5000/api/apply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          categoryId: 'village-hub',
+          fullName: formData.fullName,
+          phone: formData.phone,
+          email: 'N/A',
+          state: formData.state,
+          district: formData.district,
+          experience: formData.profession,
+          notes: `Village: ${formData.village}, Space Available: ${formData.spaceAvailable}`
+        })
+      });
+      const data = await response.json();
+      if (data.success) {
+        setSubmitted(true);
+      } else {
+        alert(data.message || 'Something went wrong.');
+      }
+    } catch (error) {
+      console.error(error);
+      alert('Could not connect to server.');
+    }
   };
 
   return (

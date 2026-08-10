@@ -34,9 +34,33 @@ export default function CategoryDetailModal({ category, onClose }) {
 
   if (!category) return null;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setSubmitted(true);
+    try {
+      const response = await fetch('http://localhost:5000/api/apply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          categoryId: category.id,
+          fullName: formData.fullName,
+          phone: formData.phone,
+          email: formData.email,
+          state: formData.state,
+          district: formData.district,
+          experience: formData.experience,
+          notes: formData.notes
+        })
+      });
+      const data = await response.json();
+      if (data.success) {
+        setSubmitted(true);
+      } else {
+        alert(data.message || 'Something went wrong.');
+      }
+    } catch (error) {
+      console.error(error);
+      alert('Could not connect to server.');
+    }
   };
 
   return (

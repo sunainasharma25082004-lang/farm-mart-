@@ -12,7 +12,7 @@ export const ActiveNavigationScreen = ({ navigation }) => {
     return (
       <View style={[styles.container, styles.center]}>
         <View style={styles.iconCircleWrapperLarge}>
-          <Ionicons name="checkmark-circle-outline" size={64} color={colors.secondary} />
+          <Ionicons name="checkmark-circle-outline" size={64} color="#16a34a" />
         </View>
         <Text style={styles.emptyTitle}>No Active Delivery Assigned</Text>
         <Text style={styles.emptySub}>You are currently available for new orders.</Text>
@@ -46,7 +46,7 @@ export const ActiveNavigationScreen = ({ navigation }) => {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn} activeOpacity={0.7}>
-          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+          <Ionicons name="arrow-back" size={24} color="#0f172a" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Live Trip: #{currentTask.id}</Text>
         <View style={styles.statusBadge}>
@@ -67,7 +67,7 @@ export const ActiveNavigationScreen = ({ navigation }) => {
             <Text style={styles.mapPinText}>Customer: {currentTask.customerName}</Text>
           </View>
           <View style={styles.navBarFooter}>
-            <Ionicons name="compass-outline" size={16} color={colors.primary} />
+            <Ionicons name="compass-outline" size={18} color="#0284c7" />
             <Text style={styles.navText}>Estimated Distance: {currentTask.distanceKm} km • 12 Mins</Text>
           </View>
         </View>
@@ -75,7 +75,7 @@ export const ActiveNavigationScreen = ({ navigation }) => {
         {/* Pickup Details */}
         <View style={styles.card}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-            <Ionicons name="storefront" size={18} color={colors.accent} />
+            <Ionicons name="storefront" size={20} color="#f97316" />
             <Text style={styles.cardHeaderTitle}>PICKUP POINT</Text>
           </View>
           <Text style={styles.cardMainText}>{currentTask.pickupLocation}</Text>
@@ -89,7 +89,7 @@ export const ActiveNavigationScreen = ({ navigation }) => {
           )}
 
           {currentTask.status === 'ARRIVED_AT_VENDOR' && (
-            <TouchableOpacity style={[styles.actionBtnPill, { backgroundColor: '#10b981' }]} onPress={handlePickedUp} activeOpacity={0.85}>
+            <TouchableOpacity style={[styles.actionBtnPill, { backgroundColor: '#16a34a' }]} onPress={handlePickedUp} activeOpacity={0.85}>
               <Ionicons name="bag-check-outline" size={20} color="#ffffff" />
               <Text style={styles.actionBtnText}>Confirm Items Picked Up</Text>
             </TouchableOpacity>
@@ -99,7 +99,7 @@ export const ActiveNavigationScreen = ({ navigation }) => {
         {/* Customer Delivery Details */}
         <View style={styles.card}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-            <Ionicons name="person" size={18} color={colors.primary} />
+            <Ionicons name="person" size={20} color="#0284c7" />
             <Text style={styles.cardHeaderTitle}>DELIVERY POINT</Text>
           </View>
           <Text style={styles.cardMainText}>{currentTask.customerName} ({currentTask.customerPhone})</Text>
@@ -118,7 +118,7 @@ export const ActiveNavigationScreen = ({ navigation }) => {
               <TextInput
                 style={styles.otpInput}
                 placeholder={`Demo OTP: ${currentTask.otpRequired}`}
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor="#94a3b8"
                 keyboardType="numeric"
                 maxLength={4}
                 value={otpInput}
@@ -173,13 +173,13 @@ export const EarningsScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8fafc' },
+  container: { flex: 1, backgroundColor: '#f1f5f9' },
   center: { justifyContent: 'center', alignItems: 'center', padding: 24 },
-  iconCircleWrapperLarge: { width: 100, height: 100, borderRadius: 50, backgroundColor: '#f1f5f9', alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
-  emptyTitle: { fontSize: 18, fontWeight: '600', color: colors.textPrimary, marginTop: 12 },
-  emptySub: { fontSize: 14, color: colors.textSecondary, marginTop: 6, marginBottom: 24 },
-  backBtnPill: { backgroundColor: colors.primary, paddingHorizontal: 24, paddingVertical: 14, borderRadius: 30 },
-  backBtnText: { color: '#ffffff', fontWeight: '600', fontSize: 15 },
+  iconCircleWrapperLarge: { width: 100, height: 100, borderRadius: 50, backgroundColor: '#dcfce7', alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
+  emptyTitle: { fontSize: 20, fontWeight: '700', color: '#0f172a', marginTop: 12 },
+  emptySub: { fontSize: 14, color: '#475569', marginTop: 6, marginBottom: 24, textAlign: 'center' },
+  backBtnPill: { backgroundColor: '#0284c7', paddingHorizontal: 24, paddingVertical: 14, borderRadius: 30 },
+  backBtnText: { color: '#ffffff', fontWeight: '700', fontSize: 15 },
   header: { 
     flexDirection: 'row', 
     justifyContent: 'space-between', 
@@ -187,69 +187,73 @@ const styles = StyleSheet.create({
     padding: 16, 
     backgroundColor: '#ffffff', 
     borderBottomWidth: 1, 
-    borderBottomColor: '#f1f5f9',
+    borderBottomColor: '#e2e8f0',
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4 },
       android: { elevation: 2 }
     })
   },
   iconBtn: { padding: 4 },
-  headerTitle: { fontSize: 16, fontWeight: '600', color: colors.textPrimary },
-  headerTitleLarge: { fontSize: 20, fontWeight: '700', color: colors.textPrimary },
+  headerTitle: { fontSize: 16, fontWeight: '700', color: '#0f172a' },
+  headerTitleLarge: { fontSize: 20, fontWeight: '800', color: '#0f172a' },
   statusBadge: { backgroundColor: '#e0e7ff', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
-  statusText: { fontSize: 11, fontWeight: '600', color: '#4338ca' },
+  statusText: { fontSize: 12, fontWeight: '700', color: '#4338ca' },
   scrollContent: { padding: 20 },
   mapSimulatedBox: { 
     backgroundColor: '#ffffff', 
-    borderRadius: 20, 
+    borderRadius: 18, 
     padding: 20, 
     marginBottom: 20, 
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 8 },
       android: { elevation: 3 }
     })
   },
   mapPinRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginVertical: 4 },
-  pinDotGreen: { width: 14, height: 14, borderRadius: 7, backgroundColor: '#10b981' },
+  pinDotGreen: { width: 14, height: 14, borderRadius: 7, backgroundColor: '#16a34a' },
   pinDotRed: { width: 14, height: 14, borderRadius: 7, backgroundColor: '#ef4444' },
-  mapPinText: { fontSize: 14, fontWeight: '600', color: colors.textPrimary },
-  mapLine: { width: 2, height: 24, backgroundColor: '#e2e8f0', marginLeft: 6 },
+  mapPinText: { fontSize: 14, fontWeight: '700', color: '#0f172a' },
+  mapLine: { width: 2, height: 24, backgroundColor: '#cbd5e1', marginLeft: 6 },
   navBarFooter: { flexDirection: 'row', alignItems: 'center', gap: 8, borderTopWidth: 1, borderTopColor: '#f1f5f9', paddingTop: 14, marginTop: 14 },
-  navText: { fontSize: 12, fontWeight: '600', color: colors.textSecondary },
+  navText: { fontSize: 13, fontWeight: '600', color: '#475569' },
   card: { 
     backgroundColor: '#ffffff', 
-    borderRadius: 20, 
+    borderRadius: 18, 
     padding: 20, 
     marginBottom: 16, 
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 8 },
       android: { elevation: 3 }
     })
   },
-  cardHeaderTitle: { fontSize: 11, fontWeight: '700', color: colors.textMuted, letterSpacing: 1 },
-  cardMainText: { fontSize: 16, fontWeight: '600', color: colors.textPrimary, marginTop: 4 },
-  cardSubText: { fontSize: 13, color: colors.textSecondary, marginTop: 4, lineHeight: 18 },
-  actionBtnPill: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary, borderRadius: 30, paddingVertical: 14, marginTop: 20, gap: 8 },
-  actionBtnText: { color: '#ffffff', fontSize: 14, fontWeight: '600' },
-  itemsBox: { backgroundColor: '#f8fafc', padding: 14, borderRadius: 12, marginTop: 16 },
-  itemsBoxTitle: { fontSize: 13, fontWeight: '600', color: colors.textPrimary, marginBottom: 6 },
-  itemText: { fontSize: 13, color: colors.textSecondary, marginBottom: 4 },
+  cardHeaderTitle: { fontSize: 11, fontWeight: '800', color: '#64748b', letterSpacing: 1 },
+  cardMainText: { fontSize: 16, fontWeight: '700', color: '#0f172a', marginTop: 4 },
+  cardSubText: { fontSize: 13, color: '#475569', marginTop: 4, lineHeight: 18 },
+  actionBtnPill: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#0284c7', borderRadius: 30, paddingVertical: 14, marginTop: 20, gap: 8 },
+  actionBtnText: { color: '#ffffff', fontSize: 14, fontWeight: '700' },
+  itemsBox: { backgroundColor: '#f8fafc', padding: 14, borderRadius: 12, marginTop: 16, borderWidth: 1, borderColor: '#e2e8f0' },
+  itemsBoxTitle: { fontSize: 13, fontWeight: '700', color: '#0f172a', marginBottom: 6 },
+  itemText: { fontSize: 13, color: '#475569', marginBottom: 4, fontWeight: '500' },
   otpContainer: { marginTop: 20, borderTopWidth: 1, borderTopColor: '#f1f5f9', paddingTop: 16 },
-  otpLabel: { fontSize: 13, fontWeight: '600', color: colors.textPrimary, marginBottom: 10 },
-  otpInput: { backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 12, padding: 14, fontSize: 16, color: colors.textPrimary, marginBottom: 16, textAlign: 'center', letterSpacing: 4, fontWeight: '600' },
-  completeBtnPill: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#10b981', borderRadius: 30, paddingVertical: 14, gap: 8 },
-  completeBtnText: { color: '#ffffff', fontSize: 14, fontWeight: '600' },
-  payBoxGradient: { backgroundColor: '#0f172a', padding: 24, borderRadius: 24, marginBottom: 24, alignItems: 'center' },
-  payLabel: { fontSize: 13, color: '#94a3b8', fontWeight: '500' },
-  payAmount: { fontSize: 36, fontWeight: '700', color: '#ffffff', marginTop: 8 },
-  paySub: { fontSize: 11, color: '#cbd5e1', marginTop: 8 },
-  sectionTitle: { fontSize: 16, fontWeight: '600', color: colors.textPrimary, marginBottom: 16 },
-  earnCard: { backgroundColor: '#ffffff', padding: 16, borderRadius: 16, marginBottom: 12, ...Platform.select({ ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.03, shadowRadius: 4 }, android: { elevation: 1 } }) },
+  otpLabel: { fontSize: 14, fontWeight: '700', color: '#0f172a', marginBottom: 10 },
+  otpInput: { backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 12, padding: 14, fontSize: 18, color: '#0f172a', marginBottom: 16, textAlign: 'center', letterSpacing: 4, fontWeight: '700' },
+  completeBtnPill: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#16a34a', borderRadius: 30, paddingVertical: 14, gap: 8 },
+  completeBtnText: { color: '#ffffff', fontSize: 14, fontWeight: '700' },
+  payBoxGradient: { backgroundColor: '#0f172a', padding: 24, borderRadius: 20, marginBottom: 24, alignItems: 'center' },
+  payLabel: { fontSize: 13, color: '#94a3b8', fontWeight: '600' },
+  payAmount: { fontSize: 36, fontWeight: '800', color: '#ffffff', marginTop: 8 },
+  paySub: { fontSize: 12, color: '#cbd5e1', marginTop: 8 },
+  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#0f172a', marginBottom: 16 },
+  earnCard: { backgroundColor: '#ffffff', padding: 16, borderRadius: 16, marginBottom: 12, borderWidth: 1, borderColor: '#e2e8f0', ...Platform.select({ ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.03, shadowRadius: 4 }, android: { elevation: 1 } }) },
   earnHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  earnDate: { fontSize: 14, fontWeight: '600', color: colors.textPrimary },
-  earnStatusBadge: { backgroundColor: '#ecfdf5', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
-  earnStatus: { fontSize: 10, fontWeight: '700', color: '#10b981' },
+  earnDate: { fontSize: 14, fontWeight: '700', color: '#0f172a' },
+  earnStatusBadge: { backgroundColor: '#dcfce7', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+  earnStatus: { fontSize: 11, fontWeight: '800', color: '#15803d' },
   earnDetailsRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10, alignItems: 'center' },
-  earnDetailText: { fontSize: 13, color: colors.textSecondary },
-  earnTotalText: { fontSize: 16, fontWeight: '700', color: colors.textPrimary }
+  earnDetailText: { fontSize: 13, color: '#475569', fontWeight: '500' },
+  earnTotalText: { fontSize: 16, fontWeight: '800', color: '#0f172a' }
 });

@@ -4,22 +4,10 @@ import { AuthProvider, useAuth } from './AuthContext';
 import LoginPage from './pages/LoginPage';
 import AdminLayout from './components/AdminLayout';
 import DashboardPage from './pages/DashboardPage';
-
-// Simple placeholder pages for the departments
-const PlaceholderPage = ({ title, module }) => {
-  const { admin } = useAuth();
-  
-  if (admin.role !== 'superadmin' && !admin.access.includes(module)) {
-    return <Navigate to="/" />;
-  }
-
-  return (
-    <div style={{ padding: '40px' }}>
-      <h1 style={{ fontSize: '24px', fontWeight: 'bold' }}>{title}</h1>
-      <p style={{ color: '#64748b', marginTop: '10px' }}>This module is currently being built. You have authorized access to view it.</p>
-    </div>
-  );
-};
+import UsersPage from './pages/UsersPage';
+import PartnersPage from './pages/PartnersPage';
+import JobsPage from './pages/JobsPage';
+import RidersPage from './pages/RidersPage';
 
 const ProtectedRoute = ({ children }) => {
   const { admin, loading } = useAuth();
@@ -39,10 +27,10 @@ function AppRoutes() {
       
       <Route path="/" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
         <Route index element={<DashboardPage />} />
-        <Route path="users" element={<PlaceholderPage title="App Users Management" module="users" />} />
-        <Route path="partners" element={<PlaceholderPage title="Partners & Vendors" module="partners" />} />
-        <Route path="riders" element={<PlaceholderPage title="Delivery Fleet" module="riders" />} />
-        <Route path="jobs" element={<PlaceholderPage title="HR & Candidate Recruitment" module="jobs" />} />
+        <Route path="users" element={<UsersPage />} />
+        <Route path="partners" element={<PartnersPage />} />
+        <Route path="riders" element={<RidersPage />} />
+        <Route path="jobs" element={<JobsPage />} />
       </Route>
     </Routes>
   );

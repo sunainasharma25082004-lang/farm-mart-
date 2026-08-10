@@ -65,9 +65,33 @@ export default function FocoFranchisePage({ onOpenContact, onBackToEcosystem }) 
     'Retail Professionals & Corporate Executives aiming to own a lucrative retail franchise.'
   ];
 
-  const handleApplySubmit = (e) => {
+  const handleApplySubmit = async (e) => {
     e.preventDefault();
-    setSubmitted(true);
+    try {
+      const response = await fetch('http://localhost:5000/api/apply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          categoryId: 'foco-franchise',
+          fullName: formData.fullName,
+          phone: formData.phone,
+          email: formData.email,
+          state: 'N/A',
+          district: formData.proposedCity,
+          experience: formData.investmentCapacity,
+          notes: 'FOCO Franchise application'
+        })
+      });
+      const data = await response.json();
+      if (data.success) {
+        setSubmitted(true);
+      } else {
+        alert(data.message || 'Something went wrong.');
+      }
+    } catch (error) {
+      console.error(error);
+      alert('Could not connect to server.');
+    }
   };
 
   return (

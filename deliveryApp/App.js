@@ -4,14 +4,13 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { NavigationContainer } from '@react-navigation/native';
 import { DeliveryProvider } from './src/context/DeliveryContext';
 import { DeliveryNavigator } from './src/navigation/DeliveryNavigator';
-import { colors } from './src/theme/colors';
 
 export default function App() {
   return (
     <SafeAreaProvider>
       <DeliveryProvider>
         <SafeAreaView style={styles.container}>
-          <StatusBar barStyle="light-content" backgroundColor={colors.card} />
+          <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
           <NavigationContainer>
             <DeliveryNavigator />
           </NavigationContainer>
@@ -24,7 +23,7 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: '#f1f5f9',
     ...(Platform.OS === 'web' && { height: '100vh', width: '100vw' })
   }
 });

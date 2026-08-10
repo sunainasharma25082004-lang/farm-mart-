@@ -36,9 +36,30 @@ export default function ContactPage() {
     'Media / Press'
   ];
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setSubmitted(true);
+    try {
+      const response = await fetch('http://localhost:5000/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.name,
+          phone: formData.phone,
+          email: formData.email,
+          inquiryType: selectedSubject,
+          message: `State: ${formData.state}, District: ${formData.district}. Message: ${formData.message}`
+        })
+      });
+      const data = await response.json();
+      if (data.success) {
+        setSubmitted(true);
+      } else {
+        alert(data.message || 'Something went wrong.');
+      }
+    } catch (error) {
+      console.error(error);
+      alert('Could not connect to server.');
+    }
   };
 
   return (

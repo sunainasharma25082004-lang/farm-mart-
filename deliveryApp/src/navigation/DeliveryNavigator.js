@@ -5,7 +5,6 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { DutyScreen } from '../screens/DutyScreen';
 import { ActiveNavigationScreen, EarningsScreen } from '../screens/ActiveNavigationScreen';
-import { colors } from '../theme/colors';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -15,15 +14,24 @@ const DeliveryTabs = () => {
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.textMuted,
+        tabBarActiveTintColor: '#0284c7',
+        tabBarInactiveTintColor: '#64748b',
         tabBarStyle: {
-          backgroundColor: colors.card,
+          backgroundColor: '#ffffff',
           borderTopWidth: 1,
-          borderTopColor: colors.border,
-          height: 60,
-          paddingBottom: 8,
-          paddingTop: 6
+          borderTopColor: '#e2e8f0',
+          height: 64,
+          paddingBottom: 10,
+          paddingTop: 8,
+          elevation: 8,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.05,
+          shadowRadius: 6
+        },
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: '700'
         },
         tabBarIcon: ({ color, size }) => {
           let iconName = 'bicycle-outline';

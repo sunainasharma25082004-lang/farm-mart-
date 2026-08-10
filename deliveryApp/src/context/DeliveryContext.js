@@ -1,12 +1,14 @@
 import React, { createContext, useState, useContext } from 'react';
-import { driverProfile as initialProfile, activeTaskQueue as initialQueue, weeklyEarningsHistory } from '../data/mockDeliveryData';
+import { driverProfile as initialProfile, activeTaskQueue as initialQueue, weeklyEarningsHistory as initialHistory } from '../data/mockDeliveryData';
 
 const DeliveryContext = createContext();
 
 export const DeliveryProvider = ({ children }) => {
   const [profile, setProfile] = useState(initialProfile);
   const [tasks, setTasks] = useState(initialQueue);
-  const [currentTask, setCurrentTask] = useState(initialQueue[0]);
+  const [currentTask, setCurrentTask] = useState(initialQueue[0] || null);
+  const [completedList, setCompletedList] = useState([]);
+  const [earningsHistory, setEarningsHistory] = useState(initialHistory);
 
   const toggleDuty = () => {
     setProfile((prev) => ({ ...prev, isOnline: !prev.isOnline }));
@@ -17,21 +19,37 @@ export const DeliveryProvider = ({ children }) => {
       prevTasks.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t))
     );
     if (currentTask && currentTask.id === taskId) {
-      setCurrentTask((prev) => ({ ...prev, status: newStatus }));
+      setCurrentTask((prev) => (prev ? { ...prev, status: newStatus } : null));
     }
   };
 
   const completeDelivery = (taskId) => {
-    updateTaskStatus(taskId, 'DELIVERED');
+    const finishedTask = tasks.find((t) => t.id === taskId) || currentTask;
+    const earnedAmount = finishedTask ? finishedTask.estEarnings : 65;
+
+    // 1. Remove from active tasks queue
+    const remainingTasks = tasks.filter((t) => t.id !== taskId);
+    setTasks(remainingTasks);
+
+    // 2. Add to completed deliveries list
+    if (finishedTask) {
+      setCompletedList((prev) => [{ ...finishedTask, status: 'DELIVERED', completedAt: new Date().toLocaleTimeString() }, ...prev]);
+    }
+
+    // 3. Update driver stats
     setProfile((prev) => ({
       ...prev,
-      todayEarnings: prev.todayEarnings + (currentTask ? currentTask.estEarnings : 65),
+      todayEarnings: prev.todayEarnings + earnedAmount,
       todayTrips: prev.todayTrips + 1,
       completedDeliveries: prev.completedDeliveries + 1
     }));
-    // Pick next task
-    const remaining = tasks.filter((t) => t.id !== taskId);
-    setCurrentTask(remaining.length > 0 ? remaining[0] : null);
+
+    // 4. Update current active task
+    setCurrentTask(remainingTasks.length > 0 ? remainingTasks[0] : null);
+  };
+
+  const selectTask = (task) => {
+    setCurrentTask(task);
   };
 
   return (
@@ -41,10 +59,11 @@ export const DeliveryProvider = ({ children }) => {
         toggleDuty,
         tasks,
         currentTask,
-        setCurrentTask,
+        setCurrentTask: selectTask,
         updateTaskStatus,
         completeDelivery,
-        weeklyEarningsHistory
+        completedList,
+        weeklyEarningsHistory: earningsHistory
       }}
     >
       {children}

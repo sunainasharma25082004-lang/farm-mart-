@@ -18,7 +18,7 @@ export const DutyScreen = ({ navigation }) => {
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <View style={styles.avatar}>
-            <Ionicons name="bicycle-outline" size={24} color="#ffffff" />
+            <Ionicons name="bicycle" size={24} color="#ffffff" />
           </View>
           <View>
             <Text style={styles.driverName}>{profile.name}</Text>
@@ -28,13 +28,13 @@ export const DutyScreen = ({ navigation }) => {
 
         {/* Duty Toggle Switch */}
         <View style={styles.dutySwitch}>
-          <Text style={[styles.dutyLabel, { color: profile.isOnline ? colors.secondary : colors.textMuted }]}>
+          <Text style={[styles.dutyLabel, { color: profile.isOnline ? '#16a34a' : '#64748b' }]}>
             {profile.isOnline ? 'ONLINE' : 'OFFLINE'}
           </Text>
           <Switch
             value={profile.isOnline}
             onValueChange={toggleDuty}
-            trackColor={{ false: '#e2e8f0', true: '#10b981' }}
+            trackColor={{ false: '#cbd5e1', true: '#10b981' }}
             thumbColor="#ffffff"
           />
         </View>
@@ -62,7 +62,7 @@ export const DutyScreen = ({ navigation }) => {
         {!profile.isOnline ? (
           <View style={styles.offlineBox}>
             <View style={styles.offlineIconBox}>
-              <Ionicons name="moon-outline" size={48} color={colors.textMuted} />
+              <Ionicons name="moon-outline" size={48} color="#64748b" />
             </View>
             <Text style={styles.offlineTitle}>You are Offline</Text>
             <Text style={styles.offlineSub}>Toggle the switch at the top to go online and start receiving new delivery orders.</Text>
@@ -85,7 +85,7 @@ export const DutyScreen = ({ navigation }) => {
                 {/* Pickup Info */}
                 <View style={styles.locationRow}>
                   <View style={styles.iconCircleWrapper}>
-                    <Ionicons name="storefront" size={18} color={colors.accent} />
+                    <Ionicons name="storefront" size={18} color="#f97316" />
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.locLabel}>PICKUP FROM</Text>
@@ -94,13 +94,13 @@ export const DutyScreen = ({ navigation }) => {
                   </View>
                 </View>
 
-                {/* Divider Line connecting dots conceptually */}
+                {/* Connecting Line */}
                 <View style={styles.verticalConnectingLine} />
 
                 {/* Delivery Info */}
                 <View style={styles.locationRow}>
                   <View style={styles.iconCircleWrapper}>
-                    <Ionicons name="home" size={18} color={colors.primary} />
+                    <Ionicons name="home" size={18} color="#0284c7" />
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.locLabel}>DELIVER TO</Text>
@@ -130,7 +130,7 @@ export const DutyScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8fafc' },
+  container: { flex: 1, backgroundColor: '#f1f5f9' },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -139,80 +139,84 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     backgroundColor: '#ffffff',
     borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
+    borderBottomColor: '#e2e8f0',
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4 },
       android: { elevation: 2 }
     })
   },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
-  driverName: { fontSize: 16, fontWeight: '600', color: colors.textPrimary },
-  vehicleText: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
+  avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#0284c7', alignItems: 'center', justifyContent: 'center' },
+  driverName: { fontSize: 16, fontWeight: '700', color: '#0f172a' },
+  vehicleText: { fontSize: 12, color: '#64748b', marginTop: 2, fontWeight: '500' },
   dutySwitch: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  dutyLabel: { fontSize: 12, fontWeight: '600', letterSpacing: 0.5 },
+  dutyLabel: { fontSize: 12, fontWeight: '700', letterSpacing: 0.5 },
   scrollContent: { padding: 20, paddingBottom: 40 },
   statsBar: {
     flexDirection: 'row',
     backgroundColor: '#ffffff',
-    borderRadius: 20,
+    borderRadius: 16,
     padding: 16,
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 24,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 8 },
       android: { elevation: 3 }
     })
   },
   statItem: { flex: 1, alignItems: 'center' },
-  statVal: { fontSize: 18, fontWeight: '700', color: colors.textPrimary },
-  statLabel: { fontSize: 11, color: colors.textSecondary, marginTop: 4, fontWeight: '500' },
-  statDivider: { width: 1, height: 30, backgroundColor: '#f1f5f9' },
-  offlineBox: { alignItems: 'center', justifyContent: 'center', paddingVertical: 80 },
-  offlineIconBox: { width: 100, height: 100, borderRadius: 50, backgroundColor: '#f1f5f9', alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
-  offlineTitle: { fontSize: 18, fontWeight: '600', color: colors.textPrimary },
-  offlineSub: { fontSize: 14, color: colors.textSecondary, textAlign: 'center', marginTop: 8, paddingHorizontal: 30, lineHeight: 20 },
-  sectionTitle: { fontSize: 16, fontWeight: '600', color: colors.textPrimary, marginBottom: 16 },
+  statVal: { fontSize: 20, fontWeight: '800', color: '#0f172a' },
+  statLabel: { fontSize: 11, color: '#64748b', marginTop: 4, fontWeight: '600' },
+  statDivider: { width: 1, height: 30, backgroundColor: '#e2e8f0' },
+  offlineBox: { alignItems: 'center', justifyContent: 'center', paddingVertical: 60 },
+  offlineIconBox: { width: 90, height: 90, borderRadius: 45, backgroundColor: '#e2e8f0', alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
+  offlineTitle: { fontSize: 18, fontWeight: '700', color: '#0f172a' },
+  offlineSub: { fontSize: 14, color: '#475569', textAlign: 'center', marginTop: 8, paddingHorizontal: 30, lineHeight: 20 },
+  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#0f172a', marginBottom: 14 },
   taskCard: {
     backgroundColor: '#ffffff',
-    borderRadius: 20,
+    borderRadius: 18,
     padding: 16,
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 8 },
       android: { elevation: 3 }
     })
   },
-  taskHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  orderIdBadge: { backgroundColor: '#f1f5f9', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
-  orderIdText: { fontSize: 13, fontWeight: '600', color: colors.textPrimary },
-  earnBadgeBox: { backgroundColor: '#ecfdf5', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
-  earnBadge: { fontSize: 13, fontWeight: '700', color: '#10b981' },
+  taskHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
+  orderIdBadge: { backgroundColor: '#f1f5f9', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
+  orderIdText: { fontSize: 13, fontWeight: '700', color: '#0f172a' },
+  earnBadgeBox: { backgroundColor: '#dcfce7', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
+  earnBadge: { fontSize: 14, fontWeight: '800', color: '#15803d' },
   locationRow: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
-  iconCircleWrapper: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#f8fafc', alignItems: 'center', justifyContent: 'center', marginTop: 2 },
-  verticalConnectingLine: { width: 1, height: 16, backgroundColor: '#e2e8f0', marginLeft: 15, marginVertical: 4 },
-  locLabel: { fontSize: 10, fontWeight: '600', color: colors.textMuted, letterSpacing: 0.5 },
-  locTitle: { fontSize: 14, fontWeight: '600', color: colors.textPrimary, marginTop: 2 },
-  locSub: { fontSize: 12, color: colors.textSecondary, marginTop: 2, lineHeight: 16 },
+  iconCircleWrapper: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#f8fafc', alignItems: 'center', justifyContent: 'center', marginTop: 2, borderWidth: 1, borderColor: '#e2e8f0' },
+  verticalConnectingLine: { width: 2, height: 16, backgroundColor: '#cbd5e1', marginLeft: 16, marginVertical: 2 },
+  locLabel: { fontSize: 10, fontWeight: '700', color: '#64748b', letterSpacing: 0.5 },
+  locTitle: { fontSize: 15, fontWeight: '700', color: '#0f172a', marginTop: 2 },
+  locSub: { fontSize: 13, color: '#475569', marginTop: 2, lineHeight: 18 },
   taskFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     borderTopWidth: 1,
     borderTopColor: '#f1f5f9',
-    paddingTop: 16,
-    marginTop: 16
+    paddingTop: 14,
+    marginTop: 14
   },
-  distText: { fontSize: 13, color: colors.textSecondary, fontWeight: '500' },
+  distText: { fontSize: 13, color: '#475569', fontWeight: '600' },
   navBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.primary,
+    backgroundColor: '#0284c7',
     paddingHorizontal: 20,
     paddingVertical: 10,
-    borderRadius: 30, // Pill shape
+    borderRadius: 25,
     gap: 8
   },
-  navBtnText: { color: '#ffffff', fontSize: 13, fontWeight: '600' }
+  navBtnText: { color: '#ffffff', fontSize: 13, fontWeight: '700' }
 });

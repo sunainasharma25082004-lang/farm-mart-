@@ -132,9 +132,33 @@ export default function GrowthPartnerPage({ onOpenContact, onBackToEcosystem }) 
     }
   ];
 
-  const handleApplySubmit = (e) => {
+  const handleApplySubmit = async (e) => {
     e.preventDefault();
-    setSubmitted(true);
+    try {
+      const response = await fetch('http://localhost:5000/api/apply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          categoryId: 'growth-partner',
+          fullName: formData.fullName,
+          phone: formData.phone,
+          email: formData.email,
+          state: formData.state,
+          district: formData.city,
+          experience: formData.experienceYears,
+          notes: 'Growth partner application'
+        })
+      });
+      const data = await response.json();
+      if (data.success) {
+        setSubmitted(true);
+      } else {
+        alert(data.message || 'Something went wrong.');
+      }
+    } catch (error) {
+      console.error(error);
+      alert('Could not connect to server.');
+    }
   };
 
   return (
