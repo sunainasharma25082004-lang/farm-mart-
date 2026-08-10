@@ -27,17 +27,17 @@ export default function UsersPage() {
   }, []);
 
   return (
-    <div style={styles.page}>
-      <header style={styles.header}>
-        <h1 style={styles.title}>App Users Management</h1>
-        <p style={styles.subtitle}>View and manage registered customers on the Farmart ecosystem.</p>
+    <div style={styles.page} className="responsive-page-padding">
+      <header style={styles.header} className="responsive-flex-header">
+        <h1 style={styles.title}>Registered Customers</h1>
+        <p style={styles.subtitle}>View customer app accounts and referral program earnings.</p>
       </header>
 
-      <div style={styles.tableCard}>
+      <div style={styles.tableCard} className="table-responsive-wrapper">
         {loading ? (
-          <div style={{ padding: '24px', color: '#64748b' }}>Loading user data...</div>
+          <div style={{ padding: '24px', color: '#64748b' }}>Loading users...</div>
         ) : users.length === 0 ? (
-          <div style={{ padding: '24px', color: '#64748b' }}>No registered users found.</div>
+          <div style={{ padding: '24px', color: '#64748b' }}>No users registered yet.</div>
         ) : (
           <table style={styles.table}>
             <thead>

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../AuthContext';
 import { NavLink, Outlet } from 'react-router-dom';
 import { 
@@ -9,11 +9,14 @@ import {
   Briefcase, 
   LogOut,
   ShieldCheck,
-  MessageSquare
+  MessageSquare,
+  Menu,
+  X
 } from 'lucide-react';
 
 export default function AdminLayout() {
   const { admin, logout } = useAuth();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navigation = [
     { name: 'Dashboard', path: '/', icon: LayoutDashboard, requiredAccess: 'all' },
@@ -26,21 +29,40 @@ export default function AdminLayout() {
 
   const hasAccess = (requiredAccess) => {
     if (admin.role === 'superadmin') return true;
-    if (requiredAccess === 'all') return true; // Dashboard is usually visible, but data inside is restricted
+    if (requiredAccess === 'all') return true;
     return admin.access?.includes(requiredAccess);
   };
 
   return (
-    <div style={styles.layout}>
+    <div style={styles.layout} className="admin-layout-container">
+      {/* Mobile Top Header */}
+      <div style={styles.mobileTopBar} className="admin-mobile-header">
+        <div style={styles.sidebarHeaderBrand}>
+          <ShieldCheck size={24} color="#10b981" />
+          <h2 style={styles.brandMobile}>Farmart Central</h2>
+        </div>
+        <button style={styles.hamburgerBtn} onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+          {mobileMenuOpen ? <X size={24} color="#ffffff" /> : <Menu size={24} color="#ffffff" />}
+        </button>
+      </div>
+
+      {/* Backdrop for Mobile Overlay */}
+      {mobileMenuOpen && (
+        <div style={styles.backdrop} onClick={() => setMobileMenuOpen(false)} />
+      )}
+
       {/* Sidebar */}
-      <aside style={styles.sidebar}>
+      <aside 
+        style={styles.sidebar} 
+        className={`admin-sidebar ${mobileMenuOpen ? 'open' : ''}`}
+      >
         <div style={styles.sidebarHeader}>
           <ShieldCheck size={28} color="#10b981" />
           <h2 style={styles.brand}>Farmart Central</h2>
         </div>
 
         <div style={styles.adminInfo}>
-          <div style={styles.avatar}>{admin.name.charAt(0)}</div>
+          <div style={styles.avatar}>{admin.name ? admin.name.charAt(0) : 'A'}</div>
           <div>
             <div style={styles.adminName}>{admin.name}</div>
             <div style={styles.adminRole}>{admin.role === 'superadmin' ? 'Super Admin' : 'Sub Admin'}</div>
@@ -54,6 +76,7 @@ export default function AdminLayout() {
               <NavLink 
                 key={item.name} 
                 to={item.path}
+                onClick={() => setMobileMenuOpen(false)}
                 style={({isActive}) => ({
                   ...styles.navItem,
                   backgroundColor: isActive ? '#1e293b' : 'transparent',
@@ -75,7 +98,7 @@ export default function AdminLayout() {
       </aside>
 
       {/* Main Content Area */}
-      <main style={styles.main}>
+      <main style={styles.main} className="admin-main-content">
         <Outlet />
       </main>
     </div>
@@ -87,14 +110,62 @@ const styles = {
     display: 'flex',
     minHeight: '100vh',
     backgroundColor: '#f8fafc',
-    fontFamily: 'Inter, sans-serif'
+    fontFamily: 'Inter, sans-serif',
+    position: 'relative'
+  },
+  mobileTopBar: {
+    display: 'none',
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '60px',
+    backgroundColor: '#0f172a',
+    zIndex: 9990,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '0 20px',
+    borderBottom: '1px solid #1e293b'
+  },
+  sidebarHeaderBrand: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px'
+  },
+  brandMobile: {
+    fontSize: '18px',
+    fontWeight: '700',
+    color: '#ffffff',
+    margin: 0
+  },
+  hamburgerBtn: {
+    backgroundColor: 'transparent',
+    border: 'none',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '6px'
+  },
+  backdrop: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(15, 23, 42, 0.6)',
+    zIndex: 9998,
+    backdropFilter: 'blur(4px)'
   },
   sidebar: {
     width: '280px',
     backgroundColor: '#0f172a',
     color: '#ffffff',
     display: 'flex',
-    flexDirection: 'column'
+    flexDirection: 'column',
+    height: '100vh',
+    position: 'sticky',
+    top: 0
   },
   sidebarHeader: {
     padding: '24px',
@@ -110,7 +181,7 @@ const styles = {
     margin: 0
   },
   adminInfo: {
-    padding: '24px',
+    padding: '20px 24px',
     display: 'flex',
     alignItems: 'center',
     gap: '12px',
@@ -141,7 +212,8 @@ const styles = {
   },
   nav: {
     padding: '16px 0',
-    flex: 1
+    flex: 1,
+    overflowY: 'auto'
   },
   navItem: {
     display: 'flex',
@@ -166,7 +238,8 @@ const styles = {
     fontWeight: '600',
     cursor: 'pointer',
     textAlign: 'left',
-    transition: '0.2s'
+    transition: '0.2s',
+    marginTop: 'auto'
   },
   main: {
     flex: 1,

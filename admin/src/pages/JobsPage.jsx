@@ -51,17 +51,17 @@ export default function JobsPage() {
   };
 
   return (
-    <div style={styles.page}>
-      <header style={styles.header}>
-        <h1 style={styles.title}>HR & Candidate Recruitment</h1>
-        <p style={styles.subtitle}>Review Growth Promoter Job Applications.</p>
+    <div style={styles.page} className="responsive-page-padding">
+      <header style={styles.header} className="responsive-flex-header">
+        <h1 style={styles.title}>HR & Hiring Portal</h1>
+        <p style={styles.subtitle}>Manage Job Candidates and Promoter Registrations.</p>
       </header>
 
-      <div style={styles.tableCard}>
+      <div style={styles.tableCard} className="table-responsive-wrapper">
         {loading ? (
-          <div style={{ padding: '24px', color: '#64748b' }}>Loading applications...</div>
+          <div style={{ padding: '24px', color: '#64748b' }}>Loading candidate data...</div>
         ) : jobs.length === 0 ? (
-          <div style={{ padding: '24px', color: '#64748b' }}>No candidates have applied yet.</div>
+          <div style={{ padding: '24px', color: '#64748b' }}>No job applications found.</div>
         ) : (
           <table style={styles.table}>
             <thead>

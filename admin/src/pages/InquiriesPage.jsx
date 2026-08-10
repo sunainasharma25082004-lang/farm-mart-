@@ -53,8 +53,8 @@ export default function InquiriesPage() {
   });
 
   return (
-    <div style={styles.page}>
-      <header style={styles.header}>
+    <div style={styles.page} className="responsive-page-padding">
+      <header style={styles.header} className="responsive-flex-header">
         <div>
           <h1 style={styles.title}>Live Website Inquiries & Leads</h1>
           <p style={styles.subtitle}>Manage real-time customer inquiries, partner requests, and regional callbacks.</p>

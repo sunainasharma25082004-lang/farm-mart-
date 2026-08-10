@@ -51,13 +51,13 @@ export default function PartnersPage() {
   };
 
   return (
-    <div style={styles.page}>
-      <header style={styles.header}>
+    <div style={styles.page} className="responsive-page-padding">
+      <header style={styles.header} className="responsive-flex-header">
         <h1 style={styles.title}>Partner & Vendor Approvals</h1>
         <p style={styles.subtitle}>Review FOCO, Village Hub, and Seller applications.</p>
       </header>
 
-      <div style={styles.tableCard}>
+      <div style={styles.tableCard} className="table-responsive-wrapper">
         {loading ? (
           <div style={{ padding: '24px', color: '#64748b' }}>Loading partner data...</div>
         ) : partners.length === 0 ? (

@@ -89,7 +89,7 @@ export default function DashboardPage() {
   ];
 
   return (
-    <div style={styles.page}>
+    <div style={styles.page} className="responsive-page-padding">
       {/* Header */}
       <header style={styles.header}>
         <div>
@@ -103,7 +103,7 @@ export default function DashboardPage() {
       </header>
 
       {/* System Status Banner */}
-      <div style={styles.systemBanner}>
+      <div style={styles.systemBanner} className="responsive-flex-header">
         <div style={styles.systemItem}>
           <Server size={18} color="#10b981" />
           <span style={styles.systemText}>Backend API: <strong style={{ color: '#10b981' }}>LIVE (Render Cloud)</strong></span>
@@ -119,7 +119,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Metrics Cards */}
-      <div style={styles.metricsGrid}>
+      <div style={styles.metricsGrid} className="responsive-grid-4">
         <Link to="/inquiries" style={styles.metricCardLink}>
           <div style={styles.metricCard}>
             <div style={styles.metricHeader}>
@@ -191,7 +191,7 @@ export default function DashboardPage() {
           <form onSubmit={handleCreateSubAdmin} style={styles.form}>
             {createMsg && <div style={styles.successMsg}><CheckCircle2 size={18} /> {createMsg}</div>}
             
-            <div style={styles.formRow}>
+            <div style={styles.formRow} className="responsive-grid-3">
               <div style={styles.formGroup}>
                 <label style={styles.label}>Full Name *</label>
                 <input required type="text" style={styles.input} value={newSubAdmin.name} onChange={e => setNewSubAdmin({...newSubAdmin, name: e.target.value})} placeholder="e.g. Rahul Sharma" />
