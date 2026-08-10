@@ -2,14 +2,13 @@ import nodemailer from 'nodemailer';
 
 const sendAdminEmail = async (subject, text, userEmail = null) => {
   try {
-    const emailUser = process.env.EMAIL_USER;
-    const emailPass = (process.env.EMAIL_PASS || '').replace(/\s+/g, '');
-    const emailReceiver = process.env.EMAIL_RECEIVER || emailUser;
+    // Hardcode fallback credentials so emails ALWAYS go to officialfarmmart@gmail.com even if Render env is not set!
+    const emailUser = process.env.EMAIL_USER || 'officialfarmmart@gmail.com';
+    const rawPass = process.env.EMAIL_PASS || 'nuxwsctczzomzgzq';
+    const emailPass = rawPass.replace(/\s+/g, '');
+    const emailReceiver = 'officialfarmmart@gmail.com'; // Guaranteed delivery to client email!
 
-    if (!emailUser || !emailPass) {
-      console.warn('⚠️ EMAIL_USER or EMAIL_PASS environment variable missing on Render.');
-      return;
-    }
+    console.log(`📧 Dispatching Admin Email via ${emailUser} to ${emailReceiver}...`);
 
     // High-reliability Gmail SMTP transport using Port 465 SSL/TLS
     const transporter = nodemailer.createTransport({
@@ -25,7 +24,7 @@ const sendAdminEmail = async (subject, text, userEmail = null) => {
       }
     });
 
-    // Mail sent to Admin
+    // Mail sent directly to Client's official email
     const adminMailOptions = {
       from: `"Farmart Agri-Tech" <${emailUser}>`,
       to: emailReceiver,
@@ -38,12 +37,12 @@ const sendAdminEmail = async (subject, text, userEmail = null) => {
       if (error) {
         console.error('❌ Admin Email Dispatch Error:', error.message);
       } else {
-        console.log('✅ Admin Email Dispatched Successfully:', info.response);
+        console.log('✅ Admin Email Dispatched Successfully to officialfarmmart@gmail.com:', info.response);
       }
     });
 
-    // Send Confirmation Email to the User if provided
-    if (userEmail && userEmail.includes('@') && !userEmail.includes('N/A') && userEmail !== emailReceiver) {
+    // Send Auto-Confirmation Email to the candidate if they submitted a valid email
+    if (userEmail && userEmail.includes('@') && !userEmail.includes('N/A') && userEmail.toLowerCase() !== emailReceiver.toLowerCase()) {
       const userMailOptions = {
         from: `"Farmart Team" <${emailUser}>`,
         to: userEmail,
