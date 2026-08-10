@@ -54,10 +54,10 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* Column 4: Newsletter */}
+          {/* Column 4: Newsletter & Contact */}
           <div className="footer-newsletter-col">
             <h4>Stay Connected</h4>
-            <p>Subscribe to our monthly Kisan Impact Bulletin for updates on agri-tech trends and partner stories.</p>
+            <p>Email: <a href="mailto:officialfarmmart@gmail.com" style={{ color: '#10b981', fontWeight: '600' }}>officialfarmmart@gmail.com</a></p>
             <form className="newsletter-form" onSubmit={(e) => e.preventDefault()}>
               <input type="email" placeholder="Enter your email" required />
               <button type="submit" className="newsletter-btn">

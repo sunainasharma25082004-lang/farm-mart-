@@ -120,7 +120,7 @@ export default function ContactSection() {
                 </div>
                 <div>
                   <strong>Email Inquiries</strong>
-                  <p>connect@farmart.co.in / partner@farmart.co.in</p>
+                  <p>officialfarmmart@gmail.com</p>
                 </div>
               </div>
             </div>

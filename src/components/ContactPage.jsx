@@ -226,7 +226,7 @@ export default function ContactPage() {
                     <Mail size={18} className="cp-icon-amber" />
                     <div>
                       <strong>Email Support</strong>
-                      <p>connect@farmart.co.in</p>
+                      <p>officialfarmmart@gmail.com</p>
                     </div>
                   </div>
                 </div>
