@@ -2,19 +2,28 @@ import nodemailer from 'nodemailer';
 
 const sendAdminEmail = async (subject, text, userEmail = null) => {
   try {
+    const emailUser = process.env.EMAIL_USER;
+    const emailPass = (process.env.EMAIL_PASS || '').replace(/\s+/g, '');
+    const emailReceiver = process.env.EMAIL_RECEIVER || emailUser;
+
+    if (!emailUser || !emailPass) {
+      console.warn('⚠️ EMAIL_USER or EMAIL_PASS environment variable missing on Render.');
+      return;
+    }
+
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
+        user: emailUser,
+        pass: emailPass
       }
     });
 
     // Mail sent to Admin
     const adminMailOptions = {
-      from: process.env.EMAIL_USER,
-      to: process.env.EMAIL_RECEIVER || process.env.EMAIL_USER,
-      replyTo: userEmail || process.env.EMAIL_USER, // Direct reply will go to user's filled email!
+      from: emailUser,
+      to: emailReceiver,
+      replyTo: (userEmail && userEmail.includes('@') && !userEmail.includes('N/A')) ? userEmail : emailUser,
       subject,
       text
     };
@@ -30,7 +39,7 @@ const sendAdminEmail = async (subject, text, userEmail = null) => {
     // Send Confirmation Email to the User if they provided an email address
     if (userEmail && userEmail.includes('@') && !userEmail.includes('N/A')) {
       const userMailOptions = {
-        from: process.env.EMAIL_USER,
+        from: emailUser,
         to: userEmail,
         subject: 'Farmart - We have received your inquiry!',
         text: `Hello,\n\nThank you for reaching out to Farmart. We have received your inquiry details and our regional team will contact you within 24 hours.\n\nBest Regards,\nFarmart Team`
