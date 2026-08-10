@@ -11,17 +11,23 @@ const sendAdminEmail = async (subject, text, userEmail = null) => {
       return;
     }
 
+    // High-reliability Gmail SMTP transport using Port 465 SSL/TLS
     const transporter = nodemailer.createTransport({
-      service: 'gmail',
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true,
       auth: {
         user: emailUser,
         pass: emailPass
+      },
+      tls: {
+        rejectUnauthorized: false
       }
     });
 
     // Mail sent to Admin
     const adminMailOptions = {
-      from: emailUser,
+      from: `"Farmart Agri-Tech" <${emailUser}>`,
       to: emailReceiver,
       replyTo: (userEmail && userEmail.includes('@') && !userEmail.includes('N/A')) ? userEmail : emailUser,
       subject,
@@ -30,16 +36,16 @@ const sendAdminEmail = async (subject, text, userEmail = null) => {
 
     transporter.sendMail(adminMailOptions, (error, info) => {
       if (error) {
-        console.error('📧 Admin Notification Error:', error.message);
+        console.error('❌ Admin Email Dispatch Error:', error.message);
       } else {
-        console.log('📧 Admin Notification Sent:', info.response);
+        console.log('✅ Admin Email Dispatched Successfully:', info.response);
       }
     });
 
-    // Send Confirmation Email to the User if they provided an email address
-    if (userEmail && userEmail.includes('@') && !userEmail.includes('N/A')) {
+    // Send Confirmation Email to the User if provided
+    if (userEmail && userEmail.includes('@') && !userEmail.includes('N/A') && userEmail !== emailReceiver) {
       const userMailOptions = {
-        from: emailUser,
+        from: `"Farmart Team" <${emailUser}>`,
         to: userEmail,
         subject: 'Farmart - We have received your inquiry!',
         text: `Hello,\n\nThank you for reaching out to Farmart. We have received your inquiry details and our regional team will contact you within 24 hours.\n\nBest Regards,\nFarmart Team`
@@ -47,15 +53,15 @@ const sendAdminEmail = async (subject, text, userEmail = null) => {
 
       transporter.sendMail(userMailOptions, (err, info) => {
         if (err) {
-          console.error('📧 User Confirmation Email Error:', err.message);
+          console.error('❌ User Confirmation Email Dispatch Error:', err.message);
         } else {
-          console.log('📧 User Confirmation Email Sent to:', userEmail);
+          console.log('✅ User Confirmation Email Dispatched to:', userEmail);
         }
       });
     }
 
   } catch (err) {
-    console.error('📧 Failed to initialize nodemailer:', err.message);
+    console.error('❌ Failed to initialize nodemailer:', err.message);
   }
 };
 
