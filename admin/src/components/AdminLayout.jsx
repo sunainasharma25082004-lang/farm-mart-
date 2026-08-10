@@ -8,7 +8,8 @@ import {
   Bike, 
   Briefcase, 
   LogOut,
-  ShieldCheck
+  ShieldCheck,
+  MessageSquare
 } from 'lucide-react';
 
 export default function AdminLayout() {
@@ -16,6 +17,7 @@ export default function AdminLayout() {
 
   const navigation = [
     { name: 'Dashboard', path: '/', icon: LayoutDashboard, requiredAccess: 'all' },
+    { name: 'Inquiries & Leads', path: '/inquiries', icon: MessageSquare, requiredAccess: 'all' },
     { name: 'App Users', path: '/users', icon: Users, requiredAccess: 'users' },
     { name: 'Partners & Vendors', path: '/partners', icon: Building2, requiredAccess: 'partners' },
     { name: 'Delivery Fleet', path: '/riders', icon: Bike, requiredAccess: 'riders' },
