@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Update IP if testing on physical mobile device via Expo Go
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = 'https://farm-mart-api.onrender.com/api';
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,

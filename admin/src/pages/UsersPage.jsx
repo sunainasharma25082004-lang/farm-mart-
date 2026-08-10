@@ -12,7 +12,7 @@ export default function UsersPage() {
   }
 
   useEffect(() => {
-    fetch('http://localhost:5000/api/admin/data')
+    fetch('https://farm-mart-api.onrender.com/api/admin/data')
       .then(res => res.json())
       .then(data => {
         if (data.success) {

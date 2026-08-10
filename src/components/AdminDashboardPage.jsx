@@ -20,6 +20,7 @@ import {
   RefreshCw,
   MessageSquare
 } from 'lucide-react';
+import { API_BASE_URL } from '../config/api';
 import './AdminDashboardPage.css';
 
 export default function AdminDashboardPage({ onNavigateHome }) {
@@ -39,7 +40,7 @@ export default function AdminDashboardPage({ onNavigateHome }) {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:5000/api/admin/data');
+      const response = await fetch(`${API_BASE_URL}/admin/data`);
       const data = await response.json();
       if (data.success) {
         // Reverse arrays to show newest first
@@ -62,7 +63,7 @@ export default function AdminDashboardPage({ onNavigateHome }) {
 
   const handleUpdateStatus = async (id, type, newStatus) => {
     try {
-      const response = await fetch('http://localhost:5000/api/admin/update-status', {
+      const response = await fetch(`${API_BASE_URL}/admin/update-status`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, type, status: newStatus })

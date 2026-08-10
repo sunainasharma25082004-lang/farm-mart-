@@ -13,7 +13,7 @@ export default function JobsPage() {
   }
 
   const fetchData = () => {
-    fetch('http://localhost:5000/api/admin/data')
+    fetch('https://farm-mart-api.onrender.com/api/admin/data')
       .then(res => res.json())
       .then(data => {
         if (data.success) {
@@ -33,7 +33,7 @@ export default function JobsPage() {
 
   const updateStatus = async (id, status) => {
     try {
-      const response = await fetch('http://localhost:5000/api/admin/update-status', {
+      const response = await fetch('https://farm-mart-api.onrender.com/api/admin/update-status', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, type: 'job', status })

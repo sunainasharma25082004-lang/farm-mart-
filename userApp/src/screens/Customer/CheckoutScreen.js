@@ -28,7 +28,7 @@ export const CheckoutScreen = ({ navigation }) => {
     
     setLoading(true);
     try {
-      const API_URL = 'http://localhost:5000/api/create-order';
+      const API_URL = 'https://farm-mart-api.onrender.com/api/create-order';
       
       const response = await fetch(API_URL, {
         method: 'POST',

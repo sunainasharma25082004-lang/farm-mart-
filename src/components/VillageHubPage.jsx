@@ -79,7 +79,7 @@ export default function VillageHubPage({ onOpenContact, onBackToEcosystem }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch('http://localhost:5000/api/apply', {
+      const response = await fetch('https://farm-mart-api.onrender.com/api/apply', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
