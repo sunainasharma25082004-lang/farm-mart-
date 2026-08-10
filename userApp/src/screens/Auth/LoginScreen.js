@@ -14,6 +14,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { useApp } from '../../context/AppContext';
+import { Image } from 'react-native';
+const LOGO = require('../../../assets/farmart24_logo.jpg');
 
 export const LoginScreen = ({ navigation }) => {
   const { loginUser } = useApp();
@@ -49,6 +51,13 @@ export const LoginScreen = ({ navigation }) => {
     }
   };
 
+  // Skip login and go directly to home as guest
+  const skipLogin = () => {
+    // Set a dummy guest user and mark as authenticated
+    loginUser({ name: 'Guest', phone: '' });
+    navigation.replace('MainTabs');
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView 
@@ -57,7 +66,7 @@ export const LoginScreen = ({ navigation }) => {
       >
         <View style={styles.topSection}>
           <View style={styles.logoBox}>
-            <Ionicons name="leaf" size={48} color={colors.primary} />
+            <Image source={LOGO} style={styles.logoImage} resizeMode="contain" />
           </View>
           <Text style={styles.title}>Welcome Back!</Text>
           <Text style={styles.subtitle}>Log in to get farm-fresh produce delivered in 15 mins.</Text>
@@ -92,8 +101,8 @@ export const LoginScreen = ({ navigation }) => {
             <Text style={styles.forgotText}>Forgot Password?</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={[styles.primaryBtn, loading && styles.disabledBtn]} 
+          <TouchableOpacity
+            style={[styles.primaryBtn, loading && styles.disabledBtn]}
             onPress={handleLogin}
             disabled={loading}
           >
@@ -102,6 +111,14 @@ export const LoginScreen = ({ navigation }) => {
             ) : (
               <Text style={styles.primaryBtnText}>Login</Text>
             )}
+          </TouchableOpacity>
+
+          {/* Skip button */}
+          <TouchableOpacity
+            style={[styles.primaryBtn, { backgroundColor: colors.textMuted, marginTop: 12 }]}
+            onPress={skipLogin}
+          >
+            <Text style={styles.primaryBtnText}>Skip</Text>
           </TouchableOpacity>
         </View>
 
@@ -195,6 +212,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4
+  },
+  logoImage: {
+    width: 92,
+    height: 40
   },
   disabledBtn: {
     opacity: 0.7
