@@ -46,20 +46,28 @@ export const SignupScreen = ({ navigation }) => {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name, phone, city, password, role: selectedRole }),
-        }
+          body: JSON.stringify({
+            name,
+            phone,
+            city,
+            password,
+            role: selectedRole,
+          }),
+        },
       );
       const data = await response.json();
       setLoading(false);
 
       if (data.success) {
-        Alert.alert("Success 🎉", "Account created successfully! Please log in.", [
-          { text: "Log In Now", onPress: () => navigation.navigate("Login") },
-        ]);
+        Alert.alert(
+          "Success 🎉",
+          "Account created successfully! Please log in.",
+          [{ text: "Log In Now", onPress: () => navigation.navigate("Login") }],
+        );
       } else {
         Alert.alert(
           "Registration Failed",
-          data.message || "Something went wrong"
+          data.message || "Something went wrong",
         );
       }
     } catch (error) {
@@ -95,7 +103,11 @@ export const SignupScreen = ({ navigation }) => {
               <Text style={styles.badgeText}>Join Farmart</Text>
             </View>
 
-            <TouchableOpacity style={styles.skipBtn} onPress={skipSignup} activeOpacity={0.7}>
+            <TouchableOpacity
+              style={styles.skipBtn}
+              onPress={skipSignup}
+              activeOpacity={0.7}
+            >
               <Text style={styles.skipText}>Skip</Text>
               <Ionicons name="chevron-forward" size={14} color="#64748b" />
             </TouchableOpacity>
@@ -166,7 +178,9 @@ export const SignupScreen = ({ navigation }) => {
                   <Ionicons
                     name="call-outline"
                     size={20}
-                    color={focusedInput === "phone" ? colors.primary : "#94a3b8"}
+                    color={
+                      focusedInput === "phone" ? colors.primary : "#94a3b8"
+                    }
                     style={styles.inputIcon}
                   />
                   <TextInput
@@ -221,7 +235,9 @@ export const SignupScreen = ({ navigation }) => {
                   <Ionicons
                     name="lock-closed-outline"
                     size={20}
-                    color={focusedInput === "password" ? colors.primary : "#94a3b8"}
+                    color={
+                      focusedInput === "password" ? colors.primary : "#94a3b8"
+                    }
                     style={styles.inputIcon}
                   />
                   <TextInput
@@ -266,8 +282,14 @@ export const SignupScreen = ({ navigation }) => {
                   <ActivityIndicator color="#ffffff" />
                 ) : (
                   <View style={styles.btnInner}>
-                    <Text style={styles.primaryBtnText}>Complete Registration</Text>
-                    <Ionicons name="checkmark-circle-outline" size={20} color="#ffffff" />
+                    <Text style={styles.primaryBtnText}>
+                      Complete Registration
+                    </Text>
+                    <Ionicons
+                      name="checkmark-circle-outline"
+                      size={20}
+                      color="#ffffff"
+                    />
                   </View>
                 )}
               </TouchableOpacity>
@@ -277,7 +299,10 @@ export const SignupScreen = ({ navigation }) => {
           {/* Footer Section */}
           <View style={styles.footerSection}>
             <Text style={styles.footerText}>Already registered?</Text>
-            <TouchableOpacity onPress={() => navigation.navigate("Login")} activeOpacity={0.7}>
+            <TouchableOpacity
+              onPress={() => navigation.navigate("Login")}
+              activeOpacity={0.7}
+            >
               <Text style={styles.linkText}>Log In</Text>
             </TouchableOpacity>
           </View>
@@ -505,4 +530,3 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 });
-

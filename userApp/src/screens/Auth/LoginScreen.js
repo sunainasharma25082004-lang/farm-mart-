@@ -42,7 +42,7 @@ export const LoginScreen = ({ navigation }) => {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ phone, password }),
-        }
+        },
       );
       const data = await response.json();
       setLoading(false);
@@ -107,7 +107,8 @@ export const LoginScreen = ({ navigation }) => {
             </View>
             <Text style={styles.title}>Welcome Back 👋</Text>
             <Text style={styles.subtitle}>
-              Fresh produce, daily essentials & local food delivered to your doorstep.
+              Fresh produce, daily essentials & local food delivered to your
+              doorstep.
             </Text>
           </View>
 
@@ -141,7 +142,9 @@ export const LoginScreen = ({ navigation }) => {
                   <Ionicons
                     name="call-outline"
                     size={20}
-                    color={focusedInput === "phone" ? colors.primary : "#94a3b8"}
+                    color={
+                      focusedInput === "phone" ? colors.primary : "#94a3b8"
+                    }
                     style={styles.inputIcon}
                   />
                   <TextInput
@@ -169,7 +172,9 @@ export const LoginScreen = ({ navigation }) => {
                   <Ionicons
                     name="lock-closed-outline"
                     size={20}
-                    color={focusedInput === "password" ? colors.primary : "#94a3b8"}
+                    color={
+                      focusedInput === "password" ? colors.primary : "#94a3b8"
+                    }
                     style={styles.inputIcon}
                   />
                   <TextInput
@@ -223,7 +228,10 @@ export const LoginScreen = ({ navigation }) => {
           {/* Footer Section */}
           <View style={styles.footerSection}>
             <Text style={styles.footerText}>Don't have an account?</Text>
-            <TouchableOpacity onPress={() => navigation.navigate("Signup")} activeOpacity={0.7}>
+            <TouchableOpacity
+              onPress={() => navigation.navigate("Signup")}
+              activeOpacity={0.7}
+            >
               <Text style={styles.linkText}>Create Account</Text>
             </TouchableOpacity>
           </View>
@@ -483,4 +491,3 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 });
-
