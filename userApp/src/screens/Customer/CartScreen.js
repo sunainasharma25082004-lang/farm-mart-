@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -7,18 +7,25 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
-  Image
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { Header } from '../../components/Header';
-import { useApp } from '../../context/AppContext';
-import { colors } from '../../theme/colors';
+  Image,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { Header } from "../../components/Header";
+import { useApp } from "../../context/AppContext";
+import { colors } from "../../theme/colors";
 
 export const CartScreen = ({ navigation }) => {
-  const { cart, updateQuantity, removeFromCart, getCartTotal, placeOrder, userProfile } = useApp();
-  const [paymentMethod, setPaymentMethod] = useState('COD');
+  const {
+    cart,
+    updateQuantity,
+    removeFromCart,
+    getCartTotal,
+    placeOrder,
+    userProfile,
+  } = useApp();
+  const [paymentMethod, setPaymentMethod] = useState("COD");
   const [deliveryAddress, setDeliveryAddress] = useState(
-    'House #42, Main Bazaar, Near Village Hub, Ludhiana'
+    "House #42, Main Bazaar, Near Village Hub, Ludhiana",
   );
 
   const subtotal = getCartTotal();
@@ -27,12 +34,17 @@ export const CartScreen = ({ navigation }) => {
 
   const handleCheckout = () => {
     if (cart.length === 0) return;
-    navigation.navigate('Checkout');
+    navigation.navigate("Checkout");
   };
 
   return (
     <View style={styles.container}>
-      <Header navigation={navigation} title="Your Cart" showCart={false} showBack />
+      <Header
+        navigation={navigation}
+        title="Your Cart"
+        showCart={false}
+        showBack
+      />
 
       {cart.length === 0 ? (
         <View style={styles.emptyContainer}>
@@ -45,7 +57,7 @@ export const CartScreen = ({ navigation }) => {
           </Text>
           <TouchableOpacity
             style={styles.shopBtn}
-            onPress={() => navigation.navigate('MainTabs', { screen: 'Home' })}
+            onPress={() => navigation.navigate("MainTabs", { screen: "Home" })}
             activeOpacity={0.85}
           >
             <Text style={styles.shopBtnText}>Start Shopping</Text>
@@ -54,11 +66,17 @@ export const CartScreen = ({ navigation }) => {
         </View>
       ) : (
         <>
-          <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+          >
             <Text style={styles.sectionTitle}>Items ({cart.length})</Text>
             {cart.map((item) => (
               <View key={item.product.id} style={styles.cartCard}>
-                <Image source={{ uri: item.product.image }} style={styles.itemImage} />
+                <Image
+                  source={{ uri: item.product.image }}
+                  style={styles.itemImage}
+                />
                 <View style={styles.itemInfo}>
                   <Text style={styles.itemTitle} numberOfLines={2}>
                     {item.product.name}
@@ -78,7 +96,11 @@ export const CartScreen = ({ navigation }) => {
                     style={styles.trashBtn}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
-                    <Ionicons name="trash-outline" size={16} color={colors.error} />
+                    <Ionicons
+                      name="trash-outline"
+                      size={16}
+                      color={colors.error}
+                    />
                   </TouchableOpacity>
 
                   <View style={styles.quantityControls}>
@@ -86,7 +108,11 @@ export const CartScreen = ({ navigation }) => {
                       style={styles.qtyBtn}
                       onPress={() => updateQuantity(item.product.id, -1)}
                     >
-                      <Ionicons name="remove" size={14} color={colors.primary} />
+                      <Ionicons
+                        name="remove"
+                        size={14}
+                        color={colors.primary}
+                      />
                     </TouchableOpacity>
                     <Text style={styles.qtyText}>{item.quantity}</Text>
                     <TouchableOpacity
@@ -119,20 +145,36 @@ export const CartScreen = ({ navigation }) => {
             <Text style={styles.sectionTitle}>Payment</Text>
             <View style={styles.paymentContainer}>
               {[
-                { id: 'COD', icon: 'cash-outline', label: 'Cash on Delivery', color: colors.primary },
-                { id: 'UPI', icon: 'qr-code-outline', label: 'UPI / QR Code', color: colors.info },
-                { id: 'WALLET', icon: 'wallet-outline', label: 'Farmart Wallet', color: colors.accent }
+                {
+                  id: "COD",
+                  icon: "cash-outline",
+                  label: "Cash on Delivery",
+                  color: colors.primary,
+                },
+                {
+                  id: "UPI",
+                  icon: "qr-code-outline",
+                  label: "UPI / QR Code",
+                  color: colors.info,
+                },
               ].map((opt) => (
                 <TouchableOpacity
                   key={opt.id}
-                  style={[styles.paymentCard, paymentMethod === opt.id && styles.paymentSelected]}
+                  style={[
+                    styles.paymentCard,
+                    paymentMethod === opt.id && styles.paymentSelected,
+                  ]}
                   onPress={() => setPaymentMethod(opt.id)}
                   activeOpacity={0.8}
                 >
                   <Ionicons name={opt.icon} size={20} color={opt.color} />
                   <Text style={styles.paymentText}>{opt.label}</Text>
                   {paymentMethod === opt.id && (
-                    <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={20}
+                      color={colors.primary}
+                    />
                   )}
                 </TouchableOpacity>
               ))}
@@ -146,12 +188,19 @@ export const CartScreen = ({ navigation }) => {
               </View>
               <View style={styles.billRow}>
                 <Text style={styles.billLabel}>Delivery</Text>
-                <Text style={[styles.billVal, deliveryFee === 0 && { color: colors.success }]}>
-                  {deliveryFee === 0 ? 'FREE' : `₹${deliveryFee}`}
+                <Text
+                  style={[
+                    styles.billVal,
+                    deliveryFee === 0 && { color: colors.success },
+                  ]}
+                >
+                  {deliveryFee === 0 ? "FREE" : `₹${deliveryFee}`}
                 </Text>
               </View>
               {subtotal < 300 && (
-                <Text style={styles.freeHint}>Add ₹{300 - subtotal} more for free delivery</Text>
+                <Text style={styles.freeHint}>
+                  Add ₹{300 - subtotal} more for free delivery
+                </Text>
               )}
               <View style={[styles.billRow, styles.totalRow]}>
                 <Text style={styles.totalLabel}>Grand total</Text>
@@ -165,7 +214,11 @@ export const CartScreen = ({ navigation }) => {
               <Text style={styles.bottomLabel}>Total</Text>
               <Text style={styles.bottomTotal}>₹{grandTotal}</Text>
             </View>
-            <TouchableOpacity style={styles.checkoutBtn} onPress={handleCheckout} activeOpacity={0.85}>
+            <TouchableOpacity
+              style={styles.checkoutBtn}
+              onPress={handleCheckout}
+              activeOpacity={0.85}
+            >
               <Text style={styles.checkoutText}>Place Order</Text>
               <Ionicons name="arrow-forward" size={18} color="#ffffff" />
             </TouchableOpacity>
@@ -179,268 +232,268 @@ export const CartScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background
+    backgroundColor: colors.background,
   },
   scrollContent: {
     padding: 16,
-    paddingBottom: 100
+    paddingBottom: 100,
   },
   emptyContainer: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 28
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 28,
   },
   emptyIconWrap: {
     width: 88,
     height: 88,
     borderRadius: 44,
     backgroundColor: colors.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
   },
   emptyTitle: {
     fontSize: 18,
-    fontWeight: '500',
-    color: colors.textPrimary
+    fontWeight: "500",
+    color: colors.textPrimary,
   },
   emptyDesc: {
     fontSize: 13,
     color: colors.textSecondary,
-    textAlign: 'center',
+    textAlign: "center",
     marginTop: 6,
     marginBottom: 22,
-    lineHeight: 18
+    lineHeight: 18,
   },
   shopBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: colors.primary,
     paddingHorizontal: 22,
     paddingVertical: 12,
     borderRadius: 12,
-    gap: 8
+    gap: 8,
   },
   shopBtnText: {
-    color: '#ffffff',
-    fontWeight: '500',
-    fontSize: 14
+    color: "#ffffff",
+    fontWeight: "500",
+    fontSize: 14,
   },
   sectionTitle: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: "500",
     color: colors.textPrimary,
     marginTop: 8,
-    marginBottom: 10
+    marginBottom: 10,
   },
   cartCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: colors.card,
     borderRadius: 14,
     padding: 10,
     marginBottom: 10,
     borderWidth: 1,
     borderColor: colors.border,
-    gap: 10
+    gap: 10,
   },
   itemImage: {
     width: 64,
     height: 64,
     borderRadius: 10,
-    backgroundColor: colors.background
+    backgroundColor: colors.background,
   },
   itemInfo: {
-    flex: 1
+    flex: 1,
   },
   itemTitle: {
     fontSize: 13,
-    fontWeight: '500',
-    color: colors.textPrimary
+    fontWeight: "500",
+    color: colors.textPrimary,
   },
   itemFarmer: {
     fontSize: 10,
     color: colors.primaryDark,
     marginTop: 2,
-    fontWeight: '500'
+    fontWeight: "500",
   },
   itemPrice: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: "500",
     color: colors.textPrimary,
-    marginTop: 4
+    marginTop: 4,
   },
   itemUnit: {
     fontSize: 11,
-    fontWeight: '500',
-    color: colors.textSecondary
+    fontWeight: "500",
+    color: colors.textSecondary,
   },
   rightCol: {
-    alignItems: 'flex-end',
-    gap: 10
+    alignItems: "flex-end",
+    gap: 10,
   },
   trashBtn: {
-    padding: 2
+    padding: 2,
   },
   quantityControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: colors.primaryLight,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: colors.primary,
-    overflow: 'hidden'
+    overflow: "hidden",
   },
   qtyBtn: {
     paddingHorizontal: 8,
-    paddingVertical: 6
+    paddingVertical: 6,
   },
   qtyText: {
     fontSize: 13,
-    fontWeight: '500',
+    fontWeight: "500",
     minWidth: 22,
-    textAlign: 'center',
-    color: colors.primaryDark
+    textAlign: "center",
+    color: colors.primaryDark,
   },
   addressCard: {
-    flexDirection: 'row',
+    flexDirection: "row",
     backgroundColor: colors.card,
     padding: 12,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: colors.border,
     gap: 10,
-    alignItems: 'flex-start'
+    alignItems: "flex-start",
   },
   addressIcon: {
     width: 36,
     height: 36,
     borderRadius: 10,
     backgroundColor: colors.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center'
+    alignItems: "center",
+    justifyContent: "center",
   },
   addressHub: {
     fontSize: 12,
-    fontWeight: '500',
-    color: colors.primaryDark
+    fontWeight: "500",
+    color: colors.primaryDark,
   },
   addressInput: {
     fontSize: 12,
     color: colors.textPrimary,
     marginTop: 4,
     lineHeight: 18,
-    padding: 0
+    padding: 0,
   },
   paymentContainer: {
-    gap: 8
+    gap: 8,
   },
   paymentCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: colors.card,
     padding: 13,
     borderRadius: 12,
     borderWidth: 1.5,
     borderColor: colors.border,
-    gap: 10
+    gap: 10,
   },
   paymentSelected: {
     borderColor: colors.primary,
-    backgroundColor: colors.primaryLight
+    backgroundColor: colors.primaryLight,
   },
   paymentText: {
     flex: 1,
     fontSize: 13,
-    fontWeight: '500',
-    color: colors.textPrimary
+    fontWeight: "500",
+    color: colors.textPrimary,
   },
   billCard: {
     backgroundColor: colors.card,
     borderRadius: 14,
     padding: 14,
     borderWidth: 1,
-    borderColor: colors.border
+    borderColor: colors.border,
   },
   billRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 8,
   },
   billLabel: {
     fontSize: 13,
-    color: colors.textSecondary
+    color: colors.textSecondary,
   },
   billVal: {
     fontSize: 13,
-    fontWeight: '500',
-    color: colors.textPrimary
+    fontWeight: "500",
+    color: colors.textPrimary,
   },
   freeHint: {
     fontSize: 11,
     color: colors.orange,
-    fontWeight: '500',
-    marginBottom: 8
+    fontWeight: "500",
+    marginBottom: 8,
   },
   totalRow: {
     borderTopWidth: 1,
     borderTopColor: colors.border,
     paddingTop: 10,
     marginTop: 4,
-    marginBottom: 0
+    marginBottom: 0,
   },
   totalLabel: {
     fontSize: 15,
-    fontWeight: '500',
-    color: colors.textPrimary
+    fontWeight: "500",
+    color: colors.textPrimary,
   },
   totalVal: {
     fontSize: 17,
-    fontWeight: '500',
-    color: colors.primaryDark
+    fontWeight: "500",
+    color: colors.primaryDark,
   },
   bottomBar: {
-    position: 'absolute',
+    position: "absolute",
     left: 0,
     right: 0,
     bottom: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     backgroundColor: colors.card,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderTopWidth: 1,
     borderTopColor: colors.border,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: -3 },
     shadowOpacity: 0.08,
     shadowRadius: 8,
-    elevation: 10
+    elevation: 10,
   },
   bottomLabel: {
     fontSize: 11,
     color: colors.textSecondary,
-    fontWeight: '500'
+    fontWeight: "500",
   },
   bottomTotal: {
     fontSize: 18,
-    fontWeight: '500',
-    color: colors.textPrimary
+    fontWeight: "500",
+    color: colors.textPrimary,
   },
   checkoutBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: colors.primary,
     borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 20,
-    gap: 8
+    gap: 8,
   },
   checkoutText: {
-    color: '#ffffff',
+    color: "#ffffff",
     fontSize: 14,
-    fontWeight: '500'
-  }
+    fontWeight: "500",
+  },
 });

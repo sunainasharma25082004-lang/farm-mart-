@@ -27,36 +27,8 @@ export const roles = [
   {
     id: 'customer',
     name: 'Customer',
-    desc: 'Shop farm produce, home food & groceries',
+    desc: 'Shop fresh produce & everyday essentials',
     icon: 'person-outline',
     color: '#16a34a'
-  },
-  {
-    id: 'farmer',
-    name: 'Farmer',
-    desc: 'List harvest & track weekly settlements',
-    icon: 'leaf-outline',
-    color: '#15803d'
-  },
-  {
-    id: 'homerestro',
-    name: 'Home Chef',
-    desc: 'Sell homemade thalis & bakery items',
-    icon: 'restaurant-outline',
-    color: '#ea580c'
-  },
-  {
-    id: 'growth_partner',
-    name: 'Growth Partner',
-    desc: 'Earn by onboarding hubs & partners',
-    icon: 'trending-up-outline',
-    color: '#0284c7'
-  },
-  {
-    id: 'village_hub',
-    name: 'Village Hub',
-    desc: 'Manage local fulfillment & inventory',
-    icon: 'business-outline',
-    color: '#7c3aed'
   }
 ];

@@ -1,15 +1,101 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+  Modal,
+  TextInput,
+  Pressable
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
 import { colors } from '../theme/colors';
 import { useApp } from '../context/AppContext';
 
 const LOGO = require('../../assets/farmart24_logo.jpg');
 
 export const Header = ({ navigation, title, showCart = true, showBack = false }) => {
-  const { cart, userProfile } = useApp();
+  const { cart, userProfile, setUserProfile } = useApp();
   const cartItemCount = cart.reduce((acc, item) => acc + item.quantity, 0);
   const canGoBack = showBack || (navigation && navigation.canGoBack && navigation.canGoBack());
+
+  const [addressModalVisible, setAddressModalVisible] = useState(false);
+  const [manualAddress, setManualAddress] = useState('');
+  const [displayAddress, setDisplayAddress] = useState('Set your delivery address');
+  const [locationSubtitle, setLocationSubtitle] = useState('Detecting location...');
+  const [isLocationLoading, setIsLocationLoading] = useState(true);
+
+  useEffect(() => {
+    const initializeLocation = async () => {
+      const fallbackAddress = userProfile?.address || userProfile?.city || 'Set your delivery address';
+      setManualAddress(fallbackAddress);
+      setDisplayAddress(fallbackAddress);
+      setLocationSubtitle('Detecting location...');
+      setIsLocationLoading(true);
+
+      if (!userProfile) {
+        setLocationSubtitle('Login to save your address');
+        setIsLocationLoading(false);
+        return;
+      }
+
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        setLocationSubtitle(userProfile.city || 'Location permission denied');
+        setDisplayAddress(fallbackAddress);
+        setManualAddress(fallbackAddress);
+        setIsLocationLoading(false);
+        return;
+      }
+
+      try {
+        const currentLocation = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Low
+        });
+
+        const [place] = await Location.reverseGeocodeAsync({
+          latitude: currentLocation.coords.latitude,
+          longitude: currentLocation.coords.longitude
+        });
+
+        const resolvedAddress = [place?.name, place?.street, place?.city, place?.region]
+          .filter(Boolean)
+          .join(', ');
+
+        const nextAddress = resolvedAddress || fallbackAddress;
+        setDisplayAddress(nextAddress);
+        setManualAddress(nextAddress);
+        setLocationSubtitle(place?.city ? `${place.city}${place.region ? `, ${place.region}` : ''}` : 'Current location');
+      } catch (error) {
+        setDisplayAddress(fallbackAddress);
+        setManualAddress(fallbackAddress);
+        setLocationSubtitle(userProfile.city || 'Could not detect location');
+      } finally {
+        setIsLocationLoading(false);
+      }
+    };
+
+    initializeLocation();
+  }, [userProfile?.address, userProfile?.city]);
+
+  const openAddressModal = () => {
+    setManualAddress(displayAddress);
+    setAddressModalVisible(true);
+  };
+
+  const saveAddress = () => {
+    const nextAddress = manualAddress.trim() || 'Set your delivery address';
+    setDisplayAddress(nextAddress);
+    setLocationSubtitle('Address updated');
+
+    if (userProfile) {
+      setUserProfile({ ...userProfile, address: nextAddress, city: userProfile.city || nextAddress });
+    }
+
+    setAddressModalVisible(false);
+  };
 
   return (
     <View style={styles.wrapper}>
@@ -32,17 +118,17 @@ export const Header = ({ navigation, title, showCart = true, showBack = false })
               {title}
             </Text>
           ) : (
-            <TouchableOpacity style={styles.locationSection} activeOpacity={0.8}>
+            <TouchableOpacity style={styles.locationSection} activeOpacity={0.8} onPress={openAddressModal}>
               <View style={styles.deliveryRow}>
                 <Ionicons name="location" size={14} color={colors.secondary} />
                 <Text style={styles.deliveryLabel}>Deliver to</Text>
                 <Ionicons name="chevron-down" size={12} color={colors.textPrimary} />
               </View>
               <Text style={styles.addressTitle} numberOfLines={1}>
-                {userProfile.villageHub}
+                {displayAddress}
               </Text>
               <Text style={styles.addressSub} numberOfLines={1}>
-                {userProfile.city} · Express 30–45 min
+                {isLocationLoading ? 'Detecting your location...' : `${locationSubtitle} · Express 30–45 min`}
               </Text>
             </TouchableOpacity>
           )}
@@ -65,6 +151,36 @@ export const Header = ({ navigation, title, showCart = true, showBack = false })
           <View style={styles.cartPlaceholder} />
         )}
       </View>
+
+      <Modal
+        transparent
+        visible={addressModalVisible}
+        animationType="fade"
+        onRequestClose={() => setAddressModalVisible(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setAddressModalVisible(false)}>
+          <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.modalHeader}>
+              <Ionicons name="location-outline" size={20} color={colors.primary} />
+              <Text style={styles.modalTitle}>Update delivery address</Text>
+            </View>
+
+            <Text style={styles.modalLabel}>Your current delivery address</Text>
+            <TextInput
+              style={styles.modalInput}
+              value={manualAddress}
+              onChangeText={setManualAddress}
+              placeholder="Enter your address"
+              placeholderTextColor={colors.textMuted}
+              multiline
+            />
+
+            <TouchableOpacity style={styles.saveButton} onPress={saveAddress} activeOpacity={0.85}>
+              <Text style={styles.saveButtonText}>Save address</Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 };
@@ -170,5 +286,57 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 9,
     fontWeight: '500'
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.45)',
+    justifyContent: 'center',
+    padding: 20
+  },
+  modalCard: {
+    backgroundColor: colors.card,
+    borderRadius: 18,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: colors.border
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.textPrimary
+  },
+  modalLabel: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginBottom: 8
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    minHeight: 90,
+    textAlignVertical: 'top',
+    fontSize: 14,
+    color: colors.textPrimary,
+    marginBottom: 14
+  },
+  saveButton: {
+    backgroundColor: colors.primary,
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center'
+  },
+  saveButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '700'
   }
 });
