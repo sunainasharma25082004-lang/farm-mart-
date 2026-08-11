@@ -1,5 +1,15 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Platform } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  TextInput,
+  Alert,
+  Platform,
+  StatusBar,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDelivery } from '../context/DeliveryContext';
 import { colors } from '../theme/colors';
@@ -11,13 +21,19 @@ export const ActiveNavigationScreen = ({ navigation }) => {
   if (!currentTask) {
     return (
       <View style={[styles.container, styles.center]}>
+        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
         <View style={styles.iconCircleWrapperLarge}>
-          <Ionicons name="checkmark-circle-outline" size={64} color="#16a34a" />
+          <Ionicons name="checkmark-circle" size={54} color="#16a34a" />
         </View>
-        <Text style={styles.emptyTitle}>No Active Delivery Assigned</Text>
-        <Text style={styles.emptySub}>You are currently available for new orders.</Text>
-        <TouchableOpacity style={styles.backBtnPill} onPress={() => navigation.navigate('Duty')} activeOpacity={0.8}>
+        <Text style={styles.emptyTitle}>No Active Trip in Progress</Text>
+        <Text style={styles.emptySub}>You're ready to pick up your next delivery order.</Text>
+        <TouchableOpacity
+          style={styles.backBtnPill}
+          onPress={() => navigation.navigate('Duty')}
+          activeOpacity={0.85}
+        >
           <Text style={styles.backBtnText}>Return to Duty Queue</Text>
+          <Ionicons name="arrow-forward" size={16} color="#ffffff" />
         </TouchableOpacity>
       </View>
     );
@@ -37,18 +53,31 @@ export const ActiveNavigationScreen = ({ navigation }) => {
       return;
     }
     completeDelivery(currentTask.id);
-    Alert.alert('Delivery Completed!', `Payout of ₹${currentTask.estEarnings} added to today's earnings!`, [
-      { text: 'Great!', onPress: () => navigation.navigate('Duty') }
+    Alert.alert('Delivery Completed! 🎉', `Payout of ₹${currentTask.estEarnings} added to today's earnings!`, [
+      { text: 'Great!', onPress: () => navigation.navigate('Duty') },
     ]);
   };
 
+  const isAssigned = currentTask.status === 'ASSIGNED';
+  const isArrived = currentTask.status === 'ARRIVED_AT_VENDOR';
+  const isOutForDelivery = currentTask.status === 'OUT_FOR_DELIVERY';
+
   return (
     <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+      
+      {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn} activeOpacity={0.7}>
-          <Ionicons name="arrow-back" size={24} color="#0f172a" />
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.iconBtnCircle}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="arrow-back" size={20} color="#0f172a" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Live Trip: #{currentTask.id}</Text>
+        
+        <Text style={styles.headerTitle}>Live Trip #{currentTask.id}</Text>
+
         <View style={styles.statusBadge}>
           <Text style={styles.statusText}>{currentTask.status.replace(/_/g, ' ')}</Text>
         </View>
@@ -57,62 +86,82 @@ export const ActiveNavigationScreen = ({ navigation }) => {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Visual Simulated Route Map Box */}
         <View style={styles.mapSimulatedBox}>
-          <View style={styles.mapPinRow}>
-            <View style={styles.pinDotGreen} />
-            <Text style={styles.mapPinText}>Vendor: {currentTask.pickupLocation}</Text>
+          <View style={styles.mapHeaderRow}>
+            <Ionicons name="navigate" size={18} color="#0284c7" />
+            <Text style={styles.mapHeaderTitle}>LIVE GPS ROUTE NAVIGATION</Text>
           </View>
-          <View style={styles.mapLine} />
-          <View style={styles.mapPinRow}>
-            <View style={styles.pinDotRed} />
-            <Text style={styles.mapPinText}>Customer: {currentTask.customerName}</Text>
+
+          <View style={styles.mapPinsContainer}>
+            <View style={styles.mapPinRow}>
+              <View style={styles.pinDotGreen} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.mapPinLabel}>VENDOR PICKUP</Text>
+                <Text style={styles.mapPinText}>{currentTask.pickupLocation}</Text>
+              </View>
+            </View>
+
+            <View style={styles.mapLine} />
+
+            <View style={styles.mapPinRow}>
+              <View style={styles.pinDotRed} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.mapPinLabel}>CUSTOMER DESTINATION</Text>
+                <Text style={styles.mapPinText}>{currentTask.customerName}</Text>
+              </View>
+            </View>
           </View>
+
           <View style={styles.navBarFooter}>
             <Ionicons name="compass-outline" size={18} color="#0284c7" />
-            <Text style={styles.navText}>Estimated Distance: {currentTask.distanceKm} km • 12 Mins</Text>
+            <Text style={styles.navText}>Estimated Distance: <Text style={{ color: '#0f172a', fontWeight: '700' }}>{currentTask.distanceKm} km</Text> • ~12 Mins ETA</Text>
           </View>
         </View>
 
-        {/* Pickup Details */}
+        {/* Pickup Details Card */}
         <View style={styles.card}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-            <Ionicons name="storefront" size={20} color="#f97316" />
-            <Text style={styles.cardHeaderTitle}>PICKUP POINT</Text>
+          <View style={styles.cardTagHeader}>
+            <Ionicons name="storefront" size={18} color="#ea580c" />
+            <Text style={[styles.cardHeaderTitle, { color: '#ea580c' }]}>PICKUP LOCATION</Text>
           </View>
           <Text style={styles.cardMainText}>{currentTask.pickupLocation}</Text>
           <Text style={styles.cardSubText}>{currentTask.pickupAddress}</Text>
 
-          {currentTask.status === 'ASSIGNED' && (
+          {isAssigned && (
             <TouchableOpacity style={styles.actionBtnPill} onPress={handleArrivedVendor} activeOpacity={0.85}>
-              <Ionicons name="location-outline" size={20} color="#ffffff" />
+              <Ionicons name="location-outline" size={18} color="#ffffff" />
               <Text style={styles.actionBtnText}>Confirm Arrived at Vendor</Text>
             </TouchableOpacity>
           )}
 
-          {currentTask.status === 'ARRIVED_AT_VENDOR' && (
+          {isArrived && (
             <TouchableOpacity style={[styles.actionBtnPill, { backgroundColor: '#16a34a' }]} onPress={handlePickedUp} activeOpacity={0.85}>
-              <Ionicons name="bag-check-outline" size={20} color="#ffffff" />
+              <Ionicons name="bag-check-outline" size={18} color="#ffffff" />
               <Text style={styles.actionBtnText}>Confirm Items Picked Up</Text>
             </TouchableOpacity>
           )}
         </View>
 
-        {/* Customer Delivery Details */}
+        {/* Customer Delivery Details Card */}
         <View style={styles.card}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-            <Ionicons name="person" size={20} color="#0284c7" />
-            <Text style={styles.cardHeaderTitle}>DELIVERY POINT</Text>
+          <View style={styles.cardTagHeader}>
+            <Ionicons name="person" size={18} color="#0284c7" />
+            <Text style={[styles.cardHeaderTitle, { color: '#0284c7' }]}>DELIVERY DESTINATION</Text>
           </View>
           <Text style={styles.cardMainText}>{currentTask.customerName} ({currentTask.customerPhone})</Text>
           <Text style={styles.cardSubText}>{currentTask.deliveryAddress}</Text>
 
+          {/* Items Checklist */}
           <View style={styles.itemsBox}>
             <Text style={styles.itemsBoxTitle}>Items to Deliver ({currentTask.itemsCount}):</Text>
             {currentTask.items.map((item, idx) => (
-              <Text key={idx} style={styles.itemText}>• {item}</Text>
+              <View key={idx} style={styles.itemCheckRow}>
+                <Ionicons name="checkmark-circle-outline" size={15} color="#16a34a" />
+                <Text style={styles.itemText}>{item}</Text>
+              </View>
             ))}
           </View>
 
-          {currentTask.status === 'OUT_FOR_DELIVERY' && (
+          {isOutForDelivery && (
             <View style={styles.otpContainer}>
               <Text style={styles.otpLabel}>Ask Customer for 4-Digit Delivery OTP:</Text>
               <TextInput
@@ -125,7 +174,7 @@ export const ActiveNavigationScreen = ({ navigation }) => {
                 onChangeText={setOtpInput}
               />
               <TouchableOpacity style={styles.completeBtnPill} onPress={handleComplete} activeOpacity={0.85}>
-                <Ionicons name="checkmark-done" size={20} color="#ffffff" />
+                <Ionicons name="checkmark-done-circle" size={20} color="#ffffff" />
                 <Text style={styles.completeBtnText}>Verify OTP & Complete Delivery</Text>
               </TouchableOpacity>
             </View>
@@ -141,28 +190,36 @@ export const EarningsScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="#0f172a" />
       <View style={styles.header}>
         <Text style={styles.headerTitleLarge}>Payouts & Earnings</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* Dark Hero Pay Card */}
         <View style={styles.payBoxGradient}>
-          <Text style={styles.payLabel}>Total Earnings Today</Text>
+          <Text style={styles.payLabel}>TODAY'S TOTAL PAYOUT</Text>
           <Text style={styles.payAmount}>₹{profile.todayEarnings}</Text>
-          <Text style={styles.paySub}>Scheduled for Wednesday Direct Settlement</Text>
+          <View style={styles.settleBadgeRow}>
+            <Ionicons name="shield-checkmark" size={14} color="#10b981" />
+            <Text style={styles.paySub}>Scheduled for Wednesday Direct Settlement</Text>
+          </View>
         </View>
 
         <Text style={styles.sectionTitle}>Weekly Trip History</Text>
         {weeklyEarningsHistory.map((item, idx) => (
           <View key={idx} style={styles.earnCard}>
             <View style={styles.earnHeader}>
-              <Text style={styles.earnDate}>{item.date}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Ionicons name="calendar-outline" size={18} color="#0284c7" />
+                <Text style={styles.earnDate}>{item.date}</Text>
+              </View>
               <View style={styles.earnStatusBadge}>
                 <Text style={styles.earnStatus}>{item.status}</Text>
               </View>
             </View>
             <View style={styles.earnDetailsRow}>
-              <Text style={styles.earnDetailText}>{item.trips} Trips Completed</Text>
+              <Text style={styles.earnDetailText}>🛵 {item.trips} Trips Completed</Text>
               <Text style={styles.earnTotalText}>+₹{item.total}</Text>
             </View>
           </View>
@@ -173,87 +230,394 @@ export const EarningsScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f1f5f9' },
-  center: { justifyContent: 'center', alignItems: 'center', padding: 24 },
-  iconCircleWrapperLarge: { width: 100, height: 100, borderRadius: 50, backgroundColor: '#dcfce7', alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
-  emptyTitle: { fontSize: 20, fontWeight: '700', color: '#0f172a', marginTop: 12 },
-  emptySub: { fontSize: 14, color: '#475569', marginTop: 6, marginBottom: 24, textAlign: 'center' },
-  backBtnPill: { backgroundColor: '#0284c7', paddingHorizontal: 24, paddingVertical: 14, borderRadius: 30 },
-  backBtnText: { color: '#ffffff', fontWeight: '700', fontSize: 15 },
-  header: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'center', 
-    padding: 16, 
-    backgroundColor: '#ffffff', 
-    borderBottomWidth: 1, 
+  container: {
+    flex: 1,
+    backgroundColor: '#f1f5f9',
+  },
+  center: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+    backgroundColor: '#ffffff',
+  },
+  iconCircleWrapperLarge: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    backgroundColor: '#dcfce7',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#bbf7d0',
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#0f172a',
+    marginTop: 8,
+  },
+  emptySub: {
+    fontSize: 14,
+    color: '#64748b',
+    marginTop: 6,
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+  backBtnPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#0284c7',
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 20,
+    gap: 8,
+    shadowColor: '#0284c7',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  backBtnText: {
+    color: '#ffffff',
+    fontWeight: '700',
+    fontSize: 15,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    backgroundColor: '#ffffff',
+    borderBottomWidth: 1,
     borderBottomColor: '#e2e8f0',
     ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4 },
-      android: { elevation: 2 }
-    })
+      ios: { shadowColor: '#0f172a', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 6 },
+      android: { elevation: 3 },
+    }),
   },
-  iconBtn: { padding: 4 },
-  headerTitle: { fontSize: 16, fontWeight: '700', color: '#0f172a' },
-  headerTitleLarge: { fontSize: 20, fontWeight: '800', color: '#0f172a' },
-  statusBadge: { backgroundColor: '#e0e7ff', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
-  statusText: { fontSize: 12, fontWeight: '700', color: '#4338ca' },
-  scrollContent: { padding: 20 },
-  mapSimulatedBox: { 
-    backgroundColor: '#ffffff', 
-    borderRadius: 18, 
-    padding: 20, 
-    marginBottom: 20, 
+  iconBtnCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: '#f1f5f9',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0f172a',
+  },
+  headerTitleLarge: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#0f172a',
+  },
+  statusBadge: {
+    backgroundColor: '#e0e7ff',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 10,
+  },
+  statusText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#4338ca',
+  },
+  scrollContent: {
+    padding: 20,
+    paddingBottom: 40,
+  },
+  mapSimulatedBox: {
+    backgroundColor: '#ffffff',
+    borderRadius: 22,
+    padding: 20,
+    marginBottom: 18,
     borderWidth: 1,
     borderColor: '#e2e8f0',
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 8 },
-      android: { elevation: 3 }
-    })
+    shadowColor: 'rgba(15, 23, 42, 0.06)',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 1,
+    shadowRadius: 16,
+    elevation: 4,
   },
-  mapPinRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginVertical: 4 },
-  pinDotGreen: { width: 14, height: 14, borderRadius: 7, backgroundColor: '#16a34a' },
-  pinDotRed: { width: 14, height: 14, borderRadius: 7, backgroundColor: '#ef4444' },
-  mapPinText: { fontSize: 14, fontWeight: '700', color: '#0f172a' },
-  mapLine: { width: 2, height: 24, backgroundColor: '#cbd5e1', marginLeft: 6 },
-  navBarFooter: { flexDirection: 'row', alignItems: 'center', gap: 8, borderTopWidth: 1, borderTopColor: '#f1f5f9', paddingTop: 14, marginTop: 14 },
-  navText: { fontSize: 13, fontWeight: '600', color: '#475569' },
-  card: { 
-    backgroundColor: '#ffffff', 
-    borderRadius: 18, 
-    padding: 20, 
-    marginBottom: 16, 
+  mapHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 14,
+  },
+  mapHeaderTitle: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#0284c7',
+    letterSpacing: 1,
+  },
+  mapPinsContainer: {
+    gap: 2,
+  },
+  mapPinRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginVertical: 4,
+  },
+  pinDotGreen: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: '#16a34a',
+  },
+  pinDotRed: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: '#ef4444',
+  },
+  mapPinLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#64748b',
+    letterSpacing: 0.5,
+  },
+  mapPinText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0f172a',
+    marginTop: 1,
+  },
+  mapLine: {
+    width: 2,
+    height: 20,
+    backgroundColor: '#cbd5e1',
+    marginLeft: 6,
+  },
+  navBarFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#f1f5f9',
+    paddingTop: 14,
+    marginTop: 14,
+  },
+  navText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#475569',
+  },
+  card: {
+    backgroundColor: '#ffffff',
+    borderRadius: 22,
+    padding: 20,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: '#e2e8f0',
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 8 },
-      android: { elevation: 3 }
-    })
+    shadowColor: 'rgba(15, 23, 42, 0.06)',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 1,
+    shadowRadius: 16,
+    elevation: 4,
   },
-  cardHeaderTitle: { fontSize: 11, fontWeight: '800', color: '#64748b', letterSpacing: 1 },
-  cardMainText: { fontSize: 16, fontWeight: '700', color: '#0f172a', marginTop: 4 },
-  cardSubText: { fontSize: 13, color: '#475569', marginTop: 4, lineHeight: 18 },
-  actionBtnPill: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#0284c7', borderRadius: 30, paddingVertical: 14, marginTop: 20, gap: 8 },
-  actionBtnText: { color: '#ffffff', fontSize: 14, fontWeight: '700' },
-  itemsBox: { backgroundColor: '#f8fafc', padding: 14, borderRadius: 12, marginTop: 16, borderWidth: 1, borderColor: '#e2e8f0' },
-  itemsBoxTitle: { fontSize: 13, fontWeight: '700', color: '#0f172a', marginBottom: 6 },
-  itemText: { fontSize: 13, color: '#475569', marginBottom: 4, fontWeight: '500' },
-  otpContainer: { marginTop: 20, borderTopWidth: 1, borderTopColor: '#f1f5f9', paddingTop: 16 },
-  otpLabel: { fontSize: 14, fontWeight: '700', color: '#0f172a', marginBottom: 10 },
-  otpInput: { backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 12, padding: 14, fontSize: 18, color: '#0f172a', marginBottom: 16, textAlign: 'center', letterSpacing: 4, fontWeight: '700' },
-  completeBtnPill: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#16a34a', borderRadius: 30, paddingVertical: 14, gap: 8 },
-  completeBtnText: { color: '#ffffff', fontSize: 14, fontWeight: '700' },
-  payBoxGradient: { backgroundColor: '#0f172a', padding: 24, borderRadius: 20, marginBottom: 24, alignItems: 'center' },
-  payLabel: { fontSize: 13, color: '#94a3b8', fontWeight: '600' },
-  payAmount: { fontSize: 36, fontWeight: '800', color: '#ffffff', marginTop: 8 },
-  paySub: { fontSize: 12, color: '#cbd5e1', marginTop: 8 },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#0f172a', marginBottom: 16 },
-  earnCard: { backgroundColor: '#ffffff', padding: 16, borderRadius: 16, marginBottom: 12, borderWidth: 1, borderColor: '#e2e8f0', ...Platform.select({ ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.03, shadowRadius: 4 }, android: { elevation: 1 } }) },
-  earnHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  earnDate: { fontSize: 14, fontWeight: '700', color: '#0f172a' },
-  earnStatusBadge: { backgroundColor: '#dcfce7', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
-  earnStatus: { fontSize: 11, fontWeight: '800', color: '#15803d' },
-  earnDetailsRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10, alignItems: 'center' },
-  earnDetailText: { fontSize: 13, color: '#475569', fontWeight: '500' },
-  earnTotalText: { fontSize: 16, fontWeight: '800', color: '#0f172a' }
+  cardTagHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 8,
+  },
+  cardHeaderTitle: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1,
+  },
+  cardMainText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0f172a',
+    marginTop: 2,
+  },
+  cardSubText: {
+    fontSize: 13,
+    color: '#475569',
+    marginTop: 4,
+    lineHeight: 18,
+  },
+  actionBtnPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#0284c7',
+    borderRadius: 16,
+    height: 52,
+    marginTop: 18,
+    gap: 8,
+    shadowColor: '#0284c7',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  actionBtnText: {
+    color: '#ffffff',
+    fontSize: 14.5,
+    fontWeight: '700',
+  },
+  itemsBox: {
+    backgroundColor: '#f8fafc',
+    padding: 14,
+    borderRadius: 14,
+    marginTop: 14,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    gap: 6,
+  },
+  itemsBoxTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#0f172a',
+    marginBottom: 4,
+  },
+  itemCheckRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  itemText: {
+    fontSize: 13,
+    color: '#334155',
+    fontWeight: '600',
+  },
+  otpContainer: {
+    marginTop: 18,
+    borderTopWidth: 1,
+    borderTopColor: '#f1f5f9',
+    paddingTop: 16,
+  },
+  otpLabel: {
+    fontSize: 13.5,
+    fontWeight: '700',
+    color: '#0f172a',
+    marginBottom: 10,
+  },
+  otpInput: {
+    backgroundColor: '#f8fafc',
+    borderWidth: 1.5,
+    borderColor: '#0284c7',
+    borderRadius: 14,
+    padding: 12,
+    fontSize: 20,
+    color: '#0f172a',
+    marginBottom: 14,
+    textAlign: 'center',
+    letterSpacing: 6,
+    fontWeight: '800',
+  },
+  completeBtnPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#16a34a',
+    borderRadius: 16,
+    height: 52,
+    gap: 8,
+    shadowColor: '#16a34a',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  completeBtnText: {
+    color: '#ffffff',
+    fontSize: 14.5,
+    fontWeight: '700',
+  },
+  payBoxGradient: {
+    backgroundColor: '#0f172a',
+    padding: 24,
+    borderRadius: 22,
+    marginBottom: 20,
+    alignItems: 'center',
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 6,
+  },
+  payLabel: {
+    fontSize: 11,
+    color: '#10b981',
+    fontWeight: '800',
+    letterSpacing: 1,
+  },
+  payAmount: {
+    fontSize: 38,
+    fontWeight: '800',
+    color: '#ffffff',
+    marginTop: 6,
+  },
+  settleBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 8,
+  },
+  paySub: {
+    fontSize: 12,
+    color: '#cbd5e1',
+    fontWeight: '500',
+  },
+  sectionTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#0f172a',
+    marginBottom: 14,
+  },
+  earnCard: {
+    backgroundColor: '#ffffff',
+    padding: 16,
+    borderRadius: 18,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  earnHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  earnDate: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0f172a',
+  },
+  earnStatusBadge: {
+    backgroundColor: '#dcfce7',
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  earnStatus: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#15803d',
+  },
+  earnDetailsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 10,
+    alignItems: 'center',
+  },
+  earnDetailText: {
+    fontSize: 13,
+    color: '#475569',
+    fontWeight: '500',
+  },
+  earnTotalText: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0f172a',
+  },
 });
+

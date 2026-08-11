@@ -86,7 +86,7 @@ export const AppProvider = ({ children }) => {
       total: totalAmount,
       status: "PLACED",
       paymentMethod,
-      hubName: userProfile.villageHub,
+      hubName: userProfile?.villageHub || userProfile?.city || "Central Hub",
       deliveryAddress: deliveryAddress || "Default Registered Address",
     };
 
@@ -100,7 +100,7 @@ export const AppProvider = ({ children }) => {
       id: `f-${Date.now()}`,
       ...listing,
       status: "ACCEPTED_BY_HUB",
-      hubAssigned: userProfile.villageHub,
+      hubAssigned: userProfile?.villageHub || userProfile?.city || "Central Hub",
     };
     setFarmerListings([newListing, ...farmerListings]);
   };

@@ -132,7 +132,7 @@ export const CartScreen = ({ navigation }) => {
                 <Ionicons name="location" size={18} color={colors.primary} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.addressHub}>{userProfile.villageHub}</Text>
+                <Text style={styles.addressHub}>{userProfile?.villageHub || userProfile?.city || "Central Hub"}</Text>
                 <TextInput
                   style={styles.addressInput}
                   value={deliveryAddress}

@@ -94,9 +94,9 @@ export const CheckoutScreen = ({ navigation }) => {
           <View style={styles.addressRow}>
             <Ionicons name="location" size={24} color={colors.primary} style={{marginTop: 2}} />
             <View style={styles.addressDetails}>
-              <Text style={styles.addressName}>{userProfile.fullName}</Text>
-              <Text style={styles.addressText}>{userProfile.villageHub}, {userProfile.city}</Text>
-              <Text style={styles.addressPhone}>+91 {userProfile.phone}</Text>
+              <Text style={styles.addressName}>{userProfile?.fullName || userProfile?.name || "Guest Customer"}</Text>
+              <Text style={styles.addressText}>{userProfile?.villageHub || "Main Hub"}{userProfile?.city ? `, ${userProfile.city}` : ""}</Text>
+              <Text style={styles.addressPhone}>{userProfile?.phone ? `+91 ${userProfile.phone}` : "No phone provided"}</Text>
             </View>
           </View>
         </View>

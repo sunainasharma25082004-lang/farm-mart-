@@ -31,14 +31,16 @@ export const ProfileWalletScreen = ({ navigation }) => {
 
         <View style={styles.profileCard}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{userProfile.name.charAt(0)}</Text>
+            <Text style={styles.avatarText}>
+              {(userProfile?.name || "Guest").charAt(0).toUpperCase()}
+            </Text>
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.userName}>{userProfile.name}</Text>
-            <Text style={styles.userPhone}>{userProfile.phone}</Text>
+            <Text style={styles.userName}>{userProfile?.name || "Guest User"}</Text>
+            <Text style={styles.userPhone}>{userProfile?.phone || "No phone linked"}</Text>
             <View style={styles.hubRow}>
               <Ionicons name="location" size={12} color={colors.primary} />
-              <Text style={styles.userHub}>{userProfile.villageHub}</Text>
+              <Text style={styles.userHub}>{userProfile?.villageHub || userProfile?.city || "Central Hub"}</Text>
             </View>
           </View>
           <View style={styles.customerBadge}>

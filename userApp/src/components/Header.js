@@ -41,16 +41,16 @@ export const Header = ({ navigation, title, showCart = true, showBack = false })
         return;
       }
 
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        setLocationSubtitle(userProfile.city || 'Location permission denied');
-        setDisplayAddress(fallbackAddress);
-        setManualAddress(fallbackAddress);
-        setIsLocationLoading(false);
-        return;
-      }
-
       try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          setLocationSubtitle(userProfile?.city || 'Location permission denied');
+          setDisplayAddress(fallbackAddress);
+          setManualAddress(fallbackAddress);
+          setIsLocationLoading(false);
+          return;
+        }
+
         const currentLocation = await Location.getCurrentPositionAsync({
           accuracy: Location.Accuracy.Low
         });
@@ -71,7 +71,7 @@ export const Header = ({ navigation, title, showCart = true, showBack = false })
       } catch (error) {
         setDisplayAddress(fallbackAddress);
         setManualAddress(fallbackAddress);
-        setLocationSubtitle(userProfile.city || 'Could not detect location');
+        setLocationSubtitle(userProfile?.city || 'Could not detect location');
       } finally {
         setIsLocationLoading(false);
       }

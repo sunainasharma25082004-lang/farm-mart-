@@ -1,5 +1,10 @@
 import React, { createContext, useState, useContext } from 'react';
-import { vendorProfile as initialProfile, incomingCustomerOrders as initialOrders, initialInventoryItems } from '../data/mockPartnerData';
+import {
+  vendorProfile as initialProfile,
+  incomingCustomerOrders as initialOrders,
+  initialInventoryItems,
+  settlementHistory as initialSettlements
+} from '../data/mockPartnerData';
 
 const PartnerContext = createContext();
 
@@ -7,6 +12,7 @@ export const PartnerProvider = ({ children }) => {
   const [vendor, setVendor] = useState(initialProfile);
   const [orders, setOrders] = useState(initialOrders);
   const [inventory, setInventory] = useState(initialInventoryItems);
+  const [settlementHistory, setSettlementHistory] = useState(initialSettlements);
 
   const toggleStoreStatus = () => {
     setVendor((prev) => ({ ...prev, isStoreOpen: !prev.isStoreOpen }));
@@ -21,10 +27,11 @@ export const PartnerProvider = ({ children }) => {
   const addInventoryItem = (item) => {
     const newItem = {
       id: `v-item-${Date.now()}`,
-      ...item,
-      isAvailable: true
+      stock: 10,
+      isAvailable: true,
+      ...item
     };
-    setInventory([newItem, ...inventory]);
+    setInventory((prev) => [newItem, ...prev]);
   };
 
   const toggleItemAvailability = (itemId) => {
@@ -33,16 +40,23 @@ export const PartnerProvider = ({ children }) => {
     );
   };
 
+  const deleteInventoryItem = (itemId) => {
+    setInventory((prev) => prev.filter((i) => i.id !== itemId));
+  };
+
   return (
     <PartnerContext.Provider
       value={{
         vendor,
+        setVendor,
         toggleStoreStatus,
         orders,
         updateOrderStatus,
         inventory,
         addInventoryItem,
-        toggleItemAvailability
+        toggleItemAvailability,
+        deleteInventoryItem,
+        settlementHistory
       }}
     >
       {children}

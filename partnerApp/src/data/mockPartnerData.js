@@ -67,3 +67,9 @@ export const initialInventoryItems = [
     isAvailable: true
   }
 ];
+
+export const settlementHistory = [
+  { date: 'Wed, Aug 05, 2026', total: 4280, status: 'PAID', ref: 'UPI-FMT-99412' },
+  { date: 'Wed, Jul 29, 2026', total: 3950, status: 'PAID', ref: 'UPI-FMT-88190' },
+  { date: 'Wed, Jul 22, 2026', total: 5120, status: 'PAID', ref: 'UPI-FMT-77631' }
+];
