@@ -14,6 +14,17 @@ import { colors, roles } from '../theme/colors';
 import { useApp } from '../context/AppContext';
 
 const LOGO = require('../../assets/farmart24_logo.jpg');
+const safeRoles = Array.isArray(roles)
+  ? roles
+  : [
+      {
+        id: 'customer',
+        name: 'Customer',
+        desc: 'Shop fresh produce & everyday essentials',
+        icon: 'person-outline',
+        color: '#16a34a',
+      },
+    ];
 
 export const RoleSelectorModal = () => {
   const { activeRole, setActiveRole, isRoleModalOpen, setIsRoleModalOpen } = useApp();
@@ -52,47 +63,52 @@ export const RoleSelectorModal = () => {
           </View>
 
           <ScrollView style={styles.roleList} showsVerticalScrollIndicator={false}>
-            {roles.map((role) => {
+            {safeRoles.map((role) => {
               const isSelected = activeRole === role.id;
-              return (
-                <TouchableOpacity
-                  key={role.id}
-                  style={[
-                    styles.roleCard,
-                    isSelected && { borderColor: role.color, backgroundColor: role.color + '0A' }
-                  ]}
-                  onPress={() => handleSelect(role.id)}
-                  activeOpacity={0.7}
-                >
-                  <View
+                return (
+                  <TouchableOpacity
+                    key={role.id}
                     style={[
-                      styles.iconContainer,
-                      { backgroundColor: isSelected ? role.color : '#f1f5f9' }
+                      styles.roleCard,
+                      isSelected && { borderColor: role.color, backgroundColor: role.color + '0A' }
                     ]}
+                    onPress={() => handleSelect(role.id)}
+                    activeOpacity={0.7}
                   >
-                    <Ionicons
-                      name={role.icon}
-                      size={22}
-                      color={isSelected ? '#ffffff' : role.color}
-                    />
-                  </View>
-                  <View style={styles.roleInfo}>
-                    <Text
+                    <View
                       style={[
-                        styles.roleName,
-                        isSelected && { color: role.color, fontWeight: '500' }
+                        styles.iconContainer,
+                        { backgroundColor: isSelected ? role.color : '#f1f5f9' }
                       ]}
                     >
-                      {role.name}
-                    </Text>
-                    <Text style={styles.roleDesc}>{role.desc}</Text>
-                  </View>
-                  {isSelected && (
-                    <Ionicons name="checkmark-circle" size={24} color={role.color} />
-                  )}
-                </TouchableOpacity>
-              );
-            })}
+                      <Ionicons
+                        name={role.icon}
+                        size={22}
+                        color={isSelected ? '#ffffff' : role.color}
+                      />
+                    </View>
+                    <View style={styles.roleInfo}>
+                      <Text
+                        style={[
+                          styles.roleName,
+                          isSelected && { color: role.color, fontWeight: '500' }
+                        ]}
+                      >
+                        {role.name}
+                      </Text>
+                      <Text style={styles.roleDesc}>{role.desc}</Text>
+                    </View>
+                    {isSelected && (
+                      <Ionicons name="checkmark-circle" size={24} color={role.color} />
+                    )}
+                  </TouchableOpacity>
+                );
+              })
+            ) : (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyStateText}>No roles available right now.</Text>
+              </View>
+            )}
           </ScrollView>
         </Pressable>
       </TouchableOpacity>
@@ -190,5 +206,14 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: colors.textSecondary,
     marginTop: 2
+  },
+  emptyState: {
+    padding: 24,
+    alignItems: 'center',
+  },
+  emptyStateText: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    textAlign: 'center',
   }
 });
