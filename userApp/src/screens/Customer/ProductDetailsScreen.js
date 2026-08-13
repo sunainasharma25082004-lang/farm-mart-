@@ -224,7 +224,7 @@ const styles = StyleSheet.create({
   badgeText: {
     color: '#ffffff',
     fontSize: 9,
-    fontWeight: '600'
+    fontWeight: '500'
   },
   scrollContent: {
     paddingBottom: 100
@@ -253,7 +253,7 @@ const styles = StyleSheet.create({
   discountText: {
     color: '#ffffff',
     fontSize: 11,
-    fontWeight: '600'
+    fontWeight: '500'
   },
   mainInfo: {
     padding: 16,
@@ -264,7 +264,7 @@ const styles = StyleSheet.create({
   },
   productName: {
     fontSize: 22,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#0f172a',
     lineHeight: 28
   },
@@ -286,7 +286,7 @@ const styles = StyleSheet.create({
   },
   price: {
     fontSize: 24,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#0f172a'
   },
   ratingBox: {
@@ -300,7 +300,7 @@ const styles = StyleSheet.create({
   ratingText: {
     color: '#ffffff',
     fontSize: 12,
-    fontWeight: '600'
+    fontWeight: '500'
   },
   btnWrapper: {
     minWidth: 100,
@@ -318,7 +318,7 @@ const styles = StyleSheet.create({
   addBtnText: {
     color: colors.primaryDark,
     fontSize: 14,
-    fontWeight: '600'
+    fontWeight: '500'
   },
   qtyControl: {
     flex: 1,
@@ -336,7 +336,7 @@ const styles = StyleSheet.create({
   qtyText: {
     color: '#ffffff',
     fontSize: 14,
-    fontWeight: '600'
+    fontWeight: '500'
   },
   divider: {
     height: 8,
@@ -361,7 +361,7 @@ const styles = StyleSheet.create({
   },
   trustTitle: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#334155'
   },
   trustSub: {
@@ -375,7 +375,7 @@ const styles = StyleSheet.create({
   },
   sectionHeading: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#0f172a',
     marginBottom: 10
   },
@@ -422,13 +422,13 @@ const styles = StyleSheet.create({
   fcItems: {
     color: '#dcfce7',
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: '500',
     marginBottom: 2
   },
   fcTotal: {
     color: '#ffffff',
     fontSize: 15,
-    fontWeight: '600'
+    fontWeight: '500'
   },
   fcBtn: {
     width: 40,

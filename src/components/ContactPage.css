@@ -29,13 +29,13 @@
   border: 1px solid var(--border-green);
   color: var(--primary-green);
   font-size: 0.88rem;
-  font-weight: 700;
+  font-weight: 500;
   margin-bottom: 1rem;
 }
 
 .cp-hero-title {
   font-size: 3rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--text-main);
   margin-bottom: 0.75rem;
 }
@@ -72,7 +72,7 @@
 
 .form-card-header h3 {
   font-size: 1.4rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--text-main);
   margin-bottom: 0.2rem;
 }
@@ -90,7 +90,7 @@
 .cp-chip-label {
   display: block;
   font-size: 0.85rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--text-main);
   margin-bottom: 0.5rem;
 }
@@ -107,7 +107,7 @@
   color: var(--text-muted);
   font-family: var(--font-body);
   font-size: 0.82rem;
-  font-weight: 700;
+  font-weight: 500;
   padding: 0.4rem 0.9rem;
   border-radius: 9999px;
   cursor: pointer;
@@ -160,7 +160,7 @@
   align-items: center;
   gap: 0.35rem;
   font-size: 0.85rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--text-main);
 }
 
@@ -187,7 +187,7 @@
   width: 100%;
   padding: 1rem;
   font-size: 1.05rem;
-  font-weight: 800;
+  font-weight: 500;
   border-radius: 9999px;
 }
 
@@ -213,7 +213,7 @@
   background-color: var(--surface-cream);
   border: 1px solid var(--border-green);
   color: var(--primary-green);
-  font-weight: 800;
+  font-weight: 500;
   padding: 0.4rem 1.25rem;
   border-radius: 9999px;
   margin-bottom: 1.5rem;
@@ -241,7 +241,7 @@
 
 .cp-office-card h3 {
   font-size: 1.3rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--text-main);
   margin-bottom: 0.4rem;
 }
@@ -272,7 +272,7 @@
 .cp-link-item strong {
   display: block;
   font-size: 0.92rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--text-main);
 }
 
@@ -292,7 +292,7 @@
 
 .cp-regional-presence h4 {
   font-size: 0.95rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--text-main);
   margin-bottom: 0.75rem;
 }
@@ -305,7 +305,7 @@
 
 .cp-hubs-grid span {
   font-size: 0.8rem;
-  font-weight: 700;
+  font-weight: 500;
   padding: 0.4rem 0.75rem;
   background-color: var(--surface-cream);
   border: 1px solid var(--border-light);

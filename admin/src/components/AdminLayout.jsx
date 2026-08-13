@@ -134,7 +134,7 @@ const styles = {
   },
   brandMobile: {
     fontSize: '18px',
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#ffffff',
     margin: 0
   },
@@ -176,7 +176,7 @@ const styles = {
   },
   brand: {
     fontSize: '20px',
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#ffffff',
     margin: 0
   },
@@ -197,11 +197,11 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center',
     fontSize: '18px',
-    fontWeight: '700'
+    fontWeight: '500'
   },
   adminName: {
     fontSize: '14px',
-    fontWeight: '600'
+    fontWeight: '500'
   },
   adminRole: {
     fontSize: '12px',
@@ -235,7 +235,7 @@ const styles = {
     borderTop: '1px solid #1e293b',
     color: '#ef4444',
     fontSize: '15px',
-    fontWeight: '600',
+    fontWeight: '500',
     cursor: 'pointer',
     textAlign: 'left',
     transition: '0.2s',

@@ -33,7 +33,7 @@
   color: #0d9488;
   font-family: var(--font-body);
   font-size: 0.88rem;
-  font-weight: 700;
+  font-weight: 500;
   cursor: pointer;
   margin-bottom: 1.5rem;
   transition: color 0.2s ease;
@@ -54,13 +54,13 @@
   border: 1px solid #99f6e4;
   color: #0d9488;
   font-size: 0.88rem;
-  font-weight: 700;
+  font-weight: 500;
   margin-bottom: 1.25rem;
 }
 
 .dp-hero-title {
   font-size: 3.2rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--text-main);
   margin-bottom: 0.5rem;
   line-height: 1.15;
@@ -69,7 +69,7 @@
 .dp-tagline {
   font-family: var(--font-heading);
   font-size: 1.4rem;
-  font-weight: 800;
+  font-weight: 500;
   color: #0d9488;
   margin-bottom: 1.5rem;
   font-style: italic;
@@ -149,14 +149,14 @@
 .dp-who-num {
   font-family: var(--font-heading);
   font-size: 1.5rem;
-  font-weight: 800;
+  font-weight: 500;
   color: #0d9488;
   margin-bottom: 0.5rem;
 }
 
 .dp-who-title {
   font-size: 1.15rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--text-main);
   margin-bottom: 0.4rem;
 }
@@ -226,7 +226,7 @@
 
 .dp-do-title {
   font-size: 1.15rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--text-main);
   margin-bottom: 0.35rem;
 }
@@ -294,7 +294,7 @@
 
 .dp-receive-title {
   font-size: 1.1rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--text-main);
   margin-bottom: 0.35rem;
   line-height: 1.25;
@@ -357,7 +357,7 @@
 
 .dp-why-title {
   font-size: 1.25rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--text-main);
   margin-bottom: 0.65rem;
 }
@@ -399,7 +399,7 @@
 
 .dp-cta-tagline {
   font-size: 2.3rem;
-  font-weight: 800;
+  font-weight: 500;
   color: #ffffff;
   line-height: 1.25;
   margin-bottom: 1rem;
@@ -452,7 +452,7 @@
 
 .dp-modal-header h3 {
   font-size: 1.35rem;
-  font-weight: 800;
+  font-weight: 500;
 }
 
 .dp-apply-form {

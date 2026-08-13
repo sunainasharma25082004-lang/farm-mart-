@@ -246,7 +246,7 @@ const styles = StyleSheet.create({
   },
   storeName: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#0f172a',
     letterSpacing: -0.2,
   },
@@ -272,7 +272,7 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '500',
     letterSpacing: 0.4,
   },
   scrollContent: {
@@ -295,13 +295,13 @@ const styles = StyleSheet.create({
   },
   bannerTag: {
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: '500',
     color: '#10b981',
     letterSpacing: 1,
   },
   bannerTitle: {
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: '500',
     color: '#ffffff',
     marginTop: 2,
   },
@@ -328,14 +328,14 @@ const styles = StyleSheet.create({
   },
   statVal: {
     fontSize: 17,
-    fontWeight: '800',
+    fontWeight: '500',
     color: colors.primaryDark,
   },
   statLabel: {
     fontSize: 11,
     color: '#64748b',
     marginTop: 2,
-    fontWeight: '600',
+    fontWeight: '500',
     textAlign: 'center',
   },
   addProdBtn: {
@@ -364,7 +364,7 @@ const styles = StyleSheet.create({
   addProdText: {
     color: '#ffffff',
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: '500',
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -374,7 +374,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: '500',
     color: '#0f172a',
     letterSpacing: -0.3,
   },
@@ -386,7 +386,7 @@ const styles = StyleSheet.create({
   },
   orderCountText: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#15803d',
   },
   emptyBox: {
@@ -408,7 +408,7 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#0f172a',
   },
   emptySub: {
@@ -444,7 +444,7 @@ const styles = StyleSheet.create({
   },
   orderId: {
     fontSize: 16,
-    fontWeight: '800',
+    fontWeight: '500',
     color: '#0f172a',
   },
   typeBadge: {
@@ -458,7 +458,7 @@ const styles = StyleSheet.create({
   },
   typeBadgeText: {
     fontSize: 10.5,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#4338ca',
   },
   orderTime: {
@@ -474,7 +474,7 @@ const styles = StyleSheet.create({
   },
   statusPillText: {
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: '500',
     letterSpacing: 0.3,
   },
   itemsContainer: {
@@ -499,18 +499,18 @@ const styles = StyleSheet.create({
   },
   itemQtyText: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#15803d',
   },
   itemRowText: {
     flex: 1,
     fontSize: 13.5,
     color: '#1e293b',
-    fontWeight: '600',
+    fontWeight: '500',
   },
   itemPrice: {
     fontSize: 13.5,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#0f172a',
   },
   orderFooter: {
@@ -524,11 +524,11 @@ const styles = StyleSheet.create({
   totalLabel: {
     fontSize: 11,
     color: '#64748b',
-    fontWeight: '600',
+    fontWeight: '500',
   },
   totalText: {
     fontSize: 19,
-    fontWeight: '800',
+    fontWeight: '500',
     color: '#0f172a',
     marginTop: 2,
   },
@@ -549,7 +549,7 @@ const styles = StyleSheet.create({
   btnText: {
     color: '#ffffff',
     fontSize: 13.5,
-    fontWeight: '700',
+    fontWeight: '500',
   },
 });
 

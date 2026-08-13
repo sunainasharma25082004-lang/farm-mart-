@@ -84,7 +84,7 @@
   padding: 0.3rem 0.8rem;
   border-radius: 9999px;
   font-size: 0.72rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--primary-green);
   border: 1px solid var(--border-green);
   text-transform: uppercase;
@@ -101,7 +101,7 @@
 
 .topic-card-title {
   font-size: 1.25rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--text-main);
   margin-bottom: 0.5rem;
   line-height: 1.25;
@@ -125,7 +125,7 @@
 
 .explore-link-text {
   font-size: 0.88rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--primary-green);
   transition: color 0.2s ease;
 }

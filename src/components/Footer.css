@@ -68,12 +68,12 @@
   border: 1px solid rgba(34, 197, 94, 0.2);
   color: var(--primary-emerald);
   font-size: 0.78rem;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .footer-links-col h4, .footer-newsletter-col h4 {
   font-size: 1.1rem;
-  font-weight: 800;
+  font-weight: 500;
   color: #ffffff;
   margin-bottom: 1.25rem;
 }

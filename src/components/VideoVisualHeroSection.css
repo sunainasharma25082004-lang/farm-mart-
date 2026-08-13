@@ -112,7 +112,7 @@
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   font-size: 0.78rem;
-  font-weight: 800;
+  font-weight: 500;
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
@@ -191,7 +191,7 @@
 .play-hint-text {
   font-family: var(--font-heading);
   font-size: 1.05rem;
-  font-weight: 800;
+  font-weight: 500;
   color: #ffffff;
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
   background: rgba(15, 23, 42, 0.7);
@@ -262,7 +262,7 @@
 .video-time-tag {
   font-size: 0.8rem;
   color: #94a3b8;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .control-chapter-label {
@@ -358,14 +358,14 @@
 
 .chap-badge {
   font-size: 0.65rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--earth-amber);
   text-transform: uppercase;
 }
 
 .chap-title {
   font-size: 0.88rem;
-  font-weight: 700;
+  font-weight: 500;
   color: #ffffff;
   margin: 0.1rem 0;
   line-height: 1.25;
@@ -417,7 +417,7 @@
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  font-weight: 700;
+  font-weight: 500;
   font-size: 0.95rem;
 }
 
@@ -475,7 +475,7 @@
 
 .v-screen-center-play h3 {
   font-size: 1.8rem;
-  font-weight: 800;
+  font-weight: 500;
   color: #ffffff;
   margin-bottom: 0.35rem;
 }

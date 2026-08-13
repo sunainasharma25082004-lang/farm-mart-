@@ -77,7 +77,7 @@ export default function PartnersPage() {
               {partners.map((p) => (
                 <tr key={p.id} style={styles.tr}>
                   <td style={styles.td}>
-                    <div style={{ fontWeight: '600', color: '#0f172a' }}>{p.fullName}</div>
+                    <div style={{ fontWeight: '500', color: '#0f172a' }}>{p.fullName}</div>
                     <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>{p.id} • {p.phone}</div>
                   </td>
                   <td style={styles.td}>{p.categoryId}</td>
@@ -118,16 +118,16 @@ export default function PartnersPage() {
 const styles = {
   page: { padding: '40px', maxWidth: '1200px', margin: '0 auto', width: '100%' },
   header: { marginBottom: '32px' },
-  title: { fontSize: '28px', fontWeight: '700', color: '#0f172a', margin: 0 },
+  title: { fontSize: '28px', fontWeight: '500', color: '#0f172a', margin: 0 },
   subtitle: { fontSize: '15px', color: '#64748b', marginTop: '8px' },
   tableCard: { backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', overflow: 'hidden' },
   table: { width: '100%', borderCollapse: 'collapse', textAlign: 'left' },
   trHead: { borderBottom: '1px solid #e2e8f0', backgroundColor: '#f8fafc' },
-  th: { padding: '16px 24px', fontSize: '13px', fontWeight: '600', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' },
+  th: { padding: '16px 24px', fontSize: '13px', fontWeight: '500', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' },
   tr: { borderBottom: '1px solid #f1f5f9' },
   td: { padding: '16px 24px', fontSize: '15px', color: '#334155' },
-  statusBadge: { display: 'inline-block', padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '700' },
+  statusBadge: { display: 'inline-block', padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '500' },
   actions: { display: 'flex', gap: '8px' },
-  approveBtn: { display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: '#10b981', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' },
-  rejectBtn: { display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: '#ef4444', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }
+  approveBtn: { display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: '#10b981', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '13px', fontWeight: '500', cursor: 'pointer' },
+  rejectBtn: { display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: '#ef4444', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '13px', fontWeight: '500', cursor: 'pointer' }
 };

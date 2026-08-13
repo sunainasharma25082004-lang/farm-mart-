@@ -200,7 +200,7 @@ const styles = StyleSheet.create({
   },
   driverName: {
     fontSize: 16,
-    fontWeight: '800',
+    fontWeight: '500',
     color: '#0f172a',
     letterSpacing: -0.2,
   },
@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#64748b',
     marginTop: 2,
-    fontWeight: '600',
+    fontWeight: '500',
   },
   dutySwitchBox: {
     flexDirection: 'row',
@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
   },
   dutyLabel: {
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: '500',
     letterSpacing: 0.4,
   },
   scrollContent: {
@@ -256,14 +256,14 @@ const styles = StyleSheet.create({
   },
   statVal: {
     fontSize: 20,
-    fontWeight: '800',
+    fontWeight: '500',
     color: '#15803d',
   },
   statLabel: {
     fontSize: 11,
     color: '#64748b',
     marginTop: 4,
-    fontWeight: '600',
+    fontWeight: '500',
   },
   statDivider: {
     width: 1,
@@ -290,7 +290,7 @@ const styles = StyleSheet.create({
   },
   offlineTitle: {
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: '500',
     color: '#0f172a',
   },
   offlineSub: {
@@ -308,7 +308,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: '500',
     color: '#0f172a',
     letterSpacing: -0.3,
   },
@@ -320,7 +320,7 @@ const styles = StyleSheet.create({
   },
   taskBadgeText: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#0369a1',
   },
   emptyTasksBox: {
@@ -333,7 +333,7 @@ const styles = StyleSheet.create({
   },
   emptyTaskTitle: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#0f172a',
     marginTop: 8,
   },
@@ -370,7 +370,7 @@ const styles = StyleSheet.create({
   },
   orderIdText: {
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '500',
     color: '#0f172a',
   },
   earnBadgeBox: {
@@ -383,7 +383,7 @@ const styles = StyleSheet.create({
   },
   earnBadge: {
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '500',
     color: '#15803d',
   },
   locationRow: {
@@ -409,13 +409,13 @@ const styles = StyleSheet.create({
   },
   locLabel: {
     fontSize: 10.5,
-    fontWeight: '800',
+    fontWeight: '500',
     color: '#64748b',
     letterSpacing: 0.8,
   },
   locTitle: {
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#0f172a',
     marginTop: 2,
   },
@@ -441,12 +441,12 @@ const styles = StyleSheet.create({
   distText: {
     fontSize: 12.5,
     color: '#334155',
-    fontWeight: '700',
+    fontWeight: '500',
   },
   itemCountText: {
     fontSize: 12.5,
     color: '#64748b',
-    fontWeight: '600',
+    fontWeight: '500',
   },
   navBtn: {
     flexDirection: 'row',
@@ -465,7 +465,7 @@ const styles = StyleSheet.create({
   navBtnText: {
     color: '#ffffff',
     fontSize: 13.5,
-    fontWeight: '700',
+    fontWeight: '500',
   },
 });
 

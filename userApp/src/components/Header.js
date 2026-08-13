@@ -366,7 +366,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 16,
-    fontWeight: "700",
+    fontWeight: '500',
     color: colors.textPrimary,
   },
   modalLabel: {
@@ -395,6 +395,6 @@ const styles = StyleSheet.create({
   saveButtonText: {
     color: "#ffffff",
     fontSize: 14,
-    fontWeight: "700",
+    fontWeight: '500',
   },
 });

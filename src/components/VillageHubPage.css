@@ -17,7 +17,7 @@
   border: none;
   font-family: var(--font-body);
   font-size: 0.95rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--primary-green);
   cursor: pointer;
   transition: color 0.2s ease;
@@ -61,13 +61,13 @@
   border: 1px solid var(--border-green);
   color: var(--primary-green);
   font-size: 0.88rem;
-  font-weight: 700;
+  font-weight: 500;
   margin-bottom: 1.25rem;
 }
 
 .vh-hero-title {
   font-size: 3.2rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--text-main);
   margin-bottom: 0.5rem;
   line-height: 1.15;
@@ -75,7 +75,7 @@
 
 .vh-hero-subtitle {
   font-size: 1.15rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--earth-amber);
   margin-bottom: 1.5rem;
 }
@@ -147,7 +147,7 @@
 
 .vh-role-title {
   font-size: 1.2rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--text-main);
   margin-bottom: 0.5rem;
 }
@@ -192,7 +192,7 @@
   align-items: flex-start;
   gap: 0.85rem;
   font-size: 1rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-main);
 }
 
@@ -254,7 +254,7 @@
 
 .benefit-text-box h3 {
   font-size: 1.15rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--text-main);
   margin-bottom: 0.35rem;
 }
@@ -279,7 +279,7 @@
 
 .vh-closing-banner h2 {
   font-size: 2.2rem;
-  font-weight: 800;
+  font-weight: 500;
   color: #ffffff;
   margin-bottom: 0.75rem;
 }
@@ -368,7 +368,7 @@
   background: rgba(22, 163, 74, 0.88);
   color: #ffffff;
   font-size: 0.75rem;
-  font-weight: 800;
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin-bottom: 0.5rem;
@@ -376,7 +376,7 @@
 
 .vh-cover-content h2 {
   font-size: 2rem;
-  font-weight: 800;
+  font-weight: 500;
   color: #ffffff;
   margin-bottom: 0.3rem;
   line-height: 1.15;
@@ -445,7 +445,7 @@
   align-items: center;
   gap: 0.35rem;
   font-size: 0.85rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--text-main);
 }
 
@@ -472,7 +472,7 @@
   width: 100%;
   padding: 1rem;
   font-size: 1.05rem;
-  font-weight: 800;
+  font-weight: 500;
   border-radius: 9999px;
   margin-top: 1rem;
 }
@@ -499,7 +499,7 @@
   background-color: var(--surface-cream);
   border: 1px solid var(--border-green);
   color: var(--primary-green);
-  font-weight: 800;
+  font-weight: 500;
   padding: 0.4rem 1.25rem;
   border-radius: 9999px;
   margin: 1rem 0 1.75rem 0;

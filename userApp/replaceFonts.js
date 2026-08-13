@@ -10,12 +10,12 @@ function replaceFonts(dir) {
         } else if (fullPath.endsWith('.js')) {
             let content = fs.readFileSync(fullPath, 'utf8');
             let updated = false;
-            if (content.includes("fontWeight: '800'")) {
-                content = content.replace(/fontWeight: '800'/g, "fontWeight: '600'");
+            if (content.includes("fontWeight: '500'")) {
+                content = content.replace(/fontWeight: '500'/g, "fontWeight: '500'");
                 updated = true;
             }
-            if (content.includes("fontWeight: '900'")) {
-                content = content.replace(/fontWeight: '900'/g, "fontWeight: '700'");
+            if (content.includes("fontWeight: '500'")) {
+                content = content.replace(/fontWeight: '500'/g, "fontWeight: '500'");
                 updated = true;
             }
             if (updated) {

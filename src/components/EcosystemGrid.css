@@ -108,7 +108,7 @@
 
 .card-badge {
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 500;
   padding: 0.25rem 0.65rem;
   border-radius: 9999px;
   background-color: #f1f5f9;
@@ -118,7 +118,7 @@
 
 .card-title {
   font-size: 1.3rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--text-main);
   margin-bottom: 0.65rem;
   line-height: 1.25;
@@ -142,7 +142,7 @@
 
 .action-text {
   font-size: 0.88rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--primary-green);
   transition: color 0.2s ease;
 }

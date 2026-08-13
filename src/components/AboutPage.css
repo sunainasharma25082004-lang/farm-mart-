@@ -36,13 +36,13 @@
   border: 1px solid var(--border-green);
   color: var(--primary-green);
   font-size: 0.88rem;
-  font-weight: 700;
+  font-weight: 500;
   margin-bottom: 1.25rem;
 }
 
 .about-hero-title {
   font-size: 3rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--text-main);
   margin-bottom: 1.25rem;
   line-height: 1.15;
@@ -72,7 +72,7 @@
   border-radius: 9999px;
   border: 1px solid var(--border-light);
   font-size: 0.92rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--primary-green);
 }
 
@@ -139,7 +139,7 @@
 
 .wwd-badge {
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 500;
   padding: 0.25rem 0.65rem;
   border-radius: 9999px;
   background-color: #f1f5f9;
@@ -150,7 +150,7 @@
 
 .wwd-title {
   font-size: 1.35rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--text-main);
   margin-bottom: 0.75rem;
   line-height: 1.25;
@@ -210,7 +210,7 @@
   border: 1px solid var(--border-light);
   font-family: var(--font-body);
   font-size: 0.9rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--text-muted);
   cursor: pointer;
   box-shadow: var(--shadow-sm);
@@ -264,13 +264,13 @@
 
 .node-title-group h3 {
   font-size: 1.6rem;
-  font-weight: 800;
+  font-weight: 500;
   line-height: 1.1;
 }
 
 .node-role-badge {
   font-size: 0.78rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--earth-amber);
   background-color: var(--earth-sand);
   padding: 0.2rem 0.65rem;
@@ -296,7 +296,7 @@
 .connect-label {
   display: block;
   font-size: 0.85rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--text-main);
   margin-bottom: 0.75rem;
 }
@@ -317,7 +317,7 @@
   border: 1px solid var(--border-green);
   color: var(--primary-green);
   font-size: 0.85rem;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 /* 4. Closing Tagline Banner */
@@ -351,7 +351,7 @@
 
 .closing-tagline {
   font-size: 2.2rem;
-  font-weight: 800;
+  font-weight: 500;
   color: #ffffff;
   line-height: 1.25;
   margin-bottom: 1.25rem;

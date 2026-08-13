@@ -238,10 +238,10 @@ export const InventoryScreen = ({ navigation }) => {
               <View style={{ flex: 1, paddingHorizontal: 12 }}>
                 <Text style={styles.itemTitle}>{item.name}</Text>
                 <Text style={styles.itemCategory}>
-                  {item.category} • <Text style={{ color: '#16a34a', fontWeight: '700' }}>₹{item.price}</Text> / {item.unit}
+                  {item.category} • <Text style={{ color: '#16a34a', fontWeight: '500' }}>₹{item.price}</Text> / {item.unit}
                 </Text>
                 <Text style={styles.itemStock}>
-                  Stock: <Text style={{ fontWeight: '700', color: '#0f172a' }}>{item.stock}</Text> units
+                  Stock: <Text style={{ fontWeight: '500', color: '#0f172a' }}>{item.stock}</Text> units
                 </Text>
               </View>
 
@@ -353,12 +353,12 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 17,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#0f172a',
   },
   headerTitleLarge: {
     fontSize: 20,
-    fontWeight: '800',
+    fontWeight: '500',
     color: '#0f172a',
   },
   scrollContent: {
@@ -379,7 +379,7 @@ const styles = StyleSheet.create({
   },
   cardHeaderTitle: {
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: '500',
     color: colors.primary,
     letterSpacing: 1,
   },
@@ -395,7 +395,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#334155',
     marginBottom: 6,
   },
@@ -423,7 +423,7 @@ const styles = StyleSheet.create({
   },
   currencyPrefix: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '500',
     color: colors.primary,
     marginRight: 8,
   },
@@ -451,12 +451,12 @@ const styles = StyleSheet.create({
   },
   catChipText: {
     fontSize: 12.5,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#475569',
   },
   catChipTextSelected: {
     color: '#ffffff',
-    fontWeight: '700',
+    fontWeight: '500',
   },
   row: {
     flexDirection: 'row',
@@ -480,7 +480,7 @@ const styles = StyleSheet.create({
   submitBtnText: {
     color: '#ffffff',
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '500',
   },
   addNavBtn: {
     flexDirection: 'row',
@@ -494,7 +494,7 @@ const styles = StyleSheet.create({
   addNavBtnText: {
     color: '#ffffff',
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '500',
   },
   emptyBox: {
     backgroundColor: '#ffffff',
@@ -506,7 +506,7 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#0f172a',
     marginTop: 12,
   },
@@ -543,7 +543,7 @@ const styles = StyleSheet.create({
   },
   itemTitle: {
     fontSize: 15.5,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#0f172a',
   },
   itemCategory: {
@@ -563,7 +563,7 @@ const styles = StyleSheet.create({
   },
   toggleText: {
     fontSize: 10,
-    fontWeight: '800',
+    fontWeight: '500',
     letterSpacing: 0.5,
   },
   deleteBtn: {
@@ -597,12 +597,12 @@ const styles = StyleSheet.create({
   },
   wedTitle: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#64748b',
   },
   wedAmount: {
     fontSize: 30,
-    fontWeight: '800',
+    fontWeight: '500',
     color: '#15803d',
     marginTop: 2,
   },
@@ -615,11 +615,11 @@ const styles = StyleSheet.create({
   bankTagText: {
     fontSize: 11.5,
     color: '#15803d',
-    fontWeight: '600',
+    fontWeight: '500',
   },
   sectionTitle: {
     fontSize: 17,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#0f172a',
     marginBottom: 14,
   },
@@ -633,12 +633,12 @@ const styles = StyleSheet.create({
   },
   settleDate: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#0f172a',
   },
   settleTotal: {
     fontSize: 16,
-    fontWeight: '800',
+    fontWeight: '500',
     color: '#15803d',
   },
   settleStatusBadge: {
@@ -649,7 +649,7 @@ const styles = StyleSheet.create({
   },
   settleStatusText: {
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#15803d',
   },
   settleRef: {

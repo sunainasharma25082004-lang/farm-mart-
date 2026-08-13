@@ -83,7 +83,7 @@ const styles = StyleSheet.create({
   },
   errorTitle: {
     fontSize: 22,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#0f172a',
     marginBottom: 8,
   },
@@ -103,6 +103,6 @@ const styles = StyleSheet.create({
   restartBtnText: {
     color: '#ffffff',
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '500',
   },
 });

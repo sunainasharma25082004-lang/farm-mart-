@@ -92,7 +92,7 @@ const styles = {
   },
   brandTitle: {
     fontSize: '24px',
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#0f172a',
     marginTop: '16px'
   },
@@ -122,7 +122,7 @@ const styles = {
   },
   label: {
     fontSize: '13px',
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#334155'
   },
   inputWrapper: {
@@ -155,7 +155,7 @@ const styles = {
     borderRadius: '12px',
     border: 'none',
     fontSize: '16px',
-    fontWeight: '600',
+    fontWeight: '500',
     cursor: 'pointer',
     marginTop: '8px',
     boxShadow: '0 10px 15px -3px rgba(22, 163, 74, 0.3)'

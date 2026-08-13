@@ -188,7 +188,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#0f172a'
   },
   backBtn: {
@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
   },
   deliveryTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#166534'
   },
   deliverySub: {
@@ -240,12 +240,12 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#0f172a'
   },
   changeText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '500',
     color: colors.primary
   },
   addressRow: {
@@ -258,7 +258,7 @@ const styles = StyleSheet.create({
   },
   addressName: {
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#334155',
     marginBottom: 4
   },
@@ -297,12 +297,12 @@ const styles = StyleSheet.create({
   },
   totalText: {
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#0f172a'
   },
   totalAmount: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#0f172a'
   },
   savingsBadge: {
@@ -359,7 +359,7 @@ const styles = StyleSheet.create({
   payBtnTotal: {
     color: '#ffffff',
     fontSize: 16,
-    fontWeight: '600'
+    fontWeight: '500'
   },
   payBtnSub: {
     color: '#dcfce7',
@@ -369,6 +369,6 @@ const styles = StyleSheet.create({
   payBtnAction: {
     color: '#ffffff',
     fontSize: 16,
-    fontWeight: '600'
+    fontWeight: '500'
   }
 });

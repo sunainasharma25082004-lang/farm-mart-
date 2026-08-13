@@ -45,7 +45,7 @@ export default function RidersPage() {
 const styles = {
   page: { padding: '40px', maxWidth: '1200px', margin: '0 auto', width: '100%' },
   header: { marginBottom: '32px' },
-  title: { fontSize: '28px', fontWeight: '700', color: '#0f172a', margin: 0 },
+  title: { fontSize: '28px', fontWeight: '500', color: '#0f172a', margin: 0 },
   subtitle: { fontSize: '15px', color: '#64748b', marginTop: '8px' },
   emptyState: {
     backgroundColor: '#ffffff',
@@ -59,9 +59,9 @@ const styles = {
     boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
   },
   iconCircle: { width: '100px', height: '100px', borderRadius: '50px', backgroundColor: '#fef3c7', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px' },
-  emptyTitle: { fontSize: '22px', fontWeight: '700', color: '#0f172a', marginBottom: '12px' },
+  emptyTitle: { fontSize: '22px', fontWeight: '500', color: '#0f172a', marginBottom: '12px' },
   emptySub: { fontSize: '16px', color: '#64748b', maxWidth: '500px', lineHeight: '1.6', marginBottom: '40px' },
   comingSoonGrid: { display: 'flex', gap: '20px' },
   comingSoonCard: { display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 24px', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' },
-  cardText: { fontSize: '14px', fontWeight: '600', color: '#475569' }
+  cardText: { fontSize: '14px', fontWeight: '500', color: '#475569' }
 };

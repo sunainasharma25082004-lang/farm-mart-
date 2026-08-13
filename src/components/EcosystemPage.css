@@ -36,13 +36,13 @@
   border: 1px solid var(--border-green);
   color: var(--primary-green);
   font-size: 0.88rem;
-  font-weight: 700;
+  font-weight: 500;
   margin-bottom: 1.25rem;
 }
 
 .eco-title {
   font-size: 3.2rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--text-main);
   margin-bottom: 1rem;
   line-height: 1.15;
@@ -68,7 +68,7 @@
   align-items: center;
   gap: 0.4rem;
   font-size: 0.9rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--primary-green);
 }
 
@@ -148,7 +148,7 @@
   top: 0.85rem;
   right: 0.85rem;
   font-size: 0.72rem;
-  font-weight: 800;
+  font-weight: 500;
   padding: 0.25rem 0.65rem;
   border-radius: 9999px;
   background-color: rgba(255, 255, 255, 0.95);
@@ -166,7 +166,7 @@
 
 .eco-card-title {
   font-size: 1.25rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--text-main);
   margin-bottom: 0.2rem;
   line-height: 1.25;
@@ -174,7 +174,7 @@
 
 .eco-card-subtitle {
   font-size: 0.82rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--earth-amber);
   margin-bottom: 0.75rem;
 }
@@ -216,7 +216,7 @@
 
 .eco-cta-wrapper h2 {
   font-size: 2.2rem;
-  font-weight: 800;
+  font-weight: 500;
   color: #ffffff;
   margin-bottom: 0.75rem;
 }

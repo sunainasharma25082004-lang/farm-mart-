@@ -67,7 +67,7 @@ const styles = StyleSheet.create({
   },
   errorTitle: {
     fontSize: 20,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#0f172a',
     marginBottom: 8
   },
@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
   },
   reloadText: {
     color: '#ffffff',
-    fontWeight: '600',
+    fontWeight: '500',
     fontSize: 14
   }
 });

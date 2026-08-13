@@ -90,7 +90,7 @@ export default function CareersPage({ onOpenContact }) {
             
             {/* Left Info Panel */}
             <div className="promoter-info" style={{ position: 'sticky', top: '100px' }}>
-              <div className="badge-tag" style={{ marginBottom: '16px', display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#e0e7ff', color: '#4f46e5', padding: '8px 16px', borderRadius: '20px', fontSize: '14px', fontWeight: '600' }}>
+              <div className="badge-tag" style={{ marginBottom: '16px', display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#e0e7ff', color: '#4f46e5', padding: '8px 16px', borderRadius: '20px', fontSize: '14px', fontWeight: '500' }}>
                 <TrendingUp size={18} />
                 <span>Premium Opportunity</span>
               </div>
@@ -136,7 +136,7 @@ export default function CareersPage({ onOpenContact }) {
                   </p>
                   <button 
                     onClick={() => setPromoterSubmitted(false)}
-                    style={{ background: '#f1f5f9', color: '#0f172a', border: 'none', padding: '12px 24px', borderRadius: '8px', fontSize: '16px', fontWeight: '600', cursor: 'pointer', marginTop: '24px' }}
+                    style={{ background: '#f1f5f9', color: '#0f172a', border: 'none', padding: '12px 24px', borderRadius: '8px', fontSize: '16px', fontWeight: '500', cursor: 'pointer', marginTop: '24px' }}
                   >
                     Submit Another Application
                   </button>
@@ -153,14 +153,14 @@ export default function CareersPage({ onOpenContact }) {
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                     {/* Full Name */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <label style={{ fontSize: '14px', fontWeight: '600', color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <label style={{ fontSize: '14px', fontWeight: '500', color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <User size={14} /> Full Name *
                       </label>
                       <input type="text" required placeholder="e.g. Ramesh Patel" value={promoterFormData.fullName} onChange={(e) => setPromoterFormData({...promoterFormData, fullName: e.target.value})} style={{ padding: '14px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '16px', outline: 'none' }} />
                     </div>
                     {/* Phone */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <label style={{ fontSize: '14px', fontWeight: '600', color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <label style={{ fontSize: '14px', fontWeight: '500', color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <Phone size={14} /> Mobile Number *
                       </label>
                       <input type="tel" required placeholder="e.g. 9876543210" value={promoterFormData.phone} onChange={(e) => setPromoterFormData({...promoterFormData, phone: e.target.value})} style={{ padding: '14px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '16px', outline: 'none' }} />
@@ -170,14 +170,14 @@ export default function CareersPage({ onOpenContact }) {
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                     {/* Email */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <label style={{ fontSize: '14px', fontWeight: '600', color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <label style={{ fontSize: '14px', fontWeight: '500', color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <Mail size={14} /> Email Address *
                       </label>
                       <input type="email" required placeholder="e.g. ramesh@example.com" value={promoterFormData.email} onChange={(e) => setPromoterFormData({...promoterFormData, email: e.target.value})} style={{ padding: '14px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '16px', outline: 'none' }} />
                     </div>
                     {/* City */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <label style={{ fontSize: '14px', fontWeight: '600', color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <label style={{ fontSize: '14px', fontWeight: '500', color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <MapPin size={14} /> Current City *
                       </label>
                       <input type="text" required placeholder="e.g. Lucknow" value={promoterFormData.location} onChange={(e) => setPromoterFormData({...promoterFormData, location: e.target.value})} style={{ padding: '14px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '16px', outline: 'none' }} />
@@ -187,14 +187,14 @@ export default function CareersPage({ onOpenContact }) {
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                     {/* Experience */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <label style={{ fontSize: '14px', fontWeight: '600', color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <label style={{ fontSize: '14px', fontWeight: '500', color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <Briefcase size={14} /> Experience *
                       </label>
                       <input type="text" required placeholder="e.g. 5 Years in Logistics" value={promoterFormData.experience} onChange={(e) => setPromoterFormData({...promoterFormData, experience: e.target.value})} style={{ padding: '14px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '16px', outline: 'none' }} />
                     </div>
                     {/* Qualification */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <label style={{ fontSize: '14px', fontWeight: '600', color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <label style={{ fontSize: '14px', fontWeight: '500', color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <GraduationCap size={14} /> Highest Qualification *
                       </label>
                       <input type="text" required placeholder="e.g. MBA / Graduate" value={promoterFormData.qualification} onChange={(e) => setPromoterFormData({...promoterFormData, qualification: e.target.value})} style={{ padding: '14px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '16px', outline: 'none' }} />
@@ -205,7 +205,7 @@ export default function CareersPage({ onOpenContact }) {
 
                   {/* Resume Upload Box */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <label style={{ fontSize: '14px', fontWeight: '600', color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <label style={{ fontSize: '14px', fontWeight: '500', color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <Upload size={14} /> Upload CV / Resume (PDF / DOCX) *
                     </label>
                     <div className="stylish-upload-zone" style={{ border: '2px dashed #cbd5e1', borderRadius: '12px', padding: '30px', textAlign: 'center', background: '#f8fafc', position: 'relative', cursor: 'pointer', transition: '0.2s' }}>
@@ -227,7 +227,7 @@ export default function CareersPage({ onOpenContact }) {
                     </div>
                   </div>
 
-                  <button type="submit" style={{ background: '#16a34a', color: '#fff', border: 'none', padding: '16px', borderRadius: '10px', fontSize: '18px', fontWeight: '600', cursor: 'pointer', marginTop: '16px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(22, 163, 74, 0.3)' }}>
+                  <button type="submit" style={{ background: '#16a34a', color: '#fff', border: 'none', padding: '16px', borderRadius: '10px', fontSize: '18px', fontWeight: '500', cursor: 'pointer', marginTop: '16px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(22, 163, 74, 0.3)' }}>
                     <Send size={20} />
                     <span>Submit Candidate Application</span>
                   </button>

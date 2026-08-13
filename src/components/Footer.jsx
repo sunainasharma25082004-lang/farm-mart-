@@ -57,7 +57,7 @@ export default function Footer() {
           {/* Column 4: Newsletter & Contact */}
           <div className="footer-newsletter-col">
             <h4>Stay Connected</h4>
-            <p>Email: <a href="mailto:officialfarmmart@gmail.com" style={{ color: '#10b981', fontWeight: '600' }}>officialfarmmart@gmail.com</a></p>
+            <p>Email: <a href="mailto:officialfarmmart@gmail.com" style={{ color: '#10b981', fontWeight: '500' }}>officialfarmmart@gmail.com</a></p>
             <form className="newsletter-form" onSubmit={(e) => e.preventDefault()}>
               <input type="email" placeholder="Enter your email" required />
               <button type="submit" className="newsletter-btn">

@@ -352,7 +352,7 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     fontSize: 12,
-    fontWeight: "600",
+    fontWeight: '500',
     color: colors.primaryDark,
   },
   skipBtn: {
@@ -369,7 +369,7 @@ const styles = StyleSheet.create({
   skipText: {
     color: colors.textSecondary,
     fontSize: 13,
-    fontWeight: "600",
+    fontWeight: '500',
   },
   heroSection: {
     alignItems: "center",
@@ -377,7 +377,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 26,
-    fontWeight: "800",
+    fontWeight: '500',
     color: "#0f172a",
     marginBottom: 6,
     letterSpacing: -0.3,
@@ -414,7 +414,7 @@ const styles = StyleSheet.create({
   },
   activeTabText: {
     fontSize: 16,
-    fontWeight: "700",
+    fontWeight: '500',
     color: colors.primary,
   },
   tabIndicator: {
@@ -432,7 +432,7 @@ const styles = StyleSheet.create({
   },
   inactiveTabText: {
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: '500',
     color: colors.textMuted,
   },
   formSection: {
@@ -443,7 +443,7 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     fontSize: 13,
-    fontWeight: "600",
+    fontWeight: '500',
     color: "#334155",
   },
   inputWrap: {
@@ -485,7 +485,7 @@ const styles = StyleSheet.create({
   },
   termsHighlight: {
     color: colors.primaryDark,
-    fontWeight: "600",
+    fontWeight: '500',
   },
   primaryBtn: {
     backgroundColor: colors.primary,
@@ -511,7 +511,7 @@ const styles = StyleSheet.create({
   primaryBtnText: {
     color: "#ffffff",
     fontSize: 16,
-    fontWeight: "700",
+    fontWeight: '500',
   },
   footerSection: {
     flexDirection: "row",
@@ -527,6 +527,6 @@ const styles = StyleSheet.create({
   linkText: {
     color: colors.primary,
     fontSize: 14,
-    fontWeight: "700",
+    fontWeight: '500',
   },
 });

@@ -25,13 +25,13 @@
   border: 1px solid var(--border-green);
   color: var(--primary-green);
   font-size: 0.88rem;
-  font-weight: 700;
+  font-weight: 500;
   margin-bottom: 1.25rem;
 }
 
 .mv-hero-title {
   font-size: 3rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--text-main);
   margin-bottom: 1rem;
   line-height: 1.15;
@@ -61,7 +61,7 @@
   border: 1px solid var(--border-light);
   font-family: var(--font-body);
   font-size: 0.95rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--text-muted);
   cursor: pointer;
   box-shadow: var(--shadow-sm);
@@ -161,7 +161,7 @@
 
 .block-tag {
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 500;
   text-transform: uppercase;
   color: var(--primary-green);
   letter-spacing: 0.05em;
@@ -173,7 +173,7 @@
 
 .block-header h2 {
   font-size: 2rem;
-  font-weight: 800;
+  font-weight: 500;
   line-height: 1.1;
 }
 
@@ -208,7 +208,7 @@
 .quote-text {
   font-family: var(--font-heading);
   font-size: 1.18rem;
-  font-weight: 700;
+  font-weight: 500;
   line-height: 1.55;
   color: var(--text-main);
   font-style: italic;
@@ -216,7 +216,7 @@
 
 .sub-heading {
   font-size: 1.25rem;
-  font-weight: 800;
+  font-weight: 500;
   margin-bottom: 1.25rem;
   color: var(--text-main);
 }
@@ -260,7 +260,7 @@
 
 .point-title {
   font-size: 0.95rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--text-main);
   margin-bottom: 0.25rem;
   line-height: 1.25;
@@ -279,7 +279,7 @@
 
 .vision-support-box h3 {
   font-size: 1.3rem;
-  font-weight: 800;
+  font-weight: 500;
   margin-bottom: 0.75rem;
 }
 
@@ -315,14 +315,14 @@
 .stat-pill strong {
   font-family: var(--font-heading);
   font-size: 1.35rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--earth-amber);
 }
 
 .stat-pill span {
   font-size: 0.75rem;
   color: var(--text-muted);
-  font-weight: 600;
+  font-weight: 500;
   margin-top: 2px;
 }
 
@@ -344,7 +344,7 @@
 .commitment-badge {
   display: inline-block;
   font-size: 0.78rem;
-  font-weight: 700;
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   padding: 0.3rem 0.85rem;
@@ -356,7 +356,7 @@
 
 .commitment-header h2 {
   font-size: 2.4rem;
-  font-weight: 800;
+  font-weight: 500;
   color: #ffffff;
   margin-bottom: 0.5rem;
 }
@@ -418,7 +418,7 @@
 
 .item-badge {
   font-size: 0.68rem;
-  font-weight: 700;
+  font-weight: 500;
   color: #fde68a;
   text-transform: uppercase;
   margin-bottom: 0.25rem;
@@ -426,7 +426,7 @@
 
 .item-label {
   font-size: 0.88rem;
-  font-weight: 800;
+  font-weight: 500;
   color: #ffffff;
   line-height: 1.3;
 }

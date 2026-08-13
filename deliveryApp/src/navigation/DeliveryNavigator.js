@@ -31,7 +31,7 @@ const DeliveryTabs = () => {
         },
         tabBarLabelStyle: {
           fontSize: 11,
-          fontWeight: '700'
+          fontWeight: '500'
         },
         tabBarIcon: ({ color, size }) => {
           let iconName = 'bicycle-outline';

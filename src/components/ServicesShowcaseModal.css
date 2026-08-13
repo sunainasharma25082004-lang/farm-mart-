@@ -59,7 +59,7 @@
   gap: 0.6rem;
   font-family: var(--font-heading);
   font-size: 0.82rem;
-  font-weight: 800;
+  font-weight: 500;
   letter-spacing: 0.08em;
   color: var(--primary-green);
   text-transform: uppercase;
@@ -107,7 +107,7 @@
   background: rgba(255, 255, 255, 0.18);
   backdrop-filter: blur(4px);
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 500;
   color: #dcfce7;
   margin-bottom: 0.75rem;
   text-transform: uppercase;
@@ -115,7 +115,7 @@
 
 .showcase-intro-banner h2 {
   font-size: 2.4rem;
-  font-weight: 800;
+  font-weight: 500;
   color: #ffffff;
   margin-bottom: 0.4rem;
   line-height: 1.2;
@@ -147,7 +147,7 @@
   border: none;
   font-family: var(--font-body);
   font-size: 0.92rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--text-muted);
   padding: 1rem 1.1rem;
   cursor: pointer;
@@ -213,7 +213,7 @@
   padding: 0.4rem 1.1rem;
   border-radius: 9999px;
   font-size: 0.88rem;
-  font-weight: 800;
+  font-weight: 500;
   margin-bottom: 1.25rem;
 }
 
@@ -225,7 +225,7 @@
 
 .service-title {
   font-size: 1.85rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--text-main);
   margin-bottom: 0.35rem;
   line-height: 1.25;
@@ -234,7 +234,7 @@
 .service-tagline {
   font-family: var(--font-heading);
   font-size: 1.15rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--earth-amber);
   margin-bottom: 1rem;
   font-style: italic;
@@ -257,7 +257,7 @@
 
 .features-heading {
   font-size: 0.98rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--text-main);
   margin-bottom: 1rem;
 }
@@ -274,7 +274,7 @@
   align-items: flex-start;
   gap: 0.75rem;
   font-size: 0.92rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-main);
   line-height: 1.5;
 }
@@ -306,7 +306,7 @@
 
 .stats-title {
   font-size: 1.1rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--primary-green);
   margin-bottom: 1.25rem;
   text-transform: uppercase;
@@ -331,14 +331,14 @@
 .stat-val {
   font-family: var(--font-heading);
   font-size: 1.8rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--text-main);
   line-height: 1;
 }
 
 .stat-lbl {
   font-size: 0.8rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--text-muted);
   margin-top: 0.2rem;
 }
@@ -361,7 +361,7 @@
 .trust-promise-box strong {
   display: block;
   font-size: 0.95rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--earth-brown);
   margin-bottom: 0.2rem;
 }
@@ -382,7 +382,7 @@
   border-top: 1px solid var(--border-light);
   font-size: 0.85rem;
   color: var(--text-muted);
-  font-weight: 600;
+  font-weight: 500;
 }
 
 @media (max-width: 768px) {

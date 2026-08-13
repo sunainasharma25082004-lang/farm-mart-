@@ -33,7 +33,7 @@
   color: var(--primary-green);
   font-family: var(--font-body);
   font-size: 0.88rem;
-  font-weight: 700;
+  font-weight: 500;
   cursor: pointer;
   margin-bottom: 1.5rem;
   transition: color 0.2s ease;
@@ -54,13 +54,13 @@
   border: 1px solid #fde68a;
   color: var(--earth-amber);
   font-size: 0.88rem;
-  font-weight: 700;
+  font-weight: 500;
   margin-bottom: 1.25rem;
 }
 
 .hr-hero-title {
   font-size: 3.2rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--text-main);
   margin-bottom: 0.5rem;
   line-height: 1.15;
@@ -69,7 +69,7 @@
 .hr-tagline {
   font-family: var(--font-heading);
   font-size: 1.4rem;
-  font-weight: 800;
+  font-weight: 500;
   color: #ea580c;
   margin-bottom: 1.5rem;
   font-style: italic;
@@ -163,7 +163,7 @@
 
 .hr-offer-title {
   font-size: 1.15rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--text-main);
   margin-bottom: 0.5rem;
   line-height: 1.25;
@@ -233,7 +233,7 @@
 
 .hr-check-title {
   font-size: 1.15rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--text-main);
   margin-bottom: 0.35rem;
 }
@@ -290,7 +290,7 @@
 
 .spec-tag {
   font-size: 0.78rem;
-  font-weight: 800;
+  font-weight: 500;
   text-transform: uppercase;
   color: #ea580c;
   letter-spacing: 0.05em;
@@ -303,7 +303,7 @@
 .spec-promise {
   font-family: var(--font-heading);
   font-size: 1.45rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--text-main);
   line-height: 1.25;
 }
@@ -336,7 +336,7 @@
 
 .spec-card-title {
   font-size: 1.05rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--text-main);
   margin-bottom: 0.35rem;
 }
@@ -378,7 +378,7 @@
 
 .hr-cta-tagline {
   font-size: 2.3rem;
-  font-weight: 800;
+  font-weight: 500;
   color: #ffffff;
   line-height: 1.25;
   margin-bottom: 1rem;
@@ -431,7 +431,7 @@
 
 .hr-modal-header h3 {
   font-size: 1.35rem;
-  font-weight: 800;
+  font-weight: 500;
 }
 
 .hr-apply-form {

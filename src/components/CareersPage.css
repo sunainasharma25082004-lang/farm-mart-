@@ -29,13 +29,13 @@
   border: 1px solid var(--border-green);
   color: var(--primary-green);
   font-size: 0.88rem;
-  font-weight: 700;
+  font-weight: 500;
   margin-bottom: 1rem;
 }
 
 .careers-hero-title {
   font-size: 3rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--text-main);
   margin-bottom: 0.75rem;
 }
@@ -67,7 +67,7 @@
   color: var(--text-muted);
   font-family: var(--font-body);
   font-size: 0.9rem;
-  font-weight: 700;
+  font-weight: 500;
   padding: 0.6rem 1.25rem;
   border-radius: 9999px;
   cursor: pointer;
@@ -174,7 +174,7 @@
   top: 0.85rem;
   right: 0.85rem;
   font-size: 0.72rem;
-  font-weight: 800;
+  font-weight: 500;
   padding: 0.25rem 0.65rem;
   border-radius: 9999px;
   background: rgba(255, 255, 255, 0.95);
@@ -192,7 +192,7 @@
 
 .job-title {
   font-size: 1.25rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--text-main);
   margin-bottom: 0.5rem;
   line-height: 1.25;
@@ -210,7 +210,7 @@
   align-items: center;
   gap: 0.35rem;
   font-size: 0.78rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--text-muted);
 }
 
@@ -231,7 +231,7 @@
 
 .skill-pill {
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 500;
   padding: 0.25rem 0.6rem;
   border-radius: 8px;
   background-color: var(--surface-cream);
@@ -283,7 +283,7 @@
 
 .why-join-card p {
   font-size: 0.92rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-main);
   line-height: 1.5;
 }
@@ -322,7 +322,7 @@
 .process-step-num {
   font-family: var(--font-heading);
   font-size: 1.2rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--primary-green);
   background-color: var(--primary-light);
   width: 44px;
@@ -336,7 +336,7 @@
 
 .process-step-box h4 {
   font-size: 1rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--text-main);
   margin-bottom: 0.35rem;
 }
@@ -447,7 +447,7 @@
   border: 1px solid rgba(34, 197, 94, 0.4);
   color: #4ade80;
   font-size: 0.78rem;
-  font-weight: 800;
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin-bottom: 1rem;
@@ -456,7 +456,7 @@
 
 .left-job-title {
   font-size: 2rem;
-  font-weight: 800;
+  font-weight: 500;
   color: #ffffff;
   line-height: 1.18;
   margin-bottom: 1.25rem;
@@ -478,7 +478,7 @@
   padding: 0.4rem 0.85rem;
   border-radius: 12px;
   font-size: 0.85rem;
-  font-weight: 700;
+  font-weight: 500;
   color: #dcfce7;
   width: fit-content;
 }
@@ -502,7 +502,7 @@
   align-items: center;
   gap: 0.4rem;
   font-size: 0.92rem;
-  font-weight: 800;
+  font-weight: 500;
   color: #ffffff;
   margin-bottom: 0.75rem;
 }
@@ -535,7 +535,7 @@
   gap: 0.4rem;
   font-size: 0.75rem;
   color: #94a3b8;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 /* Right Form Panel */
@@ -554,7 +554,7 @@
 
 .form-head-block h3 {
   font-size: 1.4rem;
-  font-weight: 800;
+  font-weight: 500;
   color: var(--text-main);
   margin-bottom: 0.2rem;
 }
@@ -591,7 +591,7 @@
   align-items: center;
   gap: 0.35rem;
   font-size: 0.85rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--text-main);
 }
 
@@ -651,7 +651,7 @@
 
 .upload-text-label {
   font-size: 0.88rem;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--primary-green);
 }
 
@@ -659,7 +659,7 @@
   width: 100%;
   padding: 1rem;
   font-size: 1.05rem;
-  font-weight: 800;
+  font-weight: 500;
   border-radius: 9999px;
   box-shadow: 0 10px 25px -5px rgba(234, 88, 12, 0.4) !important;
 }
@@ -675,7 +675,7 @@
   background-color: var(--surface-cream);
   border: 1px solid var(--border-green);
   color: var(--primary-green);
-  font-weight: 800;
+  font-weight: 500;
   padding: 0.4rem 1.25rem;
   border-radius: 9999px;
   margin: 1rem 0 1.75rem 0;

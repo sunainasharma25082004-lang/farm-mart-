@@ -113,7 +113,7 @@ export const ActiveNavigationScreen = ({ navigation }) => {
 
           <View style={styles.navBarFooter}>
             <Ionicons name="compass-outline" size={18} color="#0284c7" />
-            <Text style={styles.navText}>Estimated Distance: <Text style={{ color: '#0f172a', fontWeight: '700' }}>{currentTask.distanceKm} km</Text> • ~12 Mins ETA</Text>
+            <Text style={styles.navText}>Estimated Distance: <Text style={{ color: '#0f172a', fontWeight: '500' }}>{currentTask.distanceKm} km</Text> • ~12 Mins ETA</Text>
           </View>
         </View>
 
@@ -253,7 +253,7 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 20,
-    fontWeight: '800',
+    fontWeight: '500',
     color: '#0f172a',
     marginTop: 8,
   },
@@ -280,7 +280,7 @@ const styles = StyleSheet.create({
   },
   backBtnText: {
     color: '#ffffff',
-    fontWeight: '700',
+    fontWeight: '500',
     fontSize: 15,
   },
   header: {
@@ -307,12 +307,12 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#0f172a',
   },
   headerTitleLarge: {
     fontSize: 20,
-    fontWeight: '800',
+    fontWeight: '500',
     color: '#0f172a',
   },
   statusBadge: {
@@ -323,7 +323,7 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: '500',
     color: '#4338ca',
   },
   scrollContent: {
@@ -351,7 +351,7 @@ const styles = StyleSheet.create({
   },
   mapHeaderTitle: {
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: '500',
     color: '#0284c7',
     letterSpacing: 1,
   },
@@ -378,13 +378,13 @@ const styles = StyleSheet.create({
   },
   mapPinLabel: {
     fontSize: 10,
-    fontWeight: '800',
+    fontWeight: '500',
     color: '#64748b',
     letterSpacing: 0.5,
   },
   mapPinText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#0f172a',
     marginTop: 1,
   },
@@ -405,7 +405,7 @@ const styles = StyleSheet.create({
   },
   navText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#475569',
   },
   card: {
@@ -429,12 +429,12 @@ const styles = StyleSheet.create({
   },
   cardHeaderTitle: {
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: '500',
     letterSpacing: 1,
   },
   cardMainText: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#0f172a',
     marginTop: 2,
   },
@@ -462,7 +462,7 @@ const styles = StyleSheet.create({
   actionBtnText: {
     color: '#ffffff',
     fontSize: 14.5,
-    fontWeight: '700',
+    fontWeight: '500',
   },
   itemsBox: {
     backgroundColor: '#f8fafc',
@@ -475,7 +475,7 @@ const styles = StyleSheet.create({
   },
   itemsBoxTitle: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#0f172a',
     marginBottom: 4,
   },
@@ -487,7 +487,7 @@ const styles = StyleSheet.create({
   itemText: {
     fontSize: 13,
     color: '#334155',
-    fontWeight: '600',
+    fontWeight: '500',
   },
   otpContainer: {
     marginTop: 18,
@@ -497,7 +497,7 @@ const styles = StyleSheet.create({
   },
   otpLabel: {
     fontSize: 13.5,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#0f172a',
     marginBottom: 10,
   },
@@ -512,7 +512,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     textAlign: 'center',
     letterSpacing: 6,
-    fontWeight: '800',
+    fontWeight: '500',
   },
   completeBtnPill: {
     flexDirection: 'row',
@@ -531,7 +531,7 @@ const styles = StyleSheet.create({
   completeBtnText: {
     color: '#ffffff',
     fontSize: 14.5,
-    fontWeight: '700',
+    fontWeight: '500',
   },
   payBoxGradient: {
     backgroundColor: '#0f172a',
@@ -548,12 +548,12 @@ const styles = StyleSheet.create({
   payLabel: {
     fontSize: 11,
     color: '#10b981',
-    fontWeight: '800',
+    fontWeight: '500',
     letterSpacing: 1,
   },
   payAmount: {
     fontSize: 38,
-    fontWeight: '800',
+    fontWeight: '500',
     color: '#ffffff',
     marginTop: 6,
   },
@@ -570,7 +570,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 17,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#0f172a',
     marginBottom: 14,
   },
@@ -589,7 +589,7 @@ const styles = StyleSheet.create({
   },
   earnDate: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#0f172a',
   },
   earnStatusBadge: {
@@ -600,7 +600,7 @@ const styles = StyleSheet.create({
   },
   earnStatus: {
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: '500',
     color: '#15803d',
   },
   earnDetailsRow: {
@@ -616,7 +616,7 @@ const styles = StyleSheet.create({
   },
   earnTotalText: {
     fontSize: 16,
-    fontWeight: '800',
+    fontWeight: '500',
     color: '#0f172a',
   },
 });
