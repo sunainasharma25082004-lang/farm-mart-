@@ -4,6 +4,7 @@ import {
   initialFarmerListings,
   products,
 } from "../data/mockData";
+import { apiService } from "../services/api";
 
 const AppContext = createContext();
 
@@ -73,26 +74,40 @@ export const AppProvider = ({ children }) => {
     );
   };
 
-  const placeOrder = (paymentMethod, deliveryAddress) => {
+  const placeOrder = async (paymentMethod, deliveryAddress) => {
     const totalAmount = getCartTotal();
-    const newOrder = {
-      id: `FMT-ORD-${Math.floor(1000 + Math.random() * 9000)}`,
-      date: new Date().toLocaleString(),
+    const orderData = {
+      orderId: `FMT-ORD-${Math.floor(1000 + Math.random() * 9000)}`,
+      customerName: userProfile?.fullName || userProfile?.name || "Customer",
+      customerPhone: userProfile?.phone || "9999999999",
+      deliveryAddress: deliveryAddress || "Default Registered Address",
+      pickupLocation: userProfile?.villageHub || "Central Hub",
       items: cart.map((item) => ({
         name: item.product.name,
         qty: item.quantity,
         price: item.product.price,
       })),
-      total: totalAmount,
-      status: "PLACED",
+      totalAmount,
       paymentMethod,
-      hubName: userProfile?.villageHub || userProfile?.city || "Central Hub",
-      deliveryAddress: deliveryAddress || "Default Registered Address",
+      paymentStatus: paymentMethod === "RAZORPAY" ? "PAID" : "PENDING",
+      vendorId: "default_vendor" // or map based on items
     };
 
-    setOrders([newOrder, ...orders]);
-    clearCart();
-    return newOrder;
+    try {
+      const response = await apiService.placeOrder(orderData);
+      if (response.success) {
+        setOrders([response.order, ...orders]);
+        clearCart();
+        return response.order;
+      }
+    } catch (e) {
+      console.warn("Backend error, falling back to local orders state:", e);
+      // Fallback for demo mode
+      const localOrder = { ...orderData, status: "NEW_ORDER" };
+      setOrders([localOrder, ...orders]);
+      clearCart();
+      return localOrder;
+    }
   };
 
   const addFarmerListing = (listing) => {

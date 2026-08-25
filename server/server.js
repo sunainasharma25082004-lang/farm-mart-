@@ -15,6 +15,7 @@ import jobRoutes from './routes/jobRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import paymentRoutes from './routes/paymentRoutes.js';
+import orderRoutes from './routes/orderRoutes.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -46,6 +47,13 @@ app.use('/api', jobRoutes);
 app.use('/api', userRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api', paymentRoutes);
+app.use('/api', orderRoutes);
+
+// Global Error Handling Middleware
+app.use((err, req, res, next) => {
+  console.error('Unhandled Error:', err.stack);
+  res.status(500).json({ success: false, message: 'Internal Server Error' });
+});
 
 // Start Server
 app.listen(PORT, () => {

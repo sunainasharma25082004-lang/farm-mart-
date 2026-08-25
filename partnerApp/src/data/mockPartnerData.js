@@ -22,7 +22,9 @@ export const incomingCustomerOrders = [
     ],
     total: 500,
     status: 'NEW_ORDER', // NEW_ORDER, ACCEPTED, PREPARING, READY_FOR_RIDER, COMPLETED
-    deliveryType: 'Express Rider Dispatch'
+    deliveryType: 'Express Rider Dispatch',
+    paymentMethod: 'RAZORPAY',
+    paymentStatus: 'PAID'
   },
   {
     id: 'FMT-ORD-9829',
@@ -34,7 +36,9 @@ export const incomingCustomerOrders = [
     ],
     total: 130,
     status: 'ACCEPTED',
-    deliveryType: 'Express Rider Dispatch'
+    deliveryType: 'Express Rider Dispatch',
+    paymentMethod: 'COD',
+    paymentStatus: 'PENDING'
   }
 ];
 

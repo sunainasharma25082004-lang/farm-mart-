@@ -25,7 +25,9 @@ export const activeTaskQueue = [
       '1x Pure Desi Cow Ghee (A2 Bilona)'
     ],
     status: 'ASSIGNED', // ASSIGNED, ARRIVED_AT_VENDOR, PICKED_UP, OUT_FOR_DELIVERY, DELIVERED
-    otpRequired: '4920'
+    otpRequired: '4920',
+    paymentMethod: 'RAZORPAY',
+    totalToCollect: 0 // prepaid
   },
   {
     id: 'FMT-ORD-9825',
@@ -41,7 +43,9 @@ export const activeTaskQueue = [
       '2x Punjabi Rajma Chawal Thali'
     ],
     status: 'READY_FOR_PICKUP',
-    otpRequired: '1892'
+    otpRequired: '1892',
+    paymentMethod: 'COD',
+    totalToCollect: 380
   }
 ];
 

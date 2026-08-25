@@ -169,7 +169,12 @@ export const VendorDashboardScreen = ({ navigation }) => {
                 <View style={styles.orderFooter}>
                   <View>
                     <Text style={styles.totalLabel}>Total Payout</Text>
-                    <Text style={styles.totalText}>₹{order.total}</Text>
+                    <View style={{flexDirection: 'row', alignItems: 'center', gap: 6}}>
+                      <Text style={styles.totalText}>₹{order.total}</Text>
+                      <View style={{ backgroundColor: order.paymentMethod === 'COD' ? '#fee2e2' : '#dcfce7', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6}}>
+                        <Text style={{ fontSize: 10, color: order.paymentMethod === 'COD' ? '#991b1b' : '#16a34a', fontWeight: '500'}}>{order.paymentMethod === 'COD' ? 'Cash to Collect' : 'Prepaid (Paid)'}</Text>
+                      </View>
+                    </View>
                   </View>
 
                   {isNew && (

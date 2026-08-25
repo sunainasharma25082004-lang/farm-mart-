@@ -149,6 +149,13 @@ export const ActiveNavigationScreen = ({ navigation }) => {
           </View>
           <Text style={styles.cardMainText}>{currentTask.customerName} ({currentTask.customerPhone})</Text>
           <Text style={styles.cardSubText}>{currentTask.deliveryAddress}</Text>
+          
+          {/* Payment Info */}
+          <View style={{ marginTop: 12, padding: 10, backgroundColor: currentTask.paymentMethod === 'COD' ? '#fee2e2' : '#dcfce7', borderRadius: 8, borderWidth: 1, borderColor: currentTask.paymentMethod === 'COD' ? '#fca5a5' : '#bbf7d0' }}>
+            <Text style={{ color: currentTask.paymentMethod === 'COD' ? '#991b1b' : '#166534', fontWeight: '500', fontSize: 13, textAlign: 'center' }}>
+              {currentTask.paymentMethod === 'COD' ? `CASH ON DELIVERY - Collect ₹${currentTask.totalToCollect}` : 'PREPAID ORDER - Do Not Collect Cash'}
+            </Text>
+          </View>
 
           {/* Items Checklist */}
           <View style={styles.itemsBox}>

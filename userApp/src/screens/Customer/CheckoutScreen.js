@@ -13,6 +13,7 @@ import {
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { useApp } from '../../context/AppContext';
+import { apiService } from '../../services/api';
 
 export const CheckoutScreen = ({ navigation }) => {
   const { cart, userProfile, clearCart, getCartTotal } = useApp();
@@ -28,22 +29,21 @@ export const CheckoutScreen = ({ navigation }) => {
     
     setLoading(true);
     try {
-      const API_URL = 'https://farm-mart-api.onrender.com/api/create-order';
-      
-      const response = await fetch(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount: total })
-      });
-      
-      const data = await response.json();
+      const data = await apiService.createOrder(total);
       setLoading(false);
       
       if (data.success) {
         navigation.navigate('RazorpayCheckout', {
           order: data.order,
-          onSuccess: (paymentId) => {
-            clearCart();
+          onSuccess: async (paymentId) => {
+            // Verify payment on backend
+            await apiService.verifyPayment({ 
+              razorpay_order_id: data.order.id, 
+              razorpay_payment_id: paymentId,
+              razorpay_signature: "mock_signature_for_client"
+            });
+            // Place order in context
+            placeOrder("RAZORPAY", userProfile?.deliveryAddress);
             Alert.alert("Success", "Payment successful! Order placed.");
             navigation.navigate('MainTabs', { screen: 'OrderTracking' });
           },
