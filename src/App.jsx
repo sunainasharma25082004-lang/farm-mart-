@@ -1,3 +1,61 @@
+import './App.css';
+
+// ============================================================================
+// FARMART WEBSITE - COMING SOON VIEW
+// ============================================================================
+export default function App() {
+  return (
+    <main className="coming-soon-wrapper" aria-label="Farmart Coming Soon">
+      {/* Ambient background glows */}
+      <div className="ambient-backdrop" aria-hidden="true">
+        <div className="glow-orb orb-primary"></div>
+        <div className="glow-orb orb-secondary"></div>
+      </div>
+
+      {/* Center Coming Soon Card */}
+      <div className="coming-soon-card">
+        <div className="brand-badge-container">
+          <img
+            src="/updated-logo.jpeg"
+            alt="Farmart Logo"
+            className="brand-logo-img"
+          />
+          <span className="live-status-pill">
+            <span className="pulsing-dot"></span>
+            COMING SOON
+          </span>
+        </div>
+
+        <h1 className="coming-soon-headline">
+          <span className="brand-name-accent">Farmart</span>
+          <span className="status-text">Coming Soon</span>
+        </h1>
+
+        <p className="coming-soon-tagline">
+          Empowering Farmers &bull; Building Communities &bull; Growing Bharat
+        </p>
+
+        <div className="coming-soon-divider"></div>
+
+        <p className="coming-soon-subtext">
+          Our digital platform is currently undergoing scheduled development and upgrades.
+          <br />
+          We will be launching soon with an enhanced experience!
+        </p>
+
+        <div className="coming-soon-footer">
+          &copy; {new Date().getFullYear()} Farmart. All rights reserved.
+        </div>
+      </div>
+    </main>
+  );
+}
+
+/*
+================================================================================
+PREVIOUS WEBSITE CODE (PRESERVED & COMMENTED OUT AS REQUESTED)
+================================================================================
+
 import React, { useState } from 'react';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
@@ -29,7 +87,7 @@ import ContactSection from './components/ContactSection';
 import Footer from './components/Footer';
 import { categoriesData } from './data/categories';
 
-export default function App() {
+export function OriginalFarmartWebsite() {
   const [currentView, setCurrentView] = useState('home'); 
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [showServicesShowcase, setShowServicesShowcase] = useState(false);
@@ -123,7 +181,6 @@ export default function App() {
 
   return (
     <div className="farmart-app">
-      {/* Header & Navigation */}
       {currentView !== 'admin' && (
         <Navbar
           currentView={currentView}
@@ -133,7 +190,6 @@ export default function App() {
         />
       )}
 
-      {/* Main Content Area */}
       <main>
         {currentView === 'admin' && (
           <AdminDashboardPage
@@ -237,47 +293,38 @@ export default function App() {
 
         {currentView === 'home' && (
           <>
-            {/* Full Width Hero */}
             <Hero
               onExploreClick={handleExploreClick}
               onOpenShowcase={() => setShowServicesShowcase(true)}
             />
 
-            {/* High-Definition Visual Topic Gallery */}
             <VisualGallerySection
               onSelectCategory={handleSelectCategory}
             />
 
-            {/* Real Employment & How People Work Stories */}
             <PartnerSuccessStoriesSection
               onSelectCategory={handleSelectCategory}
               onOpenContact={handleOpenContact}
             />
 
-            {/* 8 Verticals Category Grid */}
             <EcosystemGrid
               categories={categoriesData}
               onSelectCategory={handleSelectCategory}
             />
 
-            {/* Purpose & Values Overview */}
             <AboutSection />
 
-            {/* Earnings & Community Impact Calculator */}
             <ImpactCalculator
               onOpenCategoryModal={handleOpenCategoryById}
             />
 
-            {/* Careers Openings */}
             <CareersSection />
 
-            {/* Contact & Inquiry Form */}
             <ContactSection />
           </>
         )}
       </main>
 
-      {/* Sleek Floating Dock Navigation */}
       {currentView !== 'admin' && (
         <FloatingQuickNav
           currentView={currentView}
@@ -286,17 +333,14 @@ export default function App() {
         />
       )}
 
-      {/* Footer */}
       {currentView !== 'admin' && <Footer />}
 
-      {/* Interactive Services & Offerings Showcase Modal */}
       <ServicesShowcaseModal
         isOpen={showServicesShowcase}
         onClose={() => setShowServicesShowcase(false)}
         onSelectCategory={handleSelectCategory}
       />
 
-      {/* Category Detail View Drawer */}
       {selectedCategory && (
         <CategoryDetailModal
           category={selectedCategory}
@@ -306,3 +350,5 @@ export default function App() {
     </div>
   );
 }
+================================================================================
+*/
