@@ -1,11 +1,15 @@
-import React from 'react';
-import { View, SafeAreaView, StyleSheet, TouchableOpacity } from 'react-native';
-import { WebView } from 'react-native-webview';
-import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../../theme/colors';
+import React from "react";
+import { View, SafeAreaView, StyleSheet, TouchableOpacity } from "react-native";
+import { WebView } from "react-native-webview";
+import { Ionicons } from "@expo/vector-icons";
+import { colors } from "../../theme/colors";
 
 export const RazorpayCheckoutWebView = ({ route, navigation }) => {
-  const { order, onSuccess, onFailure } = route.params;
+  const { order, keyId, onSuccess, onFailure } = route.params;
+  const orderAmount = JSON.stringify(String(order.amount));
+  const orderCurrency = JSON.stringify(order.currency || "INR");
+  const razorpayKey = JSON.stringify(keyId);
+  const razorpayOrderId = JSON.stringify(order.id);
 
   // This HTML will load Razorpay checkout in the WebView.
   // It simulates what normally happens on a web frontend.
@@ -27,15 +31,16 @@ export const RazorpayCheckoutWebView = ({ route, navigation }) => {
             <div class="loader"></div>
             <p>Initializing Secure Payment...</p>
         </div>
-        <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+        <script src="https://checkout.razorpay.com/v1/checkout.js" onload="openCheckout()"></script>
         <script>
+          function openCheckout() {
             var options = {
-                "key": "dummy_key", // This should be replaced dynamically or using a test key
-                "amount": "${order.amount}",
-                "currency": "${order.currency}",
+                "key": ${razorpayKey},
+                "amount": ${orderAmount},
+                "currency": ${orderCurrency},
                 "name": "sfarmart",
                 "description": "Order Payment",
-                "order_id": "${order.id}",
+                "order_id": ${razorpayOrderId},
                 "handler": function (response) {
                     window.ReactNativeWebView.postMessage(JSON.stringify({ event: 'success', data: response }));
                 },
@@ -48,12 +53,13 @@ export const RazorpayCheckoutWebView = ({ route, navigation }) => {
                     "color": "#16a34a"
                 }
             };
-            var rzp1 = new Razorpay(options);
-            
-            // Auto open the checkout
-            setTimeout(function() {
-                rzp1.open();
-            }, 1000);
+            try {
+              var rzp1 = new Razorpay(options);
+              rzp1.open();
+            } catch (error) {
+              window.ReactNativeWebView.postMessage(JSON.stringify({ event: 'error', message: error.message }));
+            }
+          }
             
         </script>
     </body>
@@ -63,14 +69,17 @@ export const RazorpayCheckoutWebView = ({ route, navigation }) => {
   const handleMessage = (event) => {
     try {
       const parsedData = JSON.parse(event.nativeEvent.data);
-      if (parsedData.event === 'success') {
+      if (parsedData.event === "success") {
         // Here you would typically call your backend /api/verify-payment
         // For simplicity in the app, we pass the payment id to onSuccess
         navigation.goBack();
-        onSuccess(parsedData.data.razorpay_payment_id);
-      } else if (parsedData.event === 'dismissed') {
+        onSuccess(parsedData.data);
+      } else if (parsedData.event === "dismissed") {
         navigation.goBack();
         if (onFailure) onFailure();
+      } else if (parsedData.event === "error") {
+        navigation.goBack();
+        if (onFailure) onFailure(parsedData.message);
       }
     } catch (error) {
       console.log("Error parsing webview message", error);
@@ -80,7 +89,13 @@ export const RazorpayCheckoutWebView = ({ route, navigation }) => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.closeBtn} onPress={() => { navigation.goBack(); if(onFailure) onFailure(); }}>
+        <TouchableOpacity
+          style={styles.closeBtn}
+          onPress={() => {
+            navigation.goBack();
+            if (onFailure) onFailure();
+          }}
+        >
           <Ionicons name="close" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
       </View>
@@ -97,16 +112,16 @@ export const RazorpayCheckoutWebView = ({ route, navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff'
+    backgroundColor: "#ffffff",
   },
   header: {
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border
+    borderBottomColor: colors.border,
   },
   closeBtn: {
     width: 32,
     height: 32,
-    justifyContent: 'center'
-  }
+    justifyContent: "center",
+  },
 });
