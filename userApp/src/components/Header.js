@@ -240,7 +240,7 @@ export const Header = ({
         </Pressable>
       </Modal>
     </View>
-  )1QA2QAZ12WEFGB N2345T6Y7UIOLP;`12345*--+`
+  );
 };
 
 const styles = StyleSheet.create({
