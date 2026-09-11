@@ -15,7 +15,7 @@ export const GrowthPartnerScreen = ({ navigation }) => {
         <View style={styles.heroBox}>
           <Ionicons name="trophy" size={32} color="#ffffff" />
           <Text style={styles.heroTitle}>City Growth Partner Dashboard</Text>
-          <Text style={styles.heroSub}>Lead. Grow. Build Your City with Farmart.</Text>
+          <Text style={styles.heroSub}>Lead. Grow. Build Your City with sfarmart.</Text>
           <View style={styles.rankPill}>
             <Text style={styles.rankText}>Rank: District Senior Partner (Ludhiana Zone)</Text>
           </View>
@@ -45,7 +45,7 @@ export const GrowthPartnerScreen = ({ navigation }) => {
         </View>
 
         {/* Dream Rewards Tracker */}
-        <Text style={styles.sectionTitle}>🏆 Farmart Dream Rewards Program</Text>
+        <Text style={styles.sectionTitle}>🏆 sfarmart Dream Rewards Program</Text>
         <Text style={styles.sectionSub}>Milestones tracked automatically based on network orders</Text>
 
         {dreamRewards.map((reward) => {

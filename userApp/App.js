@@ -31,7 +31,7 @@ class ErrorBoundary extends Component {
         <View style={styles.errorScreen}>
           <Text style={styles.errorTitle}>Something went wrong</Text>
           <Text style={styles.errorSub}>
-            Farmart encountered an issue. Tap below to restart the app cleanly.
+            sfarmart encountered an issue. Tap below to restart the app cleanly.
           </Text>
           <TouchableOpacity style={styles.restartBtn} onPress={this.handleRestart}>
             <Text style={styles.restartBtnText}>Reload App</Text>
@@ -46,7 +46,7 @@ class ErrorBoundary extends Component {
 export default function App() {
   useEffect(() => {
     apiService.checkHealth().then((data) => {
-      console.log('Farmart API Health:', data);
+      console.log('sfarmart API Health:', data);
     }).catch(() => {
       // Backend may be offline during local UI work
     });

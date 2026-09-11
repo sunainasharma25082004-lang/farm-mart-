@@ -100,7 +100,7 @@ export const SignupScreen = ({ navigation }) => {
 
             <View style={styles.badgeWrap}>
               <Ionicons name="leaf" size={13} color={colors.primaryDark} />
-              <Text style={styles.badgeText}>Join Farmart</Text>
+              <Text style={styles.badgeText}>Join sfarmart</Text>
             </View>
 
             <TouchableOpacity
@@ -266,7 +266,7 @@ export const SignupScreen = ({ navigation }) => {
 
               {/* Terms Hint */}
               <Text style={styles.termsText}>
-                By creating an account, you agree to Farmart's{" "}
+                By creating an account, you agree to sfarmart's{" "}
                 <Text style={styles.termsHighlight}>Terms of Service</Text> &{" "}
                 <Text style={styles.termsHighlight}>Privacy Policy</Text>.
               </Text>

@@ -201,7 +201,7 @@ export const HomeScreen = ({ navigation }) => {
                 : 'Popular near you'}
             </Text>
             <Text style={styles.sectionSub}>
-              {filteredProducts.length} items · Quality assured by Farmart
+              {filteredProducts.length} items · Quality assured by sfarmart
             </Text>
           </View>
 

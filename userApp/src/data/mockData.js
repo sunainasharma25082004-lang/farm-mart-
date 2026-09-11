@@ -1,5 +1,5 @@
 export const services = [
-  { id: 'farmart_mart', title: 'Farmart Mart', subtitle: 'Daily Grocery & Staples', icon: 'basket-outline', color: '#16a34a', bg: '#dcfce7' },
+  { id: 'farmart_mart', title: 'sfarmart Mart', subtitle: 'Daily Grocery & Staples', icon: 'basket-outline', color: '#16a34a', bg: '#dcfce7' },
   { id: 'farm_harvest', title: 'Direct Farm Harvest', subtitle: 'Fresh Veggies & Fruits', icon: 'leaf-outline', color: '#15803d', bg: '#ecfdf5' },
   { id: 'homerestro', title: 'Home Restro Meals', subtitle: 'Authentic Home Thalis', icon: 'restaurant-outline', color: '#ea580c', bg: '#ffedd5' },
   { id: 'bakery_sweets', title: 'Bakery & Sweets', subtitle: 'Fresh Baked & Desserts', icon: 'gift-outline', color: '#ec4899', bg: '#fce7f3' },
@@ -9,7 +9,7 @@ export const services = [
 
 export const categories = [
   { id: 'all', name: 'All Services', icon: 'grid-outline' },
-  { id: 'grocery', name: 'Farmart Mart', icon: 'basket-outline' },
+  { id: 'grocery', name: 'sfarmart Mart', icon: 'basket-outline' },
   { id: 'veggies', name: 'Farm Veggies', icon: 'leaf-outline' },
   { id: 'fruits', name: 'Fresh Fruits', icon: 'sunny-outline' },
   { id: 'dairy', name: 'Dairy & Ghee', icon: 'water-outline' },
@@ -82,7 +82,7 @@ export const products = [
     inStock: true
   },
 
-  // 2. Farmart Mart (Grocery & Daily Essentials)
+  // 2. sfarmart Mart (Grocery & Daily Essentials)
   {
     id: 'p2',
     name: 'Pure Desi Cow Ghee (A2 Bilona)',
@@ -92,7 +92,7 @@ export const products = [
     unit: '500g',
     rating: 4.9,
     reviewsCount: 289,
-    farmer: 'Farmart Dairy Cooperative',
+    farmer: 'sfarmart Dairy Cooperative',
     image: 'https://images.unsplash.com/photo-1589927986089-35812388d1f4?w=500&auto=format&fit=crop&q=80',
     description: 'Traditionally churned Bilona method A2 cow ghee with authentic aroma and granular texture.',
     discount: 'TOP SELLER',
@@ -122,7 +122,7 @@ export const products = [
     unit: '1 Liter',
     rating: 4.8,
     reviewsCount: 98,
-    farmer: 'Farmart Agro Mills',
+    farmer: 'sfarmart Agro Mills',
     image: 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=500&auto=format&fit=crop&q=80',
     description: 'Pure wood-pressed mustard oil with pungent natural aroma and zero chemical refining.',
     discount: '100% PURE',
@@ -216,7 +216,7 @@ export const products = [
     unit: 'loaf',
     rating: 4.6,
     reviewsCount: 42,
-    farmer: 'Farmart Community Bakery',
+    farmer: 'sfarmart Community Bakery',
     image: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=500&auto=format&fit=crop&q=80',
     description: '100% whole wheat soft bread baked daily without artificial preservatives.',
     discount: 'BAKED TODAY',
@@ -231,7 +231,7 @@ export const products = [
     unit: '500g',
     rating: 4.9,
     reviewsCount: 175,
-    farmer: 'Farmart Heritage Sweets',
+    farmer: 'sfarmart Heritage Sweets',
     image: 'https://images.unsplash.com/photo-1541781774459-bb2af2f05b55?w=500&auto=format&fit=crop&q=80',
     description: 'Mouth-melting silver foil coated diamond Kaju Katli made from premium cashews.',
     discount: 'FESTIVAL SPECIAL',
