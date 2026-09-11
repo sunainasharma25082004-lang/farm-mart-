@@ -15,15 +15,8 @@ import { useApp } from "../../context/AppContext";
 import { colors } from "../../theme/colors";
 
 export const CartScreen = ({ navigation }) => {
-  const {
-    cart,
-    updateQuantity,
-    removeFromCart,
-    getCartTotal,
-    placeOrder,
-    userProfile,
-  } = useApp();
-  const [paymentMethod, setPaymentMethod] = useState("COD");
+  const { cart, updateQuantity, removeFromCart, getCartTotal, userProfile } =
+    useApp();
   const [deliveryAddress, setDeliveryAddress] = useState(
     "House #42, Main Bazaar, Near Village Hub, Ludhiana",
   );
@@ -132,7 +125,11 @@ export const CartScreen = ({ navigation }) => {
                 <Ionicons name="location" size={18} color={colors.primary} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.addressHub}>{userProfile?.villageHub || userProfile?.city || "Central Hub"}</Text>
+                <Text style={styles.addressHub}>
+                  {userProfile?.villageHub ||
+                    userProfile?.city ||
+                    "Central Hub"}
+                </Text>
                 <TextInput
                   style={styles.addressInput}
                   value={deliveryAddress}
@@ -140,44 +137,6 @@ export const CartScreen = ({ navigation }) => {
                   multiline
                 />
               </View>
-            </View>
-
-            <Text style={styles.sectionTitle}>Payment</Text>
-            <View style={styles.paymentContainer}>
-              {[
-                {
-                  id: "COD",
-                  icon: "cash-outline",
-                  label: "Cash on Delivery",
-                  color: colors.primary,
-                },
-                {
-                  id: "UPI",
-                  icon: "qr-code-outline",
-                  label: "UPI / QR Code",
-                  color: colors.info,
-                },
-              ].map((opt) => (
-                <TouchableOpacity
-                  key={opt.id}
-                  style={[
-                    styles.paymentCard,
-                    paymentMethod === opt.id && styles.paymentSelected,
-                  ]}
-                  onPress={() => setPaymentMethod(opt.id)}
-                  activeOpacity={0.8}
-                >
-                  <Ionicons name={opt.icon} size={20} color={opt.color} />
-                  <Text style={styles.paymentText}>{opt.label}</Text>
-                  {paymentMethod === opt.id && (
-                    <Ionicons
-                      name="checkmark-circle"
-                      size={20}
-                      color={colors.primary}
-                    />
-                  )}
-                </TouchableOpacity>
-              ))}
             </View>
 
             <Text style={styles.sectionTitle}>Bill details</Text>

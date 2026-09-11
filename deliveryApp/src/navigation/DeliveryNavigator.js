@@ -1,10 +1,14 @@
-import React from 'react';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Ionicons } from '@expo/vector-icons';
+import React from "react";
+import { StyleSheet, View } from "react-native";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { Ionicons } from "@expo/vector-icons";
 
-import { DutyScreen } from '../screens/DutyScreen';
-import { ActiveNavigationScreen, EarningsScreen } from '../screens/ActiveNavigationScreen';
+import { DutyScreen } from "../screens/DutyScreen";
+import {
+  ActiveNavigationScreen,
+  EarningsScreen,
+} from "../screens/ActiveNavigationScreen";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -14,37 +18,60 @@ const DeliveryTabs = () => {
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarActiveTintColor: '#0284c7',
-        tabBarInactiveTintColor: '#64748b',
+        tabBarActiveTintColor: "#0284c7",
+        tabBarInactiveTintColor: "#64748b",
         tabBarStyle: {
-          backgroundColor: '#ffffff',
+          backgroundColor: "#ffffff",
           borderTopWidth: 1,
-          borderTopColor: '#e2e8f0',
-          height: 64,
+          borderTopColor: "#e2e8f0",
+          height: 70,
           paddingBottom: 10,
-          paddingTop: 8,
-          elevation: 8,
-          shadowColor: '#000',
+          paddingTop: 7,
+          elevation: 10,
+          shadowColor: "#000",
           shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: 0.05,
-          shadowRadius: 6
+          shadowOpacity: 0.08,
+          shadowRadius: 10,
         },
         tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: '500'
+          fontSize: 10,
+          fontWeight: "600",
+          marginTop: 2,
         },
-        tabBarIcon: ({ color, size }) => {
-          let iconName = 'bicycle-outline';
-          if (route.name === 'Duty') iconName = 'speedometer-outline';
-          else if (route.name === 'ActiveNavigation') iconName = 'navigate-outline';
-          else if (route.name === 'Earnings') iconName = 'wallet-outline';
-          return <Ionicons name={iconName} size={size || 22} color={color} />;
-        }
+        tabBarItemStyle: {
+          borderRadius: 14,
+          marginHorizontal: 3,
+          marginVertical: 4,
+        },
+        tabBarIcon: ({ color, size, focused }) => {
+          let iconName = "bicycle-outline";
+          if (route.name === "Duty") iconName = "speedometer-outline";
+          else if (route.name === "ActiveNavigation")
+            iconName = "navigate-outline";
+          else if (route.name === "Earnings") iconName = "wallet-outline";
+          return (
+            <View style={focused ? styles.activeIcon : styles.icon}>
+              <Ionicons name={iconName} size={size || 21} color={color} />
+            </View>
+          );
+        },
       })}
     >
-      <Tab.Screen name="Duty" component={DutyScreen} options={{ tabBarLabel: 'Duty Queue' }} />
-      <Tab.Screen name="ActiveNavigation" component={ActiveNavigationScreen} options={{ tabBarLabel: 'Live Route' }} />
-      <Tab.Screen name="Earnings" component={EarningsScreen} options={{ tabBarLabel: 'Pay Log' }} />
+      <Tab.Screen
+        name="Duty"
+        component={DutyScreen}
+        options={{ tabBarLabel: "Duty Queue" }}
+      />
+      <Tab.Screen
+        name="ActiveNavigation"
+        component={ActiveNavigationScreen}
+        options={{ tabBarLabel: "Live Route" }}
+      />
+      <Tab.Screen
+        name="Earnings"
+        component={EarningsScreen}
+        options={{ tabBarLabel: "Pay Log" }}
+      />
     </Tab.Navigator>
   );
 };
@@ -56,3 +83,20 @@ export const DeliveryNavigator = () => {
     </Stack.Navigator>
   );
 };
+
+const styles = StyleSheet.create({
+  icon: {
+    alignItems: "center",
+    justifyContent: "center",
+    height: 28,
+    width: 44,
+  },
+  activeIcon: {
+    alignItems: "center",
+    justifyContent: "center",
+    height: 30,
+    width: 48,
+    borderRadius: 12,
+    backgroundColor: "#e0f2fe",
+  },
+});
