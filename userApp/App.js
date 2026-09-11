@@ -1,11 +1,18 @@
-import React, { useEffect, Component } from 'react';
-import { StyleSheet, StatusBar, Platform, View, Text, TouchableOpacity } from 'react-native';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { NavigationContainer } from '@react-navigation/native';
-import { AppProvider } from './src/context/AppContext';
-import { RootNavigator } from './src/navigation/RootNavigator';
-import { apiService } from './src/services/api';
-import { colors } from './src/theme/colors';
+import React, { useEffect, Component } from "react";
+import {
+  StyleSheet,
+  StatusBar,
+  Platform,
+  View,
+  Text,
+  TouchableOpacity,
+} from "react-native";
+import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
+import { NavigationContainer } from "@react-navigation/native";
+import { AppProvider } from "./src/context/AppContext";
+import { RootNavigator } from "./src/navigation/RootNavigator";
+import { apiService } from "./src/services/api";
+import { colors } from "./src/theme/colors";
 
 class ErrorBoundary extends Component {
   constructor(props) {
@@ -18,7 +25,11 @@ class ErrorBoundary extends Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    console.error('Unhandled app error caught by ErrorBoundary:', error, errorInfo);
+    console.error(
+      "Unhandled app error caught by ErrorBoundary:",
+      error,
+      errorInfo,
+    );
   }
 
   handleRestart = () => {
@@ -33,7 +44,10 @@ class ErrorBoundary extends Component {
           <Text style={styles.errorSub}>
             sfarmart encountered an issue. Tap below to restart the app cleanly.
           </Text>
-          <TouchableOpacity style={styles.restartBtn} onPress={this.handleRestart}>
+          <TouchableOpacity
+            style={styles.restartBtn}
+            onPress={this.handleRestart}
+          >
             <Text style={styles.restartBtnText}>Reload App</Text>
           </TouchableOpacity>
         </View>
@@ -45,11 +59,14 @@ class ErrorBoundary extends Component {
 
 export default function App() {
   useEffect(() => {
-    apiService.checkHealth().then((data) => {
-      console.log('sfarmart API Health:', data);
-    }).catch(() => {
-      // Backend may be offline during local UI work
-    });
+    apiService
+      .checkHealth()
+      .then((data) => {
+        console.log("sfarmart API Health:", data);
+      })
+      .catch(() => {
+        // Backend may be offline during local UI work
+      });
   }, []);
 
   return (
@@ -58,9 +75,14 @@ export default function App() {
         <AppProvider>
           <View style={styles.container}>
             <StatusBar barStyle="dark-content" backgroundColor={colors.card} />
-            <NavigationContainer>
-              <RootNavigator />
-            </NavigationContainer>
+            <SafeAreaView
+              style={styles.navigationSafeArea}
+              edges={["top", "bottom"]}
+            >
+              <NavigationContainer>
+                <RootNavigator />
+              </NavigationContainer>
+            </SafeAreaView>
           </View>
         </AppProvider>
       </SafeAreaProvider>
@@ -72,25 +94,28 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-    ...(Platform.OS === 'web' && { height: '100vh', width: '100vw' })
+    ...(Platform.OS === "web" && { height: "100vh", width: "100vw" }),
+  },
+  navigationSafeArea: {
+    flex: 1,
   },
   errorScreen: {
     flex: 1,
-    backgroundColor: '#ffffff',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#ffffff",
+    justifyContent: "center",
+    alignItems: "center",
     padding: 24,
   },
   errorTitle: {
     fontSize: 22,
-    fontWeight: '500',
-    color: '#0f172a',
+    fontWeight: "500",
+    color: "#0f172a",
     marginBottom: 8,
   },
   errorSub: {
     fontSize: 14,
-    color: '#64748b',
-    textAlign: 'center',
+    color: "#64748b",
+    textAlign: "center",
     marginBottom: 20,
     lineHeight: 20,
   },
@@ -101,8 +126,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   restartBtnText: {
-    color: '#ffffff',
+    color: "#ffffff",
     fontSize: 15,
-    fontWeight: '500',
+    fontWeight: "500",
   },
 });

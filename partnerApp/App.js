@@ -1,10 +1,17 @@
-import React, { Component } from 'react';
-import { StyleSheet, StatusBar, Platform, View, Text, TouchableOpacity } from 'react-native';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { NavigationContainer } from '@react-navigation/native';
-import { PartnerProvider } from './src/context/PartnerContext';
-import { PartnerNavigator } from './src/navigation/PartnerNavigator';
-import { colors } from './src/theme/colors';
+import React, { Component } from "react";
+import {
+  StyleSheet,
+  StatusBar,
+  Platform,
+  View,
+  Text,
+  TouchableOpacity,
+} from "react-native";
+import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
+import { NavigationContainer } from "@react-navigation/native";
+import { PartnerProvider } from "./src/context/PartnerContext";
+import { PartnerNavigator } from "./src/navigation/PartnerNavigator";
+import { colors } from "./src/theme/colors";
 
 class ErrorBoundary extends Component {
   constructor(props) {
@@ -17,7 +24,7 @@ class ErrorBoundary extends Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    console.error('PartnerApp Error Boundary:', error, errorInfo);
+    console.error("PartnerApp Error Boundary:", error, errorInfo);
   }
 
   render() {
@@ -25,8 +32,13 @@ class ErrorBoundary extends Component {
       return (
         <View style={styles.errorScreen}>
           <Text style={styles.errorTitle}>Partner Hub Alert</Text>
-          <Text style={styles.errorSub}>An unexpected error occurred in Partner Portal.</Text>
-          <TouchableOpacity style={styles.reloadBtn} onPress={() => this.setState({ hasError: false })}>
+          <Text style={styles.errorSub}>
+            An unexpected error occurred in Partner Portal.
+          </Text>
+          <TouchableOpacity
+            style={styles.reloadBtn}
+            onPress={() => this.setState({ hasError: false })}
+          >
             <Text style={styles.reloadText}>Reload Dashboard</Text>
           </TouchableOpacity>
         </View>
@@ -43,9 +55,14 @@ export default function App() {
         <PartnerProvider>
           <View style={styles.container}>
             <StatusBar barStyle="dark-content" backgroundColor={colors.card} />
-            <NavigationContainer>
-              <PartnerNavigator />
-            </NavigationContainer>
+            <SafeAreaView
+              style={styles.navigationSafeArea}
+              edges={["top", "bottom"]}
+            >
+              <NavigationContainer>
+                <PartnerNavigator />
+              </NavigationContainer>
+            </SafeAreaView>
           </View>
         </PartnerProvider>
       </SafeAreaProvider>
@@ -57,36 +74,39 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-    ...(Platform.OS === 'web' && { height: '100vh', width: '100vw' })
+    ...(Platform.OS === "web" && { height: "100vh", width: "100vw" }),
+  },
+  navigationSafeArea: {
+    flex: 1,
   },
   errorScreen: {
     flex: 1,
-    backgroundColor: '#ffffff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24
+    backgroundColor: "#ffffff",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
   },
   errorTitle: {
     fontSize: 20,
-    fontWeight: '500',
-    color: '#0f172a',
-    marginBottom: 8
+    fontWeight: "500",
+    color: "#0f172a",
+    marginBottom: 8,
   },
   errorSub: {
     fontSize: 14,
-    color: '#64748b',
-    textAlign: 'center',
-    marginBottom: 20
+    color: "#64748b",
+    textAlign: "center",
+    marginBottom: 20,
   },
   reloadBtn: {
     backgroundColor: colors.primary,
     paddingHorizontal: 20,
     paddingVertical: 12,
-    borderRadius: 12
+    borderRadius: 12,
   },
   reloadText: {
-    color: '#ffffff',
-    fontWeight: '500',
-    fontSize: 14
-  }
+    color: "#ffffff",
+    fontWeight: "500",
+    fontSize: 14,
+  },
 });
