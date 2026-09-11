@@ -221,7 +221,7 @@ export const Header = ({
 
             <Text style={styles.modalLabel}>Your current delivery address</Text>
             <TextInput
-              style={styles.modalInput}
+              style={styles.modalInput} 
               value={manualAddress}
               onChangeText={setManualAddress}
               placeholder="Enter your address"
@@ -240,7 +240,7 @@ export const Header = ({
         </Pressable>
       </Modal>
     </View>
-  );
+  )1QA2QAZ12WEFGB N2345T6Y7UIOLP;`12345*--+`
 };
 
 const styles = StyleSheet.create({
