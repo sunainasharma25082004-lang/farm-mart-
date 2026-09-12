@@ -76,10 +76,19 @@ const DeliveryTabs = () => {
   );
 };
 
+import { useDelivery } from '../context/DeliveryContext';
+import { LoginScreen } from '../screens/LoginScreen';
+
 export const DeliveryNavigator = () => {
+  const { isAuthenticated } = useDelivery();
+
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="DeliveryTabs" component={DeliveryTabs} />
+      {!isAuthenticated ? (
+        <Stack.Screen name="Login" component={LoginScreen} />
+      ) : (
+        <Stack.Screen name="DeliveryTabs" component={DeliveryTabs} />
+      )}
     </Stack.Navigator>
   );
 };

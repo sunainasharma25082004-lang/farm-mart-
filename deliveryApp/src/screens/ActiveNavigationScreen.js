@@ -83,7 +83,7 @@ export const ActiveNavigationScreen = ({ navigation }) => {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         {/* Visual Simulated Route Map Box */}
         <View style={styles.mapSimulatedBox}>
           <View style={styles.mapHeaderRow}>

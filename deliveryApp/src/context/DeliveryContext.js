@@ -11,6 +11,7 @@ export const DeliveryProvider = ({ children }) => {
   const [currentTask, setCurrentTask] = useState(null);
   const [completedList, setCompletedList] = useState([]);
   const [earningsHistory, setEarningsHistory] = useState(initialHistory);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
     fetchDeliveryTasks();
@@ -96,6 +97,15 @@ export const DeliveryProvider = ({ children }) => {
     setCurrentTask(task);
   };
 
+  const loginUser = (credentials) => {
+    // Mock login logic
+    setIsAuthenticated(true);
+  };
+
+  const logoutUser = () => {
+    setIsAuthenticated(false);
+  };
+
   return (
     <DeliveryContext.Provider
       value={{
@@ -107,7 +117,10 @@ export const DeliveryProvider = ({ children }) => {
         updateTaskStatus,
         completeDelivery,
         completedList,
-        weeklyEarningsHistory: earningsHistory
+        weeklyEarningsHistory: earningsHistory,
+        isAuthenticated,
+        loginUser,
+        logoutUser
       }}
     >
       {children}

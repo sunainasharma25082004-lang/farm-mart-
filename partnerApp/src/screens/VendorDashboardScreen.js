@@ -8,13 +8,34 @@ import {
   Switch,
   Platform,
   StatusBar,
+  Animated,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { usePartner } from '../context/PartnerContext';
 import { colors } from '../theme/colors';
 
 export const VendorDashboardScreen = ({ navigation }) => {
   const { vendor, toggleStoreStatus, orders, updateOrderStatus } = usePartner();
+
+  // Animation values
+  const scaleAnim = React.useRef(new Animated.Value(1)).current;
+  const fadeAnim = React.useRef(new Animated.Value(0)).current;
+
+  React.useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 600,
+      useNativeDriver: true,
+    }).start();
+  }, []);
+
+  const handlePressIn = () => {
+    Animated.spring(scaleAnim, { toValue: 0.95, useNativeDriver: true }).start();
+  };
+  const handlePressOut = () => {
+    Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true }).start();
+  };
 
   return (
     <View style={styles.container}>
@@ -46,15 +67,26 @@ export const VendorDashboardScreen = ({ navigation }) => {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <Animated.ScrollView 
+        contentContainerStyle={styles.scrollContent} 
+        showsVerticalScrollIndicator={false}
+        style={{ opacity: fadeAnim }}
+      >
         {/* Store Welcome Banner */}
-        <View style={styles.bannerCard}>
+        <LinearGradient
+          colors={['#16a34a', '#047857']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.bannerCard}
+        >
           <View style={styles.bannerContent}>
-            <Text style={styles.bannerTag}>PARTNER DASHBOARD</Text>
+            <View style={styles.bannerTagBox}>
+              <Text style={styles.bannerTag}>PARTNER DASHBOARD</Text>
+            </View>
             <Text style={styles.bannerTitle}>Manage Produce & Live Orders 🌾</Text>
             <Text style={styles.bannerSub}>Accept incoming customer requests and dispatch for quick delivery.</Text>
           </View>
-        </View>
+        </LinearGradient>
 
         {/* Quick Metrics Grid */}
         <View style={styles.statsGrid}>
@@ -84,17 +116,27 @@ export const VendorDashboardScreen = ({ navigation }) => {
         </View>
 
         {/* Add Product Action Button */}
-        <TouchableOpacity
-          style={styles.addProdBtn}
-          onPress={() => navigation.navigate('AddProduct')}
-          activeOpacity={0.85}
-        >
-          <View style={styles.addProdIconCircle}>
-            <Ionicons name="add" size={20} color="#0f172a" />
-          </View>
-          <Text style={styles.addProdText}>Add New Product / Produce</Text>
-          <Ionicons name="chevron-forward" size={18} color="#ffffff" style={{ marginLeft: 'auto' }} />
-        </TouchableOpacity>
+        <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+          <TouchableOpacity
+            onPressIn={handlePressIn}
+            onPressOut={handlePressOut}
+            onPress={() => navigation.navigate('AddProduct')}
+            activeOpacity={0.9}
+          >
+            <LinearGradient
+              colors={['#0f172a', '#1e293b']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.addProdBtn}
+            >
+              <View style={styles.addProdIconCircle}>
+                <Ionicons name="add" size={20} color="#0f172a" />
+              </View>
+              <Text style={styles.addProdText}>Add New Product / Produce</Text>
+              <Ionicons name="chevron-forward" size={18} color="#ffffff" style={{ marginLeft: 'auto' }} />
+            </LinearGradient>
+          </TouchableOpacity>
+        </Animated.View>
 
         {/* Incoming Customer Orders Section */}
         <View style={styles.sectionHeader}>
@@ -203,7 +245,7 @@ export const VendorDashboardScreen = ({ navigation }) => {
             );
           })
         )}
-      </ScrollView>
+      </Animated.ScrollView>
     </View>
   );
 };
@@ -285,36 +327,44 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   bannerCard: {
-    backgroundColor: '#0f172a',
     borderRadius: 20,
-    padding: 20,
-    marginBottom: 18,
-    shadowColor: '#0f172a',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
+    padding: 24,
+    marginBottom: 20,
+    shadowColor: '#16a34a',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
     shadowRadius: 16,
-    elevation: 6,
+    elevation: 8,
   },
   bannerContent: {
-    gap: 4,
+    gap: 6,
+  },
+  bannerTagBox: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+    marginBottom: 4,
   },
   bannerTag: {
     fontSize: 11,
-    fontWeight: '500',
-    color: '#10b981',
+    fontWeight: '700',
+    color: '#ffffff',
     letterSpacing: 1,
   },
   bannerTitle: {
-    fontSize: 18,
-    fontWeight: '500',
+    fontSize: 20,
+    fontWeight: '700',
     color: '#ffffff',
     marginTop: 2,
   },
   bannerSub: {
-    fontSize: 12.5,
-    color: '#94a3b8',
-    lineHeight: 18,
+    fontSize: 13,
+    color: '#d1fae5',
+    lineHeight: 20,
     marginTop: 2,
+    opacity: 0.9,
   },
   statsGrid: {
     flexDirection: 'row',
@@ -346,17 +396,16 @@ const styles = StyleSheet.create({
   addProdBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#0f172a',
-    borderRadius: 18,
-    paddingHorizontal: 18,
-    paddingVertical: 14,
-    marginBottom: 22,
-    gap: 12,
+    borderRadius: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    marginBottom: 26,
+    gap: 14,
     shadowColor: '#0f172a',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 8,
   },
   addProdIconCircle: {
     width: 28,

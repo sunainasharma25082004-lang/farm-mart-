@@ -24,6 +24,10 @@ export const AddProductScreen = ({ navigation }) => {
   const [price, setPrice] = useState('');
   const [unit, setUnit] = useState('thali');
   const [stock, setStock] = useState('20');
+  const [description, setDescription] = useState('');
+  const [image, setImage] = useState('');
+  const [discount, setDiscount] = useState('');
+  const [farmer, setFarmer] = useState('');
   const [focusedInput, setFocusedInput] = useState(null);
 
   const handleSubmit = () => {
@@ -37,6 +41,10 @@ export const AddProductScreen = ({ navigation }) => {
       price: Number(price),
       unit,
       stock: Number(stock),
+      description,
+      image,
+      discount,
+      farmer,
     });
     Alert.alert('Product Listed! 🎉', `${name} is now live and visible to nearby customers!`, [
       { text: 'View Products', onPress: () => navigation.goBack() },
@@ -60,7 +68,7 @@ export const AddProductScreen = ({ navigation }) => {
         <View style={{ width: 36 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <View style={styles.formCard}>
           <Text style={styles.cardHeaderTitle}>PUBLISH ITEM TO CUSTOMER APP</Text>
           <Text style={styles.cardHeaderSub}>Add produce, thalis, or homemade bakery items to receive live orders.</Text>
@@ -164,31 +172,143 @@ export const AddProductScreen = ({ navigation }) => {
             </View>
           </View>
 
-          {/* Stock Quantity */}
+          {/* Description */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Available Inventory Stock</Text>
+            <Text style={styles.label}>Description</Text>
             <View
               style={[
                 styles.inputWrap,
-                focusedInput === 'stock' && styles.inputWrapFocused,
+                { height: 80, alignItems: 'flex-start', paddingTop: 12 },
+                focusedInput === 'description' && styles.inputWrapFocused,
               ]}
             >
               <Ionicons
-                name="layers-outline"
+                name="document-text-outline"
                 size={18}
-                color={focusedInput === 'stock' ? colors.primary : '#94a3b8'}
+                color={focusedInput === 'description' ? colors.primary : '#94a3b8'}
                 style={styles.inputIcon}
               />
               <TextInput
-                style={styles.input}
-                placeholder="e.g. 50"
+                style={[styles.input, { height: 60, textAlignVertical: 'top' }]}
+                placeholder="Product description, ingredients, etc."
                 placeholderTextColor="#94a3b8"
-                keyboardType="numeric"
-                value={stock}
-                onChangeText={setStock}
-                onFocus={() => setFocusedInput('stock')}
+                multiline
+                value={description}
+                onChangeText={setDescription}
+                onFocus={() => setFocusedInput('description')}
                 onBlur={() => setFocusedInput(null)}
               />
+            </View>
+          </View>
+
+          {/* Image URL & Farmer Name */}
+          <View style={styles.row}>
+            <View style={{ flex: 1, marginRight: 10 }}>
+              <Text style={styles.label}>Image URL</Text>
+              <View
+                style={[
+                  styles.inputWrap,
+                  focusedInput === 'image' && styles.inputWrapFocused,
+                ]}
+              >
+                <Ionicons
+                  name="image-outline"
+                  size={18}
+                  color={focusedInput === 'image' ? colors.primary : '#94a3b8'}
+                  style={styles.inputIcon}
+                />
+                <TextInput
+                  style={styles.input}
+                  placeholder="https://..."
+                  placeholderTextColor="#94a3b8"
+                  value={image}
+                  onChangeText={setImage}
+                  onFocus={() => setFocusedInput('image')}
+                  onBlur={() => setFocusedInput(null)}
+                />
+              </View>
+            </View>
+
+            <View style={{ flex: 1 }}>
+              <Text style={styles.label}>Partner Name</Text>
+              <View
+                style={[
+                  styles.inputWrap,
+                  focusedInput === 'farmer' && styles.inputWrapFocused,
+                ]}
+              >
+                <Ionicons
+                  name="person-outline"
+                  size={18}
+                  color={focusedInput === 'farmer' ? colors.primary : '#94a3b8'}
+                  style={styles.inputIcon}
+                />
+                <TextInput
+                  style={styles.input}
+                  value={farmer}
+                  onChangeText={setFarmer}
+                  placeholder="e.g. John Doe"
+                  placeholderTextColor="#94a3b8"
+                  onFocus={() => setFocusedInput('farmer')}
+                  onBlur={() => setFocusedInput(null)}
+                />
+              </View>
+            </View>
+          </View>
+
+          {/* Stock Quantity & Discount */}
+          <View style={styles.row}>
+            <View style={{ flex: 1, marginRight: 10 }}>
+              <Text style={styles.label}>Available Stock</Text>
+              <View
+                style={[
+                  styles.inputWrap,
+                  focusedInput === 'stock' && styles.inputWrapFocused,
+                ]}
+              >
+                <Ionicons
+                  name="layers-outline"
+                  size={18}
+                  color={focusedInput === 'stock' ? colors.primary : '#94a3b8'}
+                  style={styles.inputIcon}
+                />
+                <TextInput
+                  style={styles.input}
+                  placeholder="e.g. 50"
+                  placeholderTextColor="#94a3b8"
+                  keyboardType="numeric"
+                  value={stock}
+                  onChangeText={setStock}
+                  onFocus={() => setFocusedInput('stock')}
+                  onBlur={() => setFocusedInput(null)}
+                />
+              </View>
+            </View>
+
+            <View style={{ flex: 1 }}>
+              <Text style={styles.label}>Discount Tag</Text>
+              <View
+                style={[
+                  styles.inputWrap,
+                  focusedInput === 'discount' && styles.inputWrapFocused,
+                ]}
+              >
+                <Ionicons
+                  name="pricetag-outline"
+                  size={18}
+                  color={focusedInput === 'discount' ? colors.primary : '#94a3b8'}
+                  style={styles.inputIcon}
+                />
+                <TextInput
+                  style={styles.input}
+                  value={discount}
+                  onChangeText={setDiscount}
+                  placeholder="e.g. 10%"
+                  placeholderTextColor="#94a3b8"
+                  onFocus={() => setFocusedInput('discount')}
+                  onBlur={() => setFocusedInput(null)}
+                />
+              </View>
             </View>
           </View>
 
@@ -412,11 +532,6 @@ const styles = StyleSheet.create({
   inputWrapFocused: {
     borderColor: colors.primary,
     backgroundColor: '#ffffff',
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 2,
   },
   inputIcon: {
     marginRight: 10,

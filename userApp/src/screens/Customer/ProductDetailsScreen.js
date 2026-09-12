@@ -13,14 +13,13 @@ import {
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { useApp } from '../../context/AppContext';
-import { products } from '../../data/mockData';
 import { ProductCard } from '../../components/ProductCard';
 
 const { width } = Dimensions.get('window');
 
 export const ProductDetailsScreen = ({ route, navigation }) => {
   const { product } = route.params;
-  const { addToCart, updateQuantity, cart } = useApp();
+  const { addToCart, updateQuantity, cart, products } = useApp();
   
   const cartItem = cart.find(item => item.product.id === product.id);
   const qtyInCart = cartItem ? cartItem.quantity : 0;

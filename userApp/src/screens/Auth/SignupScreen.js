@@ -81,12 +81,13 @@ export const SignupScreen = ({ navigation }) => {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#f0fdf4" />
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={styles.keyboardView}
       >
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContainer}
+          keyboardShouldPersistTaps="handled"
         >
           {/* Top Bar Navigation */}
           <View style={styles.headerBar}>
@@ -459,11 +460,6 @@ const styles = StyleSheet.create({
   inputWrapFocused: {
     borderColor: colors.primary,
     backgroundColor: "#ffffff",
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 2,
   },
   inputIcon: {
     marginRight: 10,

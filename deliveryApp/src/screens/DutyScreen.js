@@ -8,7 +8,9 @@ import {
   Switch,
   Platform,
   StatusBar,
+  Animated,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useDelivery } from '../context/DeliveryContext';
 import { colors } from '../theme/colors';
@@ -16,9 +18,25 @@ import { colors } from '../theme/colors';
 export const DutyScreen = ({ navigation }) => {
   const { profile, toggleDuty, tasks, setCurrentTask } = useDelivery();
 
+  const scaleAnim = React.useRef(new Animated.Value(1)).current;
+  const fadeAnim = React.useRef(new Animated.Value(0)).current;
+
+  React.useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 600,
+      useNativeDriver: true,
+    }).start();
+  }, []);
+
   const handleStartNavigation = (task) => {
-    setCurrentTask(task);
-    navigation.navigate('ActiveNavigation');
+    Animated.sequence([
+      Animated.timing(scaleAnim, { toValue: 0.95, duration: 100, useNativeDriver: true }),
+      Animated.timing(scaleAnim, { toValue: 1, duration: 100, useNativeDriver: true })
+    ]).start(() => {
+      setCurrentTask(task);
+      navigation.navigate('ActiveNavigation');
+    });
   };
 
   return (
@@ -52,24 +70,33 @@ export const DutyScreen = ({ navigation }) => {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <Animated.ScrollView 
+        contentContainerStyle={styles.scrollContent} 
+        showsVerticalScrollIndicator={false}
+        style={{ opacity: fadeAnim }}
+      >
         {/* Driver Pay Bar */}
-        <View style={styles.statsBar}>
+        <LinearGradient
+          colors={['#0284c7', '#0369a1']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.statsBar}
+        >
           <View style={styles.statItem}>
-            <Text style={styles.statVal}>₹{profile.todayEarnings}</Text>
-            <Text style={styles.statLabel}>Today's Pay</Text>
+            <Text style={[styles.statVal, { color: '#ffffff' }]}>₹{profile.todayEarnings}</Text>
+            <Text style={[styles.statLabel, { color: '#bae6fd' }]}>Today's Pay</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={[styles.statVal, { color: '#0284c7' }]}>{profile.todayTrips}</Text>
-            <Text style={styles.statLabel}>Trips Done</Text>
+            <Text style={[styles.statVal, { color: '#ffffff' }]}>{profile.todayTrips}</Text>
+            <Text style={[styles.statLabel, { color: '#bae6fd' }]}>Trips Done</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={[styles.statVal, { color: '#d97706' }]}>★ {profile.rating}</Text>
-            <Text style={styles.statLabel}>Rating</Text>
+            <Text style={[styles.statVal, { color: '#fde047' }]}>★ {profile.rating}</Text>
+            <Text style={[styles.statLabel, { color: '#bae6fd' }]}>Rating</Text>
           </View>
-        </View>
+        </LinearGradient>
 
         {!profile.isOnline ? (
           <View style={styles.offlineBox}>
@@ -142,21 +169,29 @@ export const DutyScreen = ({ navigation }) => {
                       <Text style={styles.itemCountText}>📦 {task.itemsCount} items</Text>
                     </View>
 
-                    <TouchableOpacity
-                      style={styles.navBtn}
-                      onPress={() => handleStartNavigation(task)}
-                      activeOpacity={0.85}
-                    >
-                      <Text style={styles.navBtnText}>Start Trip</Text>
-                      <Ionicons name="navigate-circle" size={18} color="#ffffff" />
-                    </TouchableOpacity>
+                    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+                      <TouchableOpacity
+                        activeOpacity={0.9}
+                        onPress={() => handleStartNavigation(task)}
+                      >
+                        <LinearGradient
+                          colors={['#0284c7', '#0369a1']}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 1 }}
+                          style={styles.navBtn}
+                        >
+                          <Text style={styles.navBtnText}>Start Trip</Text>
+                          <Ionicons name="navigate-circle" size={18} color="#ffffff" />
+                        </LinearGradient>
+                      </TouchableOpacity>
+                    </Animated.View>
                   </View>
                 </View>
               ))
             )}
           </>
         )}
-      </ScrollView>
+      </Animated.ScrollView>
     </View>
   );
 };
@@ -236,19 +271,16 @@ const styles = StyleSheet.create({
   },
   statsBar: {
     flexDirection: 'row',
-    backgroundColor: '#ffffff',
     borderRadius: 20,
-    padding: 16,
+    padding: 18,
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    shadowColor: 'rgba(15, 23, 42, 0.05)',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 1,
-    shadowRadius: 12,
-    elevation: 3,
+    shadowColor: '#0284c7',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 6,
   },
   statItem: {
     flex: 1,
@@ -267,8 +299,8 @@ const styles = StyleSheet.create({
   },
   statDivider: {
     width: 1,
-    height: 28,
-    backgroundColor: '#e2e8f0',
+    height: 32,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
   },
   offlineBox: {
     backgroundColor: '#ffffff',
@@ -451,16 +483,15 @@ const styles = StyleSheet.create({
   navBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#0284c7',
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 16,
-    gap: 6,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 18,
+    gap: 8,
     shadowColor: '#0284c7',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 6,
   },
   navBtnText: {
     color: '#ffffff',

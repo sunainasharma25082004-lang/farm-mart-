@@ -2,23 +2,36 @@ import React, { createContext, useState, useContext } from "react";
 import {
   initialOrders,
   initialFarmerListings,
-  products,
+  products as mockProducts,
 } from "../data/mockData";
 import { apiService } from "../services/api";
+import { useEffect } from "react";
 
 const AppContext = createContext();
 
 export const AppProvider = ({ children }) => {
   const [activeRole, setActiveRole] = useState("customer");
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
-  const [cart, setCart] = useState([
-    { product: products[0], quantity: 2 },
-    { product: products[1], quantity: 1 },
-  ]);
+  const [products, setProducts] = useState(mockProducts);
+  const [cart, setCart] = useState([]);
   const [orders, setOrders] = useState(initialOrders);
   const [farmerListings, setFarmerListings] = useState(initialFarmerListings);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userProfile, setUserProfile] = useState(null);
+
+  useEffect(() => {
+    fetchProducts();
+    // Poll every 15 seconds to simulate real-time updates
+    const interval = setInterval(fetchProducts, 15000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const fetchProducts = async () => {
+    const data = await apiService.getProducts();
+    if (data && data.success && data.products && data.products.length > 0) {
+      setProducts(data.products);
+    }
+  };
 
   const loginUser = (user) => {
     setUserProfile(user);
@@ -128,6 +141,7 @@ export const AppProvider = ({ children }) => {
         isRoleModalOpen,
         setIsRoleModalOpen,
         cart,
+        products,
         addToCart,
         removeFromCart,
         updateQuantity,

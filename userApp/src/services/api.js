@@ -25,6 +25,16 @@ export const apiService = {
     }
   },
 
+  getProducts: async () => {
+    try {
+      const response = await apiClient.get("/products");
+      return response.data;
+    } catch (error) {
+      console.warn("Could not fetch products from backend:", error);
+      return { success: false, products: [] };
+    }
+  },
+
   createOrder: async (amount) => {
     const response = await apiClient.post("/create-order", {
       amount,

@@ -3,7 +3,7 @@ import Order from '../models/Order.js';
 // Create new order
 export const createOrder = async (req, res) => {
   try {
-    const { orderId, customerName, customerPhone, deliveryAddress, items, totalAmount, paymentMethod, paymentStatus } = req.body;
+    const { orderId, customerName, customerPhone, deliveryAddress, pickupLocation, items, totalAmount, paymentMethod, paymentStatus, vendorId } = req.body;
     
     const itemsCount = items ? items.reduce((acc, item) => acc + (item.qty || 1), 0) : 0;
     
@@ -12,11 +12,13 @@ export const createOrder = async (req, res) => {
       customerName,
       customerPhone,
       deliveryAddress,
+      pickupLocation,
       items,
       itemsCount,
       totalAmount,
       paymentMethod,
       paymentStatus,
+      vendorId: vendorId || 'default_vendor',
       status: 'NEW_ORDER'
     });
 

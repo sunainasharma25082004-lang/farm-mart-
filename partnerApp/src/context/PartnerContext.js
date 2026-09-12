@@ -14,13 +14,27 @@ export const PartnerProvider = ({ children }) => {
   const [orders, setOrders] = useState([]);
   const [inventory, setInventory] = useState(initialInventoryItems);
   const [settlementHistory, setSettlementHistory] = useState(initialSettlements);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
     fetchOrders();
+    fetchInventory();
     // Poll for new orders every 10 seconds for production readiness without websockets
     const interval = setInterval(fetchOrders, 10000);
     return () => clearInterval(interval);
   }, []);
+
+  const fetchInventory = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/products/vendor/default_vendor`);
+      const data = await response.json();
+      if (data.success) {
+        setInventory(data.products);
+      }
+    } catch (e) {
+      console.warn("Could not fetch live inventory, fallback or empty");
+    }
+  };
 
   const fetchOrders = async () => {
     try {
@@ -54,24 +68,58 @@ export const PartnerProvider = ({ children }) => {
     }
   };
 
-  const addInventoryItem = (item) => {
-    const newItem = {
-      id: `v-item-${Date.now()}`,
-      stock: 10,
-      isAvailable: true,
-      ...item
-    };
-    setInventory((prev) => [newItem, ...prev]);
+  const addInventoryItem = async (item) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/products`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...item, vendorId: 'default_vendor' })
+      });
+      const data = await response.json();
+      if (data.success) {
+        setInventory((prev) => [data.product, ...prev]);
+      }
+    } catch (e) {
+      console.warn("Failed to add product to backend");
+    }
   };
 
-  const toggleItemAvailability = (itemId) => {
-    setInventory((prev) =>
-      prev.map((i) => (i.id === itemId ? { ...i, isAvailable: !i.isAvailable } : i))
-    );
+  const toggleItemAvailability = async (itemId) => {
+    const item = inventory.find(i => i.id === itemId);
+    if (!item) return;
+    
+    try {
+      await fetch(`${API_BASE_URL}/products/${itemId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isAvailable: !item.isAvailable })
+      });
+      setInventory((prev) =>
+        prev.map((i) => (i.id === itemId ? { ...i, isAvailable: !i.isAvailable } : i))
+      );
+    } catch (e) {
+      console.warn("Failed to update product availability");
+    }
   };
 
-  const deleteInventoryItem = (itemId) => {
-    setInventory((prev) => prev.filter((i) => i.id !== itemId));
+  const deleteInventoryItem = async (itemId) => {
+    try {
+      await fetch(`${API_BASE_URL}/products/${itemId}`, {
+        method: 'DELETE'
+      });
+      setInventory((prev) => prev.filter((i) => i.id !== itemId));
+    } catch (e) {
+      console.warn("Failed to delete product");
+    }
+  };
+
+  const loginUser = (credentials) => {
+    // Mock login logic
+    setIsAuthenticated(true);
+  };
+
+  const logoutUser = () => {
+    setIsAuthenticated(false);
   };
 
   return (
@@ -86,7 +134,10 @@ export const PartnerProvider = ({ children }) => {
         addInventoryItem,
         toggleItemAvailability,
         deleteInventoryItem,
-        settlementHistory
+        settlementHistory,
+        isAuthenticated,
+        loginUser,
+        logoutUser
       }}
     >
       {children}

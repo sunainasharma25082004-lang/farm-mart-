@@ -10,7 +10,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Header } from '../../components/Header';
 import { ProductCard } from '../../components/ProductCard';
-import { products } from '../../data/mockData';
+import { useApp } from '../../context/AppContext';
 import { colors } from '../../theme/colors';
 
 const { width } = Dimensions.get('window');
@@ -42,8 +42,10 @@ const chefs = [
 ];
 
 export const HomeRestroScreen = ({ navigation }) => {
+  const { products } = useApp();
+  
   const homeRestroItems = products.filter(
-    (p) => p.category === 'homerestro' || p.category === 'bakery' || p.category === 'sweets'
+    (p) => p.category === 'homerestro' || p.category === 'bakery' || p.category === 'sweets' || p.category === 'Home Restro'
   );
 
   const rows = [];

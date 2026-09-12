@@ -77,11 +77,22 @@ const PartnerTabs = () => {
   );
 };
 
+import { usePartner } from '../context/PartnerContext';
+import { LoginScreen } from '../screens/LoginScreen';
+
 export const PartnerNavigator = () => {
+  const { isAuthenticated } = usePartner();
+
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="PartnerTabs" component={PartnerTabs} />
-      <Stack.Screen name="AddProduct" component={AddProductScreen} />
+      {!isAuthenticated ? (
+        <Stack.Screen name="Login" component={LoginScreen} />
+      ) : (
+        <>
+          <Stack.Screen name="PartnerTabs" component={PartnerTabs} />
+          <Stack.Screen name="AddProduct" component={AddProductScreen} />
+        </>
+      )}
     </Stack.Navigator>
   );
 };

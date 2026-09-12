@@ -11,7 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Header } from '../../components/Header';
 import { CategoryChip } from '../../components/CategoryChip';
 import { ProductCard } from '../../components/ProductCard';
-import { products } from '../../data/mockData';
+import { useApp } from '../../context/AppContext';
 import { colors } from '../../theme/colors';
 
 const { width } = Dimensions.get('window');
@@ -19,6 +19,7 @@ const GAP = 10;
 const CARD_WIDTH = (width - 32 - GAP) / 2;
 
 export const CatalogScreen = ({ navigation }) => {
+  const { products } = useApp();
   const [selectedCat, setSelectedCat] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
 
