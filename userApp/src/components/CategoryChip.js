@@ -27,7 +27,13 @@ export const CategoryChip = ({ selectedCategory, onSelectCategory }) => {
                 color={isSelected ? colors.primaryDark : colors.textSecondary}
               />
             </View>
-            <Text style={[styles.text, isSelected && styles.selectedText]}>{cat.name}</Text>
+            <Text
+              style={[styles.text, isSelected && styles.selectedText]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              {cat.name}
+            </Text>
           </TouchableOpacity>
         );
       })}
@@ -38,7 +44,7 @@ export const CategoryChip = ({ selectedCategory, onSelectCategory }) => {
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 10,
     gap: 8,
     alignItems: 'center'
   },
@@ -46,17 +52,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.card,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 24,
+    minHeight: 46,
+    paddingHorizontal: 12,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: colors.border,
     gap: 6,
-    alignSelf: 'center'
+    alignSelf: 'center',
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 2
   },
   selectedChip: {
     backgroundColor: colors.primaryLight,
-    borderColor: colors.primary
+    borderColor: colors.primary,
+    shadowOpacity: 0.1
   },
   iconWrap: {
     width: 22,
@@ -64,7 +76,8 @@ const styles = StyleSheet.create({
     borderRadius: 11,
     backgroundColor: colors.background,
     alignItems: 'center',
-    justifyContent: 'center'
+    justifyContent: 'center',
+    flexShrink: 0
   },
   iconWrapSelected: {
     backgroundColor: '#ffffff'
@@ -75,7 +88,8 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     includeFontPadding: false,
     textAlignVertical: 'center',
-    paddingVertical: 2
+    paddingVertical: 2,
+    flexShrink: 1
   },
   selectedText: {
     color: colors.primaryDark,

@@ -4,8 +4,7 @@ import {
   Text,
   StyleSheet,
   FlatList,
-  TextInput,
-  Dimensions
+  TextInput
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Header } from '../../components/Header';
@@ -14,9 +13,7 @@ import { ProductCard } from '../../components/ProductCard';
 import { useApp } from '../../context/AppContext';
 import { colors } from '../../theme/colors';
 
-const { width } = Dimensions.get('window');
 const GAP = 10;
-const CARD_WIDTH = (width - 32 - GAP) / 2;
 
 export const CatalogScreen = ({ navigation, route }) => {
   const { products } = useApp();
@@ -108,6 +105,7 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
+    minWidth: 0,
     fontSize: 13,
     fontWeight: '500',
     color: colors.textPrimary,
@@ -129,10 +127,12 @@ const styles = StyleSheet.create({
   },
   row: {
     gap: GAP,
-    marginBottom: GAP
+    marginBottom: GAP,
+    alignItems: 'stretch'
   },
   cardWrap: {
-    width: CARD_WIDTH
+    flex: 1,
+    minWidth: 0
   },
   emptyContainer: {
     alignItems: 'center',

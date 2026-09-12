@@ -39,7 +39,7 @@ export const ProductCard = ({ product, onPress, compact = false }) => {
 
         <View style={styles.farmerRow}>
           <Ionicons name="shield-checkmark" size={11} color={colors.primary} />
-          <Text style={styles.farmerText} numberOfLines={1}>
+          <Text style={styles.farmerText} numberOfLines={2} ellipsizeMode="tail">
             {product.farmer}
           </Text>
         </View>
@@ -60,6 +60,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#f1f5f9',
     overflow: 'hidden',
+    minWidth: 0,
     marginBottom: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -122,6 +123,7 @@ const styles = StyleSheet.create({
   details: {
     padding: 12,
     flex: 1,
+    minWidth: 0,
     justifyContent: 'space-between'
   },
   title: {
@@ -135,11 +137,12 @@ const styles = StyleSheet.create({
     color: '#64748b',
     marginTop: 2,
     marginBottom: 6,
-    fontWeight: '500'
+    fontWeight: '500',
+    lineHeight: 16
   },
   farmerRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: 4,
     marginBottom: 10
   },
@@ -147,7 +150,9 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: colors.primaryDark,
     fontWeight: '500',
-    flex: 1
+    flex: 1,
+    minWidth: 0,
+    lineHeight: 14
   },
   footer: {
     flexDirection: 'row',
@@ -158,7 +163,8 @@ const styles = StyleSheet.create({
   price: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#0f172a'
+    color: '#0f172a',
+    flexShrink: 1
   },
   addButton: {
     backgroundColor: colors.primaryLight,
