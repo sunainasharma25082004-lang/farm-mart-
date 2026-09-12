@@ -62,7 +62,11 @@ export const CheckoutScreen = ({ navigation }) => {
               });
               if (!verification.success)
                 throw new Error("Payment verification failed");
-              await placeOrder("RAZORPAY", selectedAddress?.addressString);
+              await placeOrder(
+                "RAZORPAY",
+                selectedAddress?.addressString,
+                total,
+              );
               Alert.alert("Success", "Payment successful! Order placed.");
               navigation.navigate("MainTabs", { screen: "OrderTracking" });
             } catch (error) {

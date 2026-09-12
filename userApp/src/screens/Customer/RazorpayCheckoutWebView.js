@@ -100,10 +100,25 @@ export const RazorpayCheckoutWebView = ({ route, navigation }) => {
         </TouchableOpacity>
       </View>
       <WebView
-        source={{ html: razorpayHtml, baseUrl: 'https://checkout.razorpay.com' }}
-        originAllowlist={['*']}
+        source={{
+          html: razorpayHtml,
+          baseUrl: "https://checkout.razorpay.com",
+        }}
+        originWhitelist={["*"]}
         onMessage={handleMessage}
+        onError={() => {
+          navigation.goBack();
+          if (onFailure) onFailure("Unable to load Razorpay checkout.");
+        }}
+        onHttpError={() => {
+          navigation.goBack();
+          if (onFailure)
+            onFailure("Razorpay checkout returned a network error.");
+        }}
         javaScriptEnabled={true}
+        domStorageEnabled={true}
+        thirdPartyCookiesEnabled={true}
+        mixedContentMode="compatibility"
         style={{ flex: 1 }}
       />
     </SafeAreaView>

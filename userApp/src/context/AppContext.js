@@ -140,8 +140,12 @@ export const AppProvider = ({ children }) => {
     );
   };
 
-  const placeOrder = async (paymentMethod, customDeliveryAddress) => {
-    const totalAmount = getCartTotal();
+  const placeOrder = async (
+    paymentMethod,
+    customDeliveryAddress,
+    finalTotal = getCartTotal(),
+  ) => {
+    const totalAmount = Number(finalTotal);
     const finalAddress =
       customDeliveryAddress ||
       selectedAddress?.addressString ||

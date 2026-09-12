@@ -15,11 +15,7 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import {
-  DEMO_PARTNER_ID,
-  DEMO_PASSWORD,
-  usePartner,
-} from "../context/PartnerContext";
+import { usePartner } from "../context/PartnerContext";
 import { colors } from "../theme/colors";
 
 export const LoginScreen = () => {
@@ -38,11 +34,6 @@ export const LoginScreen = () => {
     setIsSubmitting(true);
     await loginUser({ partnerId: partnerId.trim(), password });
     setIsSubmitting(false);
-  };
-
-  const useDemoCredentials = () => {
-    setPartnerId(DEMO_PARTNER_ID);
-    setPassword(DEMO_PASSWORD);
   };
 
   return (
@@ -87,6 +78,12 @@ export const LoginScreen = () => {
                   placeholder="e.g. PRT-9821"
                   placeholderTextColor="#94a3b8"
                   value={partnerId}
+                  editable
+                  keyboardType="default"
+                  autoCorrect={false}
+                  autoComplete="username"
+                  textContentType="username"
+                  caretHidden={false}
                   onChangeText={setPartnerId}
                   onFocus={() => setFocusedInput("id")}
                   onBlur={() => setFocusedInput(null)}
@@ -115,6 +112,12 @@ export const LoginScreen = () => {
                   placeholderTextColor="#94a3b8"
                   secureTextEntry
                   value={password}
+                  editable
+                  keyboardType="default"
+                  autoCorrect={false}
+                  autoComplete="password"
+                  textContentType="password"
+                  caretHidden={false}
                   onChangeText={setPassword}
                   onFocus={() => setFocusedInput("password")}
                   onBlur={() => setFocusedInput(null)}
@@ -154,25 +157,6 @@ export const LoginScreen = () => {
               <Ionicons name="shield-checkmark" size={14} color="#64748b" />
               <Text style={styles.footerText}>Secured by Farmart Admin</Text>
             </View>
-            {__DEV__ && (
-              <>
-                <TouchableOpacity
-                  style={styles.demoBtn}
-                  onPress={useDemoCredentials}
-                  activeOpacity={0.8}
-                >
-                  <Ionicons
-                    name="flask-outline"
-                    size={16}
-                    color={colors.primaryDark}
-                  />
-                  <Text style={styles.demoBtnText}>Use demo credentials</Text>
-                </TouchableOpacity>
-                <Text style={styles.demoHint}>
-                  Demo ID: {DEMO_PARTNER_ID} · Password: {DEMO_PASSWORD}
-                </Text>
-              </>
-            )}
           </ScrollView>
         </KeyboardAvoidingView>
       </View>
@@ -259,6 +243,7 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
+    minWidth: 0,
     fontSize: 16,
     color: "#0f172a",
     fontWeight: "500",
@@ -292,29 +277,5 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#64748b",
     fontWeight: "500",
-  },
-  demoBtn: {
-    alignSelf: "center",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginTop: 18,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: 10,
-    backgroundColor: "#f0fdf4",
-    borderWidth: 1,
-    borderColor: "#bbf7d0",
-  },
-  demoBtnText: {
-    color: colors.primaryDark,
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  demoHint: {
-    color: "#94a3b8",
-    fontSize: 10,
-    textAlign: "center",
-    marginTop: 8,
   },
 });

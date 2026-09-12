@@ -20,18 +20,16 @@ export const createRazorpayOrder = async (req, res) => {
       receipt = `receipt_${Date.now()}`,
     } = req.body;
     if (!Number.isFinite(Number(amount)) || Number(amount) <= 0) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "A valid payment amount is required",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "A valid payment amount is required",
+      });
     }
 
     const razorpayInstance = getRazorpayInstance();
 
     const options = {
-      amount: amount * 100,
+      amount: Math.round(Number(amount) * 100),
       currency,
       receipt,
     };
@@ -40,12 +38,10 @@ export const createRazorpayOrder = async (req, res) => {
     res.json({ success: true, keyId: process.env.RAZORPAY_KEY_ID, order });
   } catch (error) {
     console.error("Error creating Razorpay order:", error);
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: error.message || "Failed to create order",
-      });
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to create order",
+    });
   }
 };
 
@@ -58,12 +54,10 @@ export const verifyRazorpayPayment = (req, res) => {
     !razorpay_signature ||
     !process.env.RAZORPAY_KEY_SECRET
   ) {
-    return res
-      .status(400)
-      .json({
-        success: false,
-        message: "Incomplete payment verification data",
-      });
+    return res.status(400).json({
+      success: false,
+      message: "Incomplete payment verification data",
+    });
   }
 
   const body = razorpay_order_id + "|" + razorpay_payment_id;
