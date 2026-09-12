@@ -19,6 +19,18 @@ export const AppProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userProfile, setUserProfile] = useState(null);
 
+  // Address Management
+  const [savedAddresses, setSavedAddresses] = useState([
+    {
+      id: 'default_1',
+      label: 'Home',
+      fullName: 'Customer Name',
+      phone: '9999999999',
+      addressString: 'House 42, Model Town, City Center, 141002'
+    }
+  ]);
+  const [selectedAddress, setSelectedAddress] = useState(null);
+
   useEffect(() => {
     fetchProducts();
     // Poll every 15 seconds to simulate real-time updates
@@ -42,6 +54,18 @@ export const AppProvider = ({ children }) => {
     setUserProfile(null);
     setIsAuthenticated(false);
     clearCart();
+    setSelectedAddress(null);
+  };
+
+  const addAddress = (address) => {
+    const newAddr = { id: `addr_${Date.now()}`, ...address };
+    setSavedAddresses(prev => [...prev, newAddr]);
+    if (!selectedAddress) setSelectedAddress(newAddr);
+  };
+
+  const removeAddress = (id) => {
+    setSavedAddresses(prev => prev.filter(a => a.id !== id));
+    if (selectedAddress?.id === id) setSelectedAddress(null);
   };
 
   const addToCart = (product) => {
@@ -87,13 +111,15 @@ export const AppProvider = ({ children }) => {
     );
   };
 
-  const placeOrder = async (paymentMethod, deliveryAddress) => {
+  const placeOrder = async (paymentMethod, customDeliveryAddress) => {
     const totalAmount = getCartTotal();
+    const finalAddress = customDeliveryAddress || selectedAddress?.addressString || "Default Registered Address";
+    
     const orderData = {
       orderId: `FMT-ORD-${Math.floor(1000 + Math.random() * 9000)}`,
-      customerName: userProfile?.fullName || userProfile?.name || "Customer",
-      customerPhone: userProfile?.phone || "9999999999",
-      deliveryAddress: deliveryAddress || "Default Registered Address",
+      customerName: selectedAddress?.fullName || userProfile?.fullName || userProfile?.name || "Customer",
+      customerPhone: selectedAddress?.phone || userProfile?.phone || "9999999999",
+      deliveryAddress: finalAddress,
       pickupLocation: userProfile?.villageHub || "Central Hub",
       items: cart.map((item) => ({
         name: item.product.name,
@@ -156,6 +182,11 @@ export const AppProvider = ({ children }) => {
         isAuthenticated,
         loginUser,
         logoutUser,
+        savedAddresses,
+        selectedAddress,
+        setSelectedAddress,
+        addAddress,
+        removeAddress
       }}
     >
       {children}

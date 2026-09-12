@@ -7,455 +7,435 @@ import {
   TextInput,
   TouchableOpacity,
   ImageBackground,
-  Dimensions
+  Image,
+  Dimensions,
+  Platform,
+  SafeAreaView
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { Header } from '../../components/Header';
-import { CategoryChip } from '../../components/CategoryChip';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { ProductCard } from '../../components/ProductCard';
-import { products, services } from '../../data/mockData';
+import { products, categories, services } from '../../data/mockData';
+import { useApp } from '../../context/AppContext';
 import { colors } from '../../theme/colors';
 
 const { width } = Dimensions.get('window');
-const CARD_GAP = 10;
+const CARD_GAP = 12;
 const CARD_WIDTH = (width - 32 - CARD_GAP) / 2;
 
 export const HomeScreen = ({ navigation }) => {
-  const [selectedCat, setSelectedCat] = useState('all');
-  const [selectedService, setSelectedService] = useState('all');
+  const { userProfile, selectedAddress } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
-
   const scrollViewRef = useRef(null);
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
 
+  // Auto-scroll banners
   useEffect(() => {
     const timer = setInterval(() => {
       let nextIndex = currentBannerIndex + 1;
-      if (nextIndex >= 3) {
-        nextIndex = 0;
-      }
+      if (nextIndex >= 3) nextIndex = 0;
       setCurrentBannerIndex(nextIndex);
-      // Banner width (280) + marginRight (12) = 292
-      scrollViewRef.current?.scrollTo({ x: nextIndex * 292, animated: true });
-    }, 3000);
-
+      // Banner width (width - 32) + marginRight (12)
+      const scrollX = nextIndex * (width - 32 + 12);
+      scrollViewRef.current?.scrollTo({ x: scrollX, animated: true });
+    }, 4000);
     return () => clearInterval(timer);
   }, [currentBannerIndex]);
 
-  const filteredProducts = products.filter((p) => {
-    const matchesService = selectedService === 'all' || p.service === selectedService;
-    const matchesCat = selectedCat === 'all' || p.category === selectedCat;
-    const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesService && matchesCat && matchesSearch;
-  });
+  // Derived Data
+  const topCategories = categories.filter(c => c.id !== 'all').slice(0, 8); // Take 8 for a 2-row scroll
+  const trendingProducts = products.filter(p => p.rating >= 4.9).slice(0, 5);
+  const freshHarvest = products.filter(p => p.service === 'farm_harvest');
+  const homeMeals = products.filter(p => p.service === 'homerestro');
 
-  const productRows = [];
-  for (let i = 0; i < filteredProducts.length; i += 2) {
-    productRows.push(filteredProducts.slice(i, i + 2));
-  }
+  const deliveryLocation = selectedAddress?.label || userProfile?.villageHub || "Select Location";
+
+  const catColors = ['#fef3c7', '#dcfce7', '#ffedd5', '#fce7f3', '#f3e8ff', '#e0f2fe', '#fef08a', '#bbf7d0'];
+  const catIconColors = ['#d97706', '#16a34a', '#ea580c', '#db2777', '#9333ea', '#0284c7', '#ca8a04', '#15803d'];
 
   return (
-    <View style={styles.container}>
-      <Header navigation={navigation} />
+    <SafeAreaView style={styles.container}>
+      
+      {/* 1. Enhanced Header & Location (Flipkart/Instamart Style) */}
+      <View style={styles.headerArea}>
+        <View style={styles.locationRow}>
+          <TouchableOpacity 
+            style={styles.locationLeft} 
+            activeOpacity={0.7} 
+            onPress={() => navigation.navigate('AddressScreen')}
+          >
+            <Ionicons name="location" size={24} color={colors.primary} />
+            <View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <Text style={styles.deliverToText}>Deliver to</Text>
+                <Ionicons name="chevron-down" size={14} color={colors.primary} />
+              </View>
+              <Text style={styles.locationTitle}>{deliveryLocation}</Text>
+            </View>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.navigate('ProfileWallet')}>
+            <View style={styles.profileAvatar}>
+              <Text style={styles.profileAvatarText}>{(userProfile?.name || "G").charAt(0).toUpperCase()}</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+
+        {/* Floating Search Bar */}
+        <TouchableOpacity 
+          style={styles.searchSection} 
+          activeOpacity={0.9} 
+          onPress={() => navigation.navigate('Catalog')}
+        >
+          <Ionicons name="search" size={20} color={colors.primary} />
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 14, fontWeight: '500', color: '#94a3b8' }}>Search 'Desi Ghee', 'Fresh Tomatoes'...</Text>
+          </View>
+          <View style={styles.micWrap}>
+            <Ionicons name="mic" size={18} color="#ffffff" />
+          </View>
+        </TouchableOpacity>
+      </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        {/* Search */}
-        <View style={styles.searchSection}>
-          <Ionicons name="search" size={18} color={colors.primary} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search veggies, thalis, sweets, ghee..."
-            placeholderTextColor={colors.textMuted}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-          {searchQuery.length > 0 ? (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Ionicons name="close-circle" size={18} color={colors.textMuted} />
-            </TouchableOpacity>
-          ) : (
-            <View style={styles.micWrap}>
-              <Ionicons name="mic-outline" size={16} color={colors.textSecondary} />
-            </View>
-          )}
+        
+        {/* 2. Circular Categories (Dense Layout) */}
+        <View style={styles.categoriesContainer}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoriesScroll}>
+            {topCategories.map((cat, index) => {
+              const bgColor = catColors[index % catColors.length];
+              const iconColor = catIconColors[index % catIconColors.length];
+              return (
+                <TouchableOpacity 
+                  key={index} 
+                  style={styles.catBubble} 
+                  activeOpacity={0.6} 
+                  onPress={() => navigation.navigate('Catalog', { initialCategory: cat.id })}
+                >
+                  <View style={[styles.catIconWrap, { backgroundColor: bgColor, borderColor: bgColor, elevation: 4, shadowColor: iconColor, shadowOpacity: 0.3, shadowRadius: 5, shadowOffset: { width: 0, height: 3 } }]}>
+                    <Ionicons name={cat.icon} size={22} color={iconColor} />
+                  </View>
+                  <Text style={styles.catLabel} numberOfLines={2}>{cat.name}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
         </View>
 
-        {/* Quick info strip */}
-        <View style={styles.infoStrip}>
-          <View style={styles.infoItem}>
-            <Ionicons name="flash" size={14} color={colors.accent} />
-            <Text style={styles.infoText}>30–45 min delivery</Text>
-          </View>
-          <View style={styles.infoDot} />
-          <View style={styles.infoItem}>
-            <Ionicons name="leaf" size={14} color={colors.primary} />
-            <Text style={styles.infoText}>Farm fresh daily</Text>
-          </View>
-          <View style={styles.infoDot} />
-          <View style={styles.infoItem}>
-            <Ionicons name="shield-checkmark" size={14} color={colors.info} />
-            <Text style={styles.infoText}>Quality checked</Text>
-          </View>
-        </View>
-
-        {/* Promo banners */}
+        {/* 3. Promotional Banners */}
         <ScrollView
           ref={scrollViewRef}
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.bannerSlider}
+          snapToInterval={width - 32 + 12}
+          decelerationRate="fast"
         >
           <ImageBackground
-            source={{
-              uri: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&auto=format&fit=crop&q=80'
-            }}
+            source={{ uri: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&auto=format&fit=crop&q=80' }}
             style={styles.heroBanner}
-            imageStyle={{ borderRadius: 16 }}
+            imageStyle={{ borderRadius: 12 }}
           >
-            <View style={styles.heroOverlay}>
-              <View style={styles.pillBadge}>
-                <Ionicons name="sparkles" size={11} color="#ffffff" />
-                <Text style={styles.pillText}>DIRECT FROM FARMERS</Text>
-              </View>
-              <Text style={styles.heroTitle}>100% Organic & Fresh</Text>
-              <Text style={styles.heroSub}>Harvested daily from local farms</Text>
-            </View>
+            <LinearGradient colors={['transparent', 'rgba(0,0,0,0.8)']} style={styles.heroOverlay}>
+              <Text style={styles.heroTitle}>Fresh Farm Veggies</Text>
+              <Text style={styles.heroSub}>Harvested daily & delivered in 30 mins</Text>
+            </LinearGradient>
           </ImageBackground>
 
           <ImageBackground
-            source={{
-              uri: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=800&auto=format&fit=crop&q=80'
-            }}
+            source={{ uri: 'https://images.unsplash.com/photo-1589927986089-35812388d1f4?w=800&auto=format&fit=crop&q=80' }}
             style={styles.heroBanner}
-            imageStyle={{ borderRadius: 16 }}
+            imageStyle={{ borderRadius: 12 }}
           >
-            <View style={[styles.heroOverlay, { backgroundColor: 'rgba(220, 38, 38, 0.72)' }]}>
-              <View style={[styles.pillBadge, { backgroundColor: '#ffffff' }]}>
-                <Ionicons name="restaurant" size={11} color={colors.secondary} />
-                <Text style={[styles.pillText, { color: colors.secondary }]}>HOME CHEFS</Text>
-              </View>
-              <Text style={styles.heroTitle}>Homestyle Thalis</Text>
-              <Text style={styles.heroSub}>Cooked with pure ghee & care</Text>
-            </View>
+            <LinearGradient colors={['transparent', 'rgba(180, 83, 9, 0.9)']} style={styles.heroOverlay}>
+              <Text style={styles.heroTitle}>A2 Bilona Cow Ghee</Text>
+              <Text style={styles.heroSub}>100% Pure, Traditionally Churned</Text>
+            </LinearGradient>
           </ImageBackground>
 
           <ImageBackground
-            source={{
-              uri: 'https://images.unsplash.com/photo-1599785209707-a456fc1337bb?w=800&auto=format&fit=crop&q=80'
-            }}
+            source={{ uri: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=800&auto=format&fit=crop&q=80' }}
             style={styles.heroBanner}
-            imageStyle={{ borderRadius: 16 }}
+            imageStyle={{ borderRadius: 12 }}
           >
-            <View style={[styles.heroOverlay, { backgroundColor: 'rgba(124, 58, 237, 0.72)' }]}>
-              <View style={[styles.pillBadge, { backgroundColor: '#ffffff' }]}>
-                <Ionicons name="gift" size={11} color="#7c3aed" />
-                <Text style={[styles.pillText, { color: '#7c3aed' }]}>SWEETS & BAKERY</Text>
-              </View>
-              <Text style={styles.heroTitle}>Festival Specials</Text>
-              <Text style={styles.heroSub}>Gur ladoo, kaju katli & more</Text>
-            </View>
+            <LinearGradient colors={['transparent', 'rgba(185, 28, 28, 0.9)']} style={styles.heroOverlay}>
+              <Text style={styles.heroTitle}>Home-Cooked Thalis</Text>
+              <Text style={styles.heroSub}>Prepared by local women chefs</Text>
+            </LinearGradient>
           </ImageBackground>
         </ScrollView>
 
-        {/* Services grid */}
-        <View style={styles.servicesContainer}>
-          <Text style={styles.superAppHeading}>FARMART SERVICES</Text>
-          <View style={styles.servicesGrid}>
-            {services.map((serv) => {
-              const isSelected = selectedService === serv.id;
-              return (
-                <TouchableOpacity
-                  key={serv.id}
-                  style={[
-                    styles.serviceTile,
-                    { backgroundColor: serv.bg },
-                    isSelected && styles.selectedServiceTile
-                  ]}
-                  onPress={() => setSelectedService(isSelected ? 'all' : serv.id)}
-                  activeOpacity={0.85}
-                >
-                  <View style={[styles.serviceIconCircle, { backgroundColor: serv.color }]}>
-                    <Ionicons name={serv.icon} size={18} color="#ffffff" />
-                  </View>
-                  <Text style={styles.serviceTitle} numberOfLines={2}>
-                    {serv.title}
-                  </Text>
-                  <Text style={styles.serviceSub} numberOfLines={1}>
-                    {serv.subtitle}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
+        {/* 4. Trending / Latest Products (Horizontal) */}
+        <View style={styles.sectionBlock}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>🔥 Trending Right Now</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Catalog')}>
+              <Text style={styles.viewAllText}>See all</Text>
+            </TouchableOpacity>
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
+            {trendingProducts.map(product => (
+              <View key={product.id} style={{ width: 150, marginRight: 16 }}>
+                <ProductCard product={product} compact onPress={() => navigation.navigate('ProductDetails', { product })} />
+              </View>
+            ))}
+          </ScrollView>
+        </View>
+
+        {/* Trust Banner */}
+        <View style={styles.trustBanner}>
+          <View style={styles.trustItem}>
+            <Ionicons name="leaf" size={18} color="#16a34a" />
+            <Text style={styles.trustText}>Farm Fresh</Text>
+          </View>
+          <View style={styles.trustDivider} />
+          <View style={styles.trustItem}>
+            <Ionicons name="flash" size={18} color="#eab308" />
+            <Text style={styles.trustText}>Superfast</Text>
+          </View>
+          <View style={styles.trustDivider} />
+          <View style={styles.trustItem}>
+            <Ionicons name="shield-checkmark" size={18} color="#2563eb" />
+            <Text style={styles.trustText}>Quality Assured</Text>
           </View>
         </View>
 
-        {/* Categories */}
-        <CategoryChip selectedCategory={selectedCat} onSelectCategory={setSelectedCat} />
-
-        {/* Products */}
-        <View style={styles.sectionHeader}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.sectionTitle}>
-              {selectedService !== 'all'
-                ? services.find((s) => s.id === selectedService)?.title
-                : 'Popular near you'}
-            </Text>
-            <Text style={styles.sectionSub}>
-              {filteredProducts.length} items · Quality assured by sfarmart
-            </Text>
+        {/* 5. Categorized Feed: Fresh Harvest */}
+        <View style={styles.sectionBlock}>
+          <Text style={[styles.sectionTitle, { marginHorizontal: 16, marginBottom: 12 }]}>🌱 Fresh From The Farm</Text>
+          <View style={styles.productGrid}>
+            {freshHarvest.slice(0, 4).map(product => (
+              <View key={product.id} style={styles.gridCell}>
+                <ProductCard product={product} compact onPress={() => navigation.navigate('ProductDetails', { product })} />
+              </View>
+            ))}
           </View>
-
-          {selectedService !== 'all' && (
-            <TouchableOpacity style={styles.clearBtn} onPress={() => setSelectedService('all')}>
-              <Text style={styles.resetFilterText}>Clear</Text>
-            </TouchableOpacity>
-          )}
         </View>
 
-        {filteredProducts.length === 0 ? (
-          <View style={styles.emptyBox}>
-            <Ionicons name="search-outline" size={40} color={colors.textMuted} />
-            <Text style={styles.emptyText}>No products match your filters</Text>
-            <TouchableOpacity
-              onPress={() => {
-                setSelectedCat('all');
-                setSelectedService('all');
-                setSearchQuery('');
-              }}
-            >
-              <Text style={styles.resetFilterText}>Reset filters</Text>
+        {/* 6. Categorized Feed: Home Restro */}
+        <View style={[styles.sectionBlock, { backgroundColor: '#fff7ed', paddingTop: 16, paddingBottom: 16 }]}>
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: '#9a3412' }]}>🥘 Home Chef Specials</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Catalog', { initialCategory: 'homerestro' })}>
+              <Text style={[styles.viewAllText, { color: '#ea580c' }]}>See all</Text>
             </TouchableOpacity>
           </View>
-        ) : (
-          productRows.map((row, rowIndex) => (
-            <View key={`row-${rowIndex}`} style={styles.productRow}>
-              {row.map((product) => (
-                <View key={product.id} style={styles.productCell}>
-                  <ProductCard
-                    product={product}
-                    compact
-                    onPress={() => navigation.navigate('ProductDetails', { product })}
-                  />
-                </View>
-              ))}
-              {row.length === 1 && <View style={styles.productCell} />}
-            </View>
-          ))
-        )}
+          <View style={styles.productGrid}>
+            {homeMeals.map(product => (
+              <View key={product.id} style={styles.gridCell}>
+                <ProductCard product={product} compact onPress={() => navigation.navigate('ProductDetails', { product })} />
+              </View>
+            ))}
+          </View>
+        </View>
+
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background
+    backgroundColor: '#f8fafc',
+    paddingTop: Platform.OS === 'android' ? 25 : 0
   },
-  scrollContent: {
-    paddingBottom: 28
+  headerArea: {
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9'
+  },
+  locationRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16
+  },
+  locationLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8
+  },
+  deliverToText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#475569',
+    textTransform: 'uppercase'
+  },
+  locationTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#0f172a'
+  },
+  profileAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#bbf7d0'
+  },
+  profileAvatarText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.primaryDark
   },
   searchSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.card,
-    marginHorizontal: 16,
-    marginTop: 12,
-    marginBottom: 10,
+    backgroundColor: '#f1f5f9',
     paddingHorizontal: 14,
-    paddingVertical: 11,
+    paddingVertical: 10,
     borderRadius: 14,
-    borderWidth: 1,
-    borderColor: colors.border,
     gap: 10,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 2
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
   searchInput: {
     flex: 1,
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '500',
-    color: colors.textPrimary,
+    color: '#0f172a',
     padding: 0
   },
   micWrap: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
-    backgroundColor: colors.background,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center'
   },
-  infoStrip: {
-    flexDirection: 'row',
+  scrollContent: {
+    paddingBottom: 30
+  },
+  categoriesContainer: {
+    backgroundColor: '#ffffff',
+    paddingVertical: 16,
+    marginBottom: 12
+  },
+  categoriesScroll: {
+    paddingHorizontal: 12,
+    gap: 12
+  },
+  catBubble: {
+    alignItems: 'center',
+    width: 55,
+  },
+  catIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#eff6ff',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 16,
-    marginBottom: 12,
-    gap: 8,
-    flexWrap: 'wrap'
+    marginBottom: 4,
+    borderWidth: 1,
+    borderColor: '#dbeafe'
   },
-  infoItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4
-  },
-  infoText: {
-    fontSize: 10,
-    fontWeight: '500',
-    color: colors.textSecondary
-  },
-  infoDot: {
-    width: 3,
-    height: 3,
-    borderRadius: 2,
-    backgroundColor: colors.textMuted
-  },
-  servicesContainer: {
-    paddingHorizontal: 16,
-    marginBottom: 14
-  },
-  superAppHeading: {
-    fontSize: 11,
-    fontWeight: '500',
-    color: colors.textMuted,
-    letterSpacing: 1.1,
-    marginBottom: 10
-  },
-  servicesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10
-  },
-  serviceTile: {
-    width: '48%',
-    borderRadius: 14,
-    padding: 12,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.8)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
-    justifyContent: 'center'
-  },
-  selectedServiceTile: {
-    borderColor: colors.primary,
-    shadowColor: colors.primary,
-    shadowOpacity: 0.1,
-  },
-  serviceIconCircle: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8
-  },
-  serviceTitle: {
-    fontSize: 11,
-    fontWeight: '500',
-    color: colors.textPrimary,
-    lineHeight: 16
-  },
-  serviceSub: {
-    fontSize: 10,
-    color: colors.textSecondary,
-    marginTop: 2
+  catLabel: {
+    fontSize: 9,
+    fontWeight: '600',
+    color: '#334155',
+    textAlign: 'center',
+    lineHeight: 12
   },
   bannerSlider: {
     paddingLeft: 16,
     paddingRight: 4,
-    marginBottom: 8
+    marginBottom: 20
   },
   heroBanner: {
-    width: 280,
-    height: 132,
-    marginRight: 12
+    width: width - 32,
+    height: 160,
+    marginRight: 12,
   },
   heroOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.62)',
-    borderRadius: 16,
-    padding: 14,
+    borderRadius: 12,
+    padding: 16,
     justifyContent: 'flex-end'
   },
-  pillBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.primary,
-    alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-    gap: 4,
-    marginBottom: 6
-  },
-  pillText: {
-    color: '#ffffff',
-    fontSize: 9,
-    fontWeight: '500'
-  },
   heroTitle: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: '#ffffff'
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#ffffff',
+    marginBottom: 4
   },
   heroSub: {
-    fontSize: 11,
-    color: '#e2e8f0',
-    marginTop: 2
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#e2e8f0'
+  },
+  sectionBlock: {
+    marginBottom: 24
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    marginTop: 8,
     marginBottom: 12
   },
   sectionTitle: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: colors.textPrimary
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#0f172a'
   },
-  sectionSub: {
-    fontSize: 11,
-    color: colors.textSecondary,
-    marginTop: 2
-  },
-  clearBtn: {
-    backgroundColor: colors.secondaryLight,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8
-  },
-  resetFilterText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: colors.secondary
-  },
-  productRow: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    gap: CARD_GAP,
-    marginBottom: CARD_GAP
-  },
-  productCell: {
-    width: CARD_WIDTH
-  },
-  emptyBox: {
-    alignItems: 'center',
-    paddingVertical: 40,
-    gap: 8
-  },
-  emptyText: {
+  viewAllText: {
     fontSize: 13,
-    color: colors.textSecondary,
-    fontWeight: '500'
+    fontWeight: '700',
+    color: colors.primary
+  },
+  horizontalScroll: {
+    paddingLeft: 16,
+    paddingRight: 4
+  },
+  trustBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-evenly',
+    backgroundColor: '#ffffff',
+    paddingVertical: 12,
+    marginHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.02,
+    shadowRadius: 4,
+    elevation: 1
+  },
+  trustItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6
+  },
+  trustText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#475569'
+  },
+  trustDivider: {
+    width: 1,
+    height: 20,
+    backgroundColor: '#cbd5e1'
+  },
+  productGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: 16,
+    justifyContent: 'space-between',
+    gap: CARD_GAP
+  },
+  gridCell: {
+    width: CARD_WIDTH,
+    marginBottom: CARD_GAP
   }
 });

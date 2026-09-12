@@ -12,6 +12,7 @@ import { OrderTrackingScreen } from '../screens/Customer/OrderTrackingScreen';
 import { ProfileWalletScreen } from '../screens/Customer/ProfileWalletScreen';
 import { ProductDetailsScreen } from '../screens/Customer/ProductDetailsScreen';
 import { CheckoutScreen } from '../screens/Customer/CheckoutScreen';
+import { AddressScreen } from '../screens/Customer/AddressScreen';
 import { RazorpayCheckoutWebView } from '../screens/Customer/RazorpayCheckoutWebView';
 import { FarmerDashboardScreen, AddHarvestScreen } from '../screens/Farmer/FarmerDashboardScreen';
 import { LoginScreen } from '../screens/Auth/LoginScreen';
@@ -104,6 +105,7 @@ export const RootNavigator = () => {
           <Stack.Screen name="Cart" component={CartScreen} />
           <Stack.Screen name="ProductDetails" component={ProductDetailsScreen} />
           <Stack.Screen name="Checkout" component={CheckoutScreen} />
+          <Stack.Screen name="AddressScreen" component={AddressScreen} />
           <Stack.Screen name="FarmerDashboard" component={FarmerDashboardScreen} />
           <Stack.Screen name="AddHarvest" component={AddHarvestScreen} />
           <Stack.Screen name="RazorpayCheckout" component={RazorpayCheckoutWebView} options={{ presentation: 'modal' }} />

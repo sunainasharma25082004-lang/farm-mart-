@@ -18,9 +18,10 @@ const { width } = Dimensions.get('window');
 const GAP = 10;
 const CARD_WIDTH = (width - 32 - GAP) / 2;
 
-export const CatalogScreen = ({ navigation }) => {
+export const CatalogScreen = ({ navigation, route }) => {
   const { products } = useApp();
-  const [selectedCat, setSelectedCat] = useState('all');
+  const initialCategory = route?.params?.initialCategory || 'all';
+  const [selectedCat, setSelectedCat] = useState(initialCategory);
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredProducts = products.filter((p) => {

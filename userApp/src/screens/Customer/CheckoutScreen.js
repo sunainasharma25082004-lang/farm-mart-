@@ -17,7 +17,7 @@ import { useApp } from "../../context/AppContext";
 import { apiService } from "../../services/api";
 
 export const CheckoutScreen = ({ navigation }) => {
-  const { cart, userProfile, getCartTotal, placeOrder } = useApp();
+  const { cart, userProfile, getCartTotal, placeOrder, selectedAddress } = useApp();
   const [loading, setLoading] = useState(false);
   const [selectedTip, setSelectedTip] = useState(0);
 
@@ -30,6 +30,11 @@ export const CheckoutScreen = ({ navigation }) => {
 
   const handleProceedToPay = async () => {
     if (total === 0) return;
+
+    if (!selectedAddress && !userProfile?.deliveryAddress) {
+      Alert.alert("Missing Address", "Please add a delivery address to proceed.");
+      return;
+    }
 
     setLoading(true);
     try {
@@ -48,9 +53,9 @@ export const CheckoutScreen = ({ navigation }) => {
               });
               if (!verification.success)
                 throw new Error("Payment verification failed");
-              await placeOrder("RAZORPAY", userProfile?.deliveryAddress);
+              await placeOrder("RAZORPAY", selectedAddress?.addressString);
               Alert.alert("Success", "Payment successful! Order placed.");
-              navigation.navigate("MainTabs", { screen: "OrderTracking" });
+              navigation.navigate('MainTabs', { screen: 'OrderTracking' });
             } catch (error) {
               Alert.alert(
                 "Payment Verification Failed",
@@ -100,7 +105,7 @@ export const CheckoutScreen = ({ navigation }) => {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* Delivery Time Banner (Swiggy Style) */}
+        {/* Delivery Time Banner */}
         <View style={styles.deliveryBanner}>
           <View style={styles.deliveryBannerLeft}>
             <View style={styles.deliveryIconBox}>
@@ -108,12 +113,35 @@ export const CheckoutScreen = ({ navigation }) => {
             </View>
             <View>
               <Text style={styles.deliveryTitle}>Delivery in 10-15 mins</Text>
-              <Text style={styles.deliverySub}>Home - {userProfile?.villageHub || "Main Hub"}</Text>
+              <Text style={styles.deliverySub}>Shipment of {cart.length} item{cart.length > 1 ? 's' : ''}</Text>
             </View>
           </View>
-          <TouchableOpacity style={styles.changeAddressBtn}>
-            <Text style={styles.changeAddressText}>Change</Text>
-          </TouchableOpacity>
+        </View>
+
+        {/* Address Card */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>Delivery Address</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('AddressScreen')}>
+              <Text style={[styles.cardTitle, { color: colors.primary, fontSize: 13 }]}>Change</Text>
+            </TouchableOpacity>
+          </View>
+          
+          <View style={{ flexDirection: 'row', gap: 12 }}>
+            <Ionicons name="location" size={24} color={colors.primary} style={{ marginTop: 2 }} />
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 15, fontWeight: '600', color: '#0f172a', marginBottom: 4 }}>
+                {selectedAddress?.fullName || userProfile?.name || "Guest User"} 
+                {selectedAddress && ` · ${selectedAddress.label}`}
+              </Text>
+              <Text style={{ fontSize: 13, color: '#64748b', lineHeight: 20 }}>
+                {selectedAddress?.addressString || userProfile?.deliveryAddress || "Please add a delivery address to proceed"}
+              </Text>
+              <Text style={{ fontSize: 13, fontWeight: '500', color: '#334155', marginTop: 4 }}>
+                {selectedAddress?.phone || userProfile?.phone || "No phone linked"}
+              </Text>
+            </View>
+          </View>
         </View>
 
         {/* Tip Section */}
@@ -214,7 +242,7 @@ export const CheckoutScreen = ({ navigation }) => {
           activeOpacity={0.9}
         >
           <LinearGradient
-            colors={['#16a34a', '#15803d']} // Sleek green gradient
+            colors={['#16a34a', '#15803d']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={[styles.payBtn, loading && styles.disabledBtn]}
@@ -243,7 +271,7 @@ export const CheckoutScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f1f5f9", // subtle gray background
+    backgroundColor: "#f1f5f9",
   },
   header: {
     flexDirection: "row",
@@ -301,19 +329,6 @@ const styles = StyleSheet.create({
     color: "#64748b",
     marginTop: 2,
   },
-  changeAddressBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: '#f8fafc',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e2e8f0'
-  },
-  changeAddressText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: colors.primary,
-  },
   card: {
     backgroundColor: "#ffffff",
     borderRadius: 16,
@@ -321,6 +336,9 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 12,
   },
   cardTitle: {

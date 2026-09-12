@@ -30,7 +30,6 @@ export const SignupScreen = ({ navigation }) => {
 
   const skipSignup = () => {
     loginUser({ name: "Guest", phone: "" });
-    navigation.replace("MainTabs");
   };
 
   const handleSignup = async () => {

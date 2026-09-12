@@ -46,34 +46,7 @@ export const ProductCard = ({ product, onPress, compact = false }) => {
 
         <View style={styles.footer}>
           <Text style={styles.price}>₹{product.price}</Text>
-
-          {qty > 0 ? (
-            <View style={styles.qtyControl}>
-              <TouchableOpacity
-                style={styles.qtyBtn}
-                onPress={() => updateQuantity(product.id, -1)}
-                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-              >
-                <Ionicons name="remove" size={14} color={colors.primary} />
-              </TouchableOpacity>
-              <Text style={styles.qtyText}>{qty}</Text>
-              <TouchableOpacity
-                style={styles.qtyBtn}
-                onPress={() => addToCart(product)}
-                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-              >
-                <Ionicons name="add" size={14} color={colors.primary} />
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <TouchableOpacity
-              style={styles.addButton}
-              onPress={() => addToCart(product)}
-              activeOpacity={0.85}
-            >
-              <Text style={styles.addButtonText}>ADD</Text>
-            </TouchableOpacity>
-          )}
+          <Ionicons name="chevron-forward-circle" size={24} color={colors.primary} />
         </View>
       </View>
     </TouchableOpacity>
@@ -82,17 +55,17 @@ export const ProductCard = ({ product, onPress, compact = false }) => {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.card,
-    borderRadius: 14,
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: '#f1f5f9',
     overflow: 'hidden',
     marginBottom: 12,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    elevation: 2
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 3
   },
   cardCompact: {
     flex: 1,
@@ -131,39 +104,44 @@ const styles = StyleSheet.create({
     right: 8,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
+    gap: 4,
     backgroundColor: 'rgba(255,255,255,0.95)',
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: 8
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
   },
   ratingText: {
-    fontSize: 10,
-    fontWeight: '500',
-    color: colors.textPrimary
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#334155'
   },
   details: {
-    padding: 10
+    padding: 12,
+    flex: 1,
+    justifyContent: 'space-between'
   },
   title: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: colors.textPrimary,
-    lineHeight: 17,
-    minHeight: 34
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#0f172a',
+    lineHeight: 18
   },
   unit: {
-    fontSize: 11,
-    color: colors.textSecondary,
+    fontSize: 12,
+    color: '#64748b',
     marginTop: 2,
+    marginBottom: 6,
     fontWeight: '500'
   },
   farmerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
-    marginTop: 4,
-    marginBottom: 8
+    gap: 4,
+    marginBottom: 10
   },
   farmerText: {
     fontSize: 10,
@@ -174,12 +152,13 @@ const styles = StyleSheet.create({
   footer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center'
+    alignItems: 'center',
+    marginTop: 4
   },
   price: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: colors.textPrimary
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0f172a'
   },
   addButton: {
     backgroundColor: colors.primaryLight,

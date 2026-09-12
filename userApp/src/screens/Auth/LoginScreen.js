@@ -61,7 +61,6 @@ export const LoginScreen = ({ navigation }) => {
 
   const skipLogin = () => {
     loginUser({ name: "Guest", phone: "" });
-    navigation.replace("MainTabs");
   };
 
   return (

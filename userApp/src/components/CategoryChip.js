@@ -39,18 +39,20 @@ const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 16,
     paddingVertical: 8,
-    gap: 8
+    gap: 8,
+    alignItems: 'center'
   },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.card,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 22,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 24,
     borderWidth: 1,
     borderColor: colors.border,
-    gap: 6
+    gap: 6,
+    alignSelf: 'center'
   },
   selectedChip: {
     backgroundColor: colors.primaryLight,
@@ -68,9 +70,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff'
   },
   text: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '500',
-    color: colors.textSecondary
+    color: colors.textSecondary,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    paddingVertical: 2
   },
   selectedText: {
     color: colors.primaryDark,

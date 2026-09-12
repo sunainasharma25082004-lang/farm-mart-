@@ -1,15 +1,16 @@
 import React, { Fragment } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Platform } from 'react-native';
+import { Ionicons, Feather } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Header } from '../../components/Header';
 import { useApp } from '../../context/AppContext';
 import { colors } from '../../theme/colors';
 
 const statusMeta = {
-  PLACED: { label: 'Placed', color: colors.info, bg: '#dbeafe' },
-  PACKED: { label: 'Packed', color: colors.accent, bg: colors.accentLight },
-  IN_TRANSIT: { label: 'On the way', color: colors.orange, bg: colors.orangeLight },
-  DELIVERED: { label: 'Delivered', color: colors.success, bg: colors.primaryLight }
+  PLACED: { label: 'Order Placed', color: '#3b82f6', bg: '#eff6ff', icon: 'clipboard' },
+  PACKED: { label: 'Order Packed', color: '#8b5cf6', bg: '#f5f3ff', icon: 'box' },
+  IN_TRANSIT: { label: 'On the way', color: '#f59e0b', bg: '#fffbeb', icon: 'truck' },
+  DELIVERED: { label: 'Delivered', color: '#16a34a', bg: '#f0fdf4', icon: 'check-circle' }
 };
 
 export const OrderTrackingScreen = ({ navigation }) => {
@@ -17,38 +18,42 @@ export const OrderTrackingScreen = ({ navigation }) => {
 
   const getStepState = (orderStatus, step) => {
     const order = ['PLACED', 'PACKED', 'IN_TRANSIT', 'DELIVERED'];
-    // Treat unknown as at least PLACED
     let idx = order.indexOf(orderStatus);
     if (idx < 0) idx = 0;
-    // Map PACKED into timeline: PLACED -> PACKED (hub) -> IN_TRANSIT -> DELIVERED
-    // Our steps: 0 placed, 1 packed, 2 transit, 3 delivered
-    if (orderStatus === 'PLACED' && step === 0) return 'done';
-    if (orderStatus === 'PLACED' && step === 1) return 'current';
+    
+    if (orderStatus === 'PLACED' && step === 0) return 'current';
+    if (orderStatus === 'PLACED' && step === 1) return 'todo';
     if (orderStatus === 'IN_TRANSIT' && step <= 2) return step < 2 ? 'done' : 'current';
     if (orderStatus === 'DELIVERED') return 'done';
+    
     if (step < idx) return 'done';
     if (step === idx) return 'current';
     return 'todo';
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <Header navigation={navigation} title="Your Orders" />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {orders.length === 0 ? (
           <View style={styles.emptyView}>
             <View style={styles.emptyIcon}>
-              <Ionicons name="cube-outline" size={40} color={colors.primary} />
+              <Ionicons name="receipt-outline" size={48} color="#94a3b8" />
             </View>
             <Text style={styles.emptyTitle}>No orders yet</Text>
-            <Text style={styles.emptyText}>Your recent orders will show up here</Text>
+            <Text style={styles.emptyText}>You haven't placed any orders. Discover amazing local products today!</Text>
+            <TouchableOpacity style={styles.shopNowBtn} onPress={() => navigation.navigate('Home')}>
+              <Text style={styles.shopNowText}>Start Shopping</Text>
+            </TouchableOpacity>
           </View>
         ) : (
           orders.map((order) => {
             const meta = statusMeta[order.status] || statusMeta.PLACED;
+            const isDelivered = order.status === 'DELIVERED';
+
             const steps = [
-              { key: 0, title: 'Placed', icon: 'checkmark' },
+              { key: 0, title: 'Placed', icon: 'document-text' },
               { key: 1, title: 'Packed', icon: 'cube' },
               { key: 2, title: 'On way', icon: 'bicycle' },
               { key: 3, title: 'Done', icon: 'home' }
@@ -56,209 +61,321 @@ export const OrderTrackingScreen = ({ navigation }) => {
 
             return (
               <View key={order.id} style={styles.orderCard}>
+                
+                {/* Order Header (Restaurant / Hub details) */}
                 <View style={styles.orderHeader}>
-                  <View>
-                    <Text style={styles.orderId}>{order.id}</Text>
-                    <Text style={styles.orderDate}>{order.date}</Text>
+                  <View style={styles.orderHeaderLeft}>
+                    <View style={styles.hubIconBox}>
+                      <Ionicons name="storefront" size={20} color={colors.primary} />
+                    </View>
+                    <View>
+                      <Text style={styles.hubName}>{order.hubName || order.deliveryAddress || 'sFARMART Local Hub'}</Text>
+                      <Text style={styles.orderDate}>{order.date || 'Today, 12:30 PM'}</Text>
+                    </View>
                   </View>
                   <View style={[styles.statusBadge, { backgroundColor: meta.bg }]}>
+                    <Feather name={meta.icon} size={12} color={meta.color} />
                     <Text style={[styles.statusText, { color: meta.color }]}>{meta.label}</Text>
                   </View>
                 </View>
 
+                {/* Dotted Separator */}
+                <View style={styles.dottedSeparator} />
+
+                {/* Items List */}
                 <View style={styles.itemsBox}>
                   {order.items.map((item, idx) => (
                     <View key={idx} style={styles.itemRow}>
-                      <Text style={styles.itemText} numberOfLines={1}>
-                        {item.name} × {item.qty}
-                      </Text>
+                      <View style={styles.itemRowLeft}>
+                        <View style={styles.vegIndicator}>
+                          <View style={styles.vegDot} />
+                        </View>
+                        <Text style={styles.itemQty}>{item.qty} x</Text>
+                        <Text style={styles.itemText} numberOfLines={1}>{item.name}</Text>
+                      </View>
                       <Text style={styles.itemPrice}>₹{item.price * item.qty}</Text>
                     </View>
                   ))}
+                  
                   {order.total != null && (
-                    <View style={[styles.itemRow, styles.totalLine]}>
-                      <Text style={styles.totalLabel}>Total</Text>
+                    <View style={styles.totalRow}>
+                      <Text style={styles.totalLabel}>Bill Total</Text>
                       <Text style={styles.totalPrice}>₹{order.total}</Text>
                     </View>
                   )}
                 </View>
 
-                <View style={styles.timeline}>
-                  {steps.map((step, i) => {
-                    const state = getStepState(order.status, step.key);
-                    const active = state === 'done' || state === 'current';
-                    return (
-                      <Fragment key={step.key}>
-                        <View style={styles.timelineStep}>
-                          <View
-                            style={[
-                              styles.stepDot,
-                              active && styles.stepActive,
-                              state === 'current' && styles.stepCurrent
-                            ]}
-                          >
-                            <Ionicons
-                              name={step.icon}
-                              size={11}
-                              color={active ? '#ffffff' : colors.textMuted}
-                            />
+                {/* Dotted Separator */}
+                <View style={styles.dottedSeparator} />
+
+                {/* Dynamic Timeline or Reorder Info */}
+                {!isDelivered ? (
+                  <View style={styles.timeline}>
+                    {steps.map((step, i) => {
+                      const state = getStepState(order.status, step.key);
+                      const active = state === 'done' || state === 'current';
+                      return (
+                        <Fragment key={step.key}>
+                          <View style={styles.timelineStep}>
+                            <View style={[styles.stepDot, active && styles.stepActive, state === 'current' && styles.stepCurrent]}>
+                              <Ionicons name={step.icon} size={12} color={active ? '#ffffff' : '#94a3b8'} />
+                            </View>
+                            <Text style={[styles.stepTitle, active && styles.stepTitleActive]}>{step.title}</Text>
                           </View>
-                          <Text style={[styles.stepTitle, active && styles.stepTitleActive]}>
-                            {step.title}
-                          </Text>
-                        </View>
-                        {i < steps.length - 1 && (
-                          <View style={[styles.stepLine, active && i < 2 && styles.stepLineActive]} />
-                        )}
-                      </Fragment>
-                    );
-                  })}
+                          {i < steps.length - 1 && (
+                            <View style={[styles.stepLine, active && i < 2 && styles.stepLineActive]} />
+                          )}
+                        </Fragment>
+                      );
+                    })}
+                  </View>
+                ) : (
+                  <View style={styles.deliveredMsgBox}>
+                    <Feather name="check-circle" size={16} color="#16a34a" />
+                    <Text style={styles.deliveredMsgText}>Order delivered successfully. Hope you liked it!</Text>
+                  </View>
+                )}
+
+                {/* Action Buttons Footer */}
+                <View style={styles.actionFooter}>
+                  {isDelivered ? (
+                    <>
+                      <TouchableOpacity style={styles.secondaryBtn}>
+                        <Text style={styles.secondaryBtnText}>Rate Order</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.primaryBtnOutline}>
+                        <Text style={styles.primaryBtnOutlineText}>Reorder</Text>
+                      </TouchableOpacity>
+                    </>
+                  ) : (
+                    <>
+                      <TouchableOpacity style={styles.secondaryBtn}>
+                        <Text style={styles.secondaryBtnText}>Help</Text>
+                      </TouchableOpacity>
+                      
+                      <TouchableOpacity activeOpacity={0.8} style={{ flex: 1 }}>
+                        <LinearGradient
+                          colors={['#16a34a', '#15803d']}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 0 }}
+                          style={styles.gradientBtn}
+                        >
+                          <Text style={styles.gradientBtnText}>Track Delivery</Text>
+                          <Feather name="map-pin" size={14} color="#ffffff" />
+                        </LinearGradient>
+                      </TouchableOpacity>
+                    </>
+                  )}
                 </View>
 
-                <View style={styles.hubFooter}>
-                  <Ionicons name="business" size={14} color={colors.primary} />
-                  <Text style={styles.hubText}>
-                    {order.hubName || order.deliveryAddress || 'Village Hub'}
-                  </Text>
-                </View>
               </View>
             );
           })
         )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background
+    backgroundColor: '#f1f5f9', // subtle premium bg
+    paddingTop: Platform.OS === 'android' ? 25 : 0
   },
   scrollContent: {
-    padding: 16,
-    paddingBottom: 28
+    padding: 14,
+    paddingBottom: 40
   },
   emptyView: {
     alignItems: 'center',
-    paddingVertical: 60
+    paddingVertical: 100,
+    paddingHorizontal: 20,
   },
   emptyIcon: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: colors.primaryLight,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 3
   },
   emptyTitle: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: colors.textPrimary
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#0f172a',
+    marginBottom: 8
   },
   emptyText: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    marginTop: 4
+    fontSize: 14,
+    color: '#64748b',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 24
+  },
+  shopNowBtn: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  shopNowText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '600'
   },
   orderCard: {
-    backgroundColor: colors.card,
+    backgroundColor: '#ffffff',
     borderRadius: 16,
-    padding: 14,
-    marginBottom: 14,
-    borderWidth: 1,
-    borderColor: colors.border,
+    paddingTop: 16,
+    marginBottom: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 2
+    shadowRadius: 8,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#e2e8f0'
   },
   orderHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    paddingBottom: 10,
-    marginBottom: 10
+    alignItems: 'flex-start',
+    paddingHorizontal: 16,
+    marginBottom: 14
   },
-  orderId: {
+  orderHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12
+  },
+  hubIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: '#f0fdf4',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  hubName: {
     fontSize: 15,
-    fontWeight: '500',
-    color: colors.textPrimary
+    fontWeight: '700',
+    color: '#0f172a'
   },
   orderDate: {
-    fontSize: 11,
-    color: colors.textSecondary,
+    fontSize: 12,
+    color: '#64748b',
     marginTop: 2
   },
   statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingVertical: 6,
     borderRadius: 12
   },
   statusText: {
-    fontSize: 11,
-    fontWeight: '500'
+    fontSize: 10,
+    fontWeight: '700',
+    textTransform: 'uppercase'
+  },
+  dottedSeparator: {
+    height: 1,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderStyle: 'dashed',
+    borderRadius: 1,
+    marginHorizontal: 16,
   },
   itemsBox: {
-    backgroundColor: colors.background,
-    padding: 10,
-    borderRadius: 12,
-    marginBottom: 14
+    paddingHorizontal: 16,
+    paddingVertical: 14,
   },
   itemRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 4
+    alignItems: 'center',
+    marginBottom: 10
+  },
+  itemRowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    paddingRight: 10
+  },
+  vegIndicator: {
+    width: 12,
+    height: 12,
+    borderWidth: 1,
+    borderColor: '#16a34a',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
+    borderRadius: 2
+  },
+  vegDot: {
+    width: 6,
+    height: 6,
+    backgroundColor: '#16a34a',
+    borderRadius: 3
+  },
+  itemQty: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#0f172a',
+    marginRight: 6
   },
   itemText: {
-    flex: 1,
-    fontSize: 12,
-    color: colors.textPrimary,
-    fontWeight: '500',
-    marginRight: 8
+    fontSize: 13,
+    color: '#334155',
+    flex: 1
   },
   itemPrice: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: colors.textSecondary
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#334155'
   },
-  totalLine: {
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    marginTop: 6,
-    paddingTop: 6,
-    marginBottom: 0
+  totalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
+    paddingTop: 12,
   },
   totalLabel: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: colors.textPrimary
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#0f172a'
   },
   totalPrice: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: colors.primaryDark
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#0f172a'
   },
   timeline: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 4,
-    marginVertical: 8
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    backgroundColor: '#f8fafc',
   },
   timelineStep: {
     alignItems: 'center',
-    width: 58
+    width: 50
   },
   stepDot: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: colors.border,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#e2e8f0',
     alignItems: 'center',
     justifyContent: 'center'
   },
@@ -267,40 +384,86 @@ const styles = StyleSheet.create({
   },
   stepCurrent: {
     borderWidth: 2,
-    borderColor: colors.primaryLight
+    borderColor: '#bbf7d0'
   },
   stepTitle: {
-    fontSize: 9,
-    fontWeight: '500',
-    color: colors.textMuted,
-    marginTop: 4,
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#94a3b8',
+    marginTop: 6,
     textAlign: 'center'
   },
   stepTitleActive: {
-    color: colors.primaryDark
+    color: '#0f172a'
   },
   stepLine: {
     flex: 1,
-    height: 2,
-    backgroundColor: colors.border,
-    marginBottom: 14
+    height: 3,
+    backgroundColor: '#e2e8f0',
+    marginBottom: 16,
+    marginHorizontal: 4,
+    borderRadius: 2
   },
   stepLineActive: {
     backgroundColor: colors.primary
   },
-  hubFooter: {
+  deliveredMsgBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    paddingTop: 10,
-    marginTop: 6
+    backgroundColor: '#f8fafc',
+    padding: 16,
+    gap: 8
   },
-  hubText: {
-    flex: 1,
-    fontSize: 11,
-    color: colors.textSecondary,
+  deliveredMsgText: {
+    fontSize: 12,
+    color: '#475569',
     fontWeight: '500'
+  },
+  actionFooter: {
+    flexDirection: 'row',
+    padding: 16,
+    gap: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#f1f5f9'
+  },
+  secondaryBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: '#f1f5f9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  secondaryBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#475569'
+  },
+  primaryBtnOutline: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  primaryBtnOutlineText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.primaryDark
+  },
+  gradientBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 12,
+    gap: 6
+  },
+  gradientBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#ffffff'
   }
 });
