@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -10,51 +10,68 @@ import {
   Switch,
   Platform,
   StatusBar,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { usePartner } from '../context/PartnerContext';
-import { colors } from '../theme/colors';
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { usePartner } from "../context/PartnerContext";
+import { colors } from "../theme/colors";
 
-const CATEGORIES = ['Home Restro', 'Organic Farm', 'Bakery & Sweets', 'Dairy', 'Village Hub Goods'];
+const CATEGORIES = [
+  "Home Restro",
+  "Organic Farm",
+  "Bakery & Sweets",
+  "Dairy",
+  "Village Hub Goods",
+];
 
 export const AddProductScreen = ({ navigation }) => {
   const { addInventoryItem } = usePartner();
-  const [name, setName] = useState('');
-  const [category, setCategory] = useState('Home Restro');
-  const [price, setPrice] = useState('');
-  const [unit, setUnit] = useState('thali');
-  const [stock, setStock] = useState('20');
-  const [description, setDescription] = useState('');
-  const [image, setImage] = useState('');
-  const [discount, setDiscount] = useState('');
-  const [farmer, setFarmer] = useState('');
+  const [name, setName] = useState("");
+  const [category, setCategory] = useState("Home Restro");
+  const [price, setPrice] = useState("");
+  const [unit, setUnit] = useState("thali");
+  const [stock, setStock] = useState("20");
+  const [description, setDescription] = useState("");
+  const [image, setImage] = useState("");
+  const [discount, setDiscount] = useState("");
+  const [farmer, setFarmer] = useState("");
   const [focusedInput, setFocusedInput] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!name || !price || !stock) {
-      Alert.alert('Incomplete Form', 'Please provide product name, price, and stock quantity.');
+      Alert.alert(
+        "Incomplete Form",
+        "Please provide product name, price, and stock quantity.",
+      );
       return;
     }
-    addInventoryItem({
-      name,
+
+    setIsSubmitting(true);
+    const published = await addInventoryItem({
+      name: name.trim(),
       category,
       price: Number(price),
-      unit,
+      unit: unit.trim() || "unit",
       stock: Number(stock),
-      description,
-      image,
-      discount,
-      farmer,
+      description: description.trim(),
+      image: image.trim(),
+      discount: discount.trim(),
+      farmer: farmer.trim(),
     });
-    Alert.alert('Product Listed! 🎉', `${name} is now live and visible to nearby customers!`, [
-      { text: 'View Products', onPress: () => navigation.goBack() },
-    ]);
+    setIsSubmitting(false);
+
+    if (!published) return;
+    Alert.alert(
+      "Product Listed! 🎉",
+      `${name} is now live and visible to nearby customers!`,
+      [{ text: "View Products", onPress: () => navigation.goBack() }],
+    );
   };
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-      
+
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -68,10 +85,19 @@ export const AddProductScreen = ({ navigation }) => {
         <View style={{ width: 36 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={styles.formCard}>
-          <Text style={styles.cardHeaderTitle}>PUBLISH ITEM TO CUSTOMER APP</Text>
-          <Text style={styles.cardHeaderSub}>Add produce, thalis, or homemade bakery items to receive live orders.</Text>
+          <Text style={styles.cardHeaderTitle}>
+            PUBLISH ITEM TO CUSTOMER APP
+          </Text>
+          <Text style={styles.cardHeaderSub}>
+            Add produce, thalis, or homemade bakery items to receive live
+            orders.
+          </Text>
 
           {/* Product Name */}
           <View style={styles.inputGroup}>
@@ -79,13 +105,13 @@ export const AddProductScreen = ({ navigation }) => {
             <View
               style={[
                 styles.inputWrap,
-                focusedInput === 'name' && styles.inputWrapFocused,
+                focusedInput === "name" && styles.inputWrapFocused,
               ]}
             >
               <Ionicons
                 name="pricetag-outline"
                 size={18}
-                color={focusedInput === 'name' ? colors.primary : '#94a3b8'}
+                color={focusedInput === "name" ? colors.primary : "#94a3b8"}
                 style={styles.inputIcon}
               />
               <TextInput
@@ -94,7 +120,7 @@ export const AddProductScreen = ({ navigation }) => {
                 placeholderTextColor="#94a3b8"
                 value={name}
                 onChangeText={setName}
-                onFocus={() => setFocusedInput('name')}
+                onFocus={() => setFocusedInput("name")}
                 onBlur={() => setFocusedInput(null)}
               />
             </View>
@@ -103,17 +129,29 @@ export const AddProductScreen = ({ navigation }) => {
           {/* Category Chips Selector */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Select Category</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.catChipRow}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.catChipRow}
+            >
               {CATEGORIES.map((cat) => {
                 const isSelected = category === cat;
                 return (
                   <TouchableOpacity
                     key={cat}
-                    style={[styles.catChip, isSelected && styles.catChipSelected]}
+                    style={[
+                      styles.catChip,
+                      isSelected && styles.catChipSelected,
+                    ]}
                     onPress={() => setCategory(cat)}
                     activeOpacity={0.8}
                   >
-                    <Text style={[styles.catChipText, isSelected && styles.catChipTextSelected]}>
+                    <Text
+                      style={[
+                        styles.catChipText,
+                        isSelected && styles.catChipTextSelected,
+                      ]}
+                    >
                       {cat}
                     </Text>
                   </TouchableOpacity>
@@ -129,7 +167,7 @@ export const AddProductScreen = ({ navigation }) => {
               <View
                 style={[
                   styles.inputWrap,
-                  focusedInput === 'price' && styles.inputWrapFocused,
+                  focusedInput === "price" && styles.inputWrapFocused,
                 ]}
               >
                 <Text style={styles.currencyPrefix}>₹</Text>
@@ -140,7 +178,7 @@ export const AddProductScreen = ({ navigation }) => {
                   keyboardType="numeric"
                   value={price}
                   onChangeText={setPrice}
-                  onFocus={() => setFocusedInput('price')}
+                  onFocus={() => setFocusedInput("price")}
                   onBlur={() => setFocusedInput(null)}
                 />
               </View>
@@ -151,13 +189,13 @@ export const AddProductScreen = ({ navigation }) => {
               <View
                 style={[
                   styles.inputWrap,
-                  focusedInput === 'unit' && styles.inputWrapFocused,
+                  focusedInput === "unit" && styles.inputWrapFocused,
                 ]}
               >
                 <Ionicons
                   name="cube-outline"
                   size={18}
-                  color={focusedInput === 'unit' ? colors.primary : '#94a3b8'}
+                  color={focusedInput === "unit" ? colors.primary : "#94a3b8"}
                   style={styles.inputIcon}
                 />
                 <TextInput
@@ -165,7 +203,7 @@ export const AddProductScreen = ({ navigation }) => {
                   value={unit}
                   onChangeText={setUnit}
                   placeholderTextColor="#94a3b8"
-                  onFocus={() => setFocusedInput('unit')}
+                  onFocus={() => setFocusedInput("unit")}
                   onBlur={() => setFocusedInput(null)}
                 />
               </View>
@@ -178,24 +216,26 @@ export const AddProductScreen = ({ navigation }) => {
             <View
               style={[
                 styles.inputWrap,
-                { height: 80, alignItems: 'flex-start', paddingTop: 12 },
-                focusedInput === 'description' && styles.inputWrapFocused,
+                { height: 80, alignItems: "flex-start", paddingTop: 12 },
+                focusedInput === "description" && styles.inputWrapFocused,
               ]}
             >
               <Ionicons
                 name="document-text-outline"
                 size={18}
-                color={focusedInput === 'description' ? colors.primary : '#94a3b8'}
+                color={
+                  focusedInput === "description" ? colors.primary : "#94a3b8"
+                }
                 style={styles.inputIcon}
               />
               <TextInput
-                style={[styles.input, { height: 60, textAlignVertical: 'top' }]}
+                style={[styles.input, { height: 60, textAlignVertical: "top" }]}
                 placeholder="Product description, ingredients, etc."
                 placeholderTextColor="#94a3b8"
                 multiline
                 value={description}
                 onChangeText={setDescription}
-                onFocus={() => setFocusedInput('description')}
+                onFocus={() => setFocusedInput("description")}
                 onBlur={() => setFocusedInput(null)}
               />
             </View>
@@ -208,13 +248,13 @@ export const AddProductScreen = ({ navigation }) => {
               <View
                 style={[
                   styles.inputWrap,
-                  focusedInput === 'image' && styles.inputWrapFocused,
+                  focusedInput === "image" && styles.inputWrapFocused,
                 ]}
               >
                 <Ionicons
                   name="image-outline"
                   size={18}
-                  color={focusedInput === 'image' ? colors.primary : '#94a3b8'}
+                  color={focusedInput === "image" ? colors.primary : "#94a3b8"}
                   style={styles.inputIcon}
                 />
                 <TextInput
@@ -223,7 +263,7 @@ export const AddProductScreen = ({ navigation }) => {
                   placeholderTextColor="#94a3b8"
                   value={image}
                   onChangeText={setImage}
-                  onFocus={() => setFocusedInput('image')}
+                  onFocus={() => setFocusedInput("image")}
                   onBlur={() => setFocusedInput(null)}
                 />
               </View>
@@ -234,13 +274,13 @@ export const AddProductScreen = ({ navigation }) => {
               <View
                 style={[
                   styles.inputWrap,
-                  focusedInput === 'farmer' && styles.inputWrapFocused,
+                  focusedInput === "farmer" && styles.inputWrapFocused,
                 ]}
               >
                 <Ionicons
                   name="person-outline"
                   size={18}
-                  color={focusedInput === 'farmer' ? colors.primary : '#94a3b8'}
+                  color={focusedInput === "farmer" ? colors.primary : "#94a3b8"}
                   style={styles.inputIcon}
                 />
                 <TextInput
@@ -249,7 +289,7 @@ export const AddProductScreen = ({ navigation }) => {
                   onChangeText={setFarmer}
                   placeholder="e.g. John Doe"
                   placeholderTextColor="#94a3b8"
-                  onFocus={() => setFocusedInput('farmer')}
+                  onFocus={() => setFocusedInput("farmer")}
                   onBlur={() => setFocusedInput(null)}
                 />
               </View>
@@ -263,13 +303,13 @@ export const AddProductScreen = ({ navigation }) => {
               <View
                 style={[
                   styles.inputWrap,
-                  focusedInput === 'stock' && styles.inputWrapFocused,
+                  focusedInput === "stock" && styles.inputWrapFocused,
                 ]}
               >
                 <Ionicons
                   name="layers-outline"
                   size={18}
-                  color={focusedInput === 'stock' ? colors.primary : '#94a3b8'}
+                  color={focusedInput === "stock" ? colors.primary : "#94a3b8"}
                   style={styles.inputIcon}
                 />
                 <TextInput
@@ -279,7 +319,7 @@ export const AddProductScreen = ({ navigation }) => {
                   keyboardType="numeric"
                   value={stock}
                   onChangeText={setStock}
-                  onFocus={() => setFocusedInput('stock')}
+                  onFocus={() => setFocusedInput("stock")}
                   onBlur={() => setFocusedInput(null)}
                 />
               </View>
@@ -290,13 +330,15 @@ export const AddProductScreen = ({ navigation }) => {
               <View
                 style={[
                   styles.inputWrap,
-                  focusedInput === 'discount' && styles.inputWrapFocused,
+                  focusedInput === "discount" && styles.inputWrapFocused,
                 ]}
               >
                 <Ionicons
                   name="pricetag-outline"
                   size={18}
-                  color={focusedInput === 'discount' ? colors.primary : '#94a3b8'}
+                  color={
+                    focusedInput === "discount" ? colors.primary : "#94a3b8"
+                  }
                   style={styles.inputIcon}
                 />
                 <TextInput
@@ -305,7 +347,7 @@ export const AddProductScreen = ({ navigation }) => {
                   onChangeText={setDiscount}
                   placeholder="e.g. 10%"
                   placeholderTextColor="#94a3b8"
-                  onFocus={() => setFocusedInput('discount')}
+                  onFocus={() => setFocusedInput("discount")}
                   onBlur={() => setFocusedInput(null)}
                 />
               </View>
@@ -313,9 +355,20 @@ export const AddProductScreen = ({ navigation }) => {
           </View>
 
           {/* Submit Button */}
-          <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit} activeOpacity={0.85}>
-            <Ionicons name="cloud-upload-outline" size={20} color="#ffffff" />
-            <Text style={styles.submitBtnText}>Publish Listing Now</Text>
+          <TouchableOpacity
+            style={[styles.submitBtn, isSubmitting && styles.submitBtnDisabled]}
+            onPress={handleSubmit}
+            disabled={isSubmitting}
+            activeOpacity={0.85}
+          >
+            <Ionicons
+              name={isSubmitting ? "sync-outline" : "cloud-upload-outline"}
+              size={20}
+              color="#ffffff"
+            />
+            <Text style={styles.submitBtnText}>
+              {isSubmitting ? "Publishing..." : "Publish Listing Now"}
+            </Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -324,7 +377,8 @@ export const AddProductScreen = ({ navigation }) => {
 };
 
 export const InventoryScreen = ({ navigation }) => {
-  const { inventory, toggleItemAvailability, deleteInventoryItem } = usePartner();
+  const { inventory, toggleItemAvailability, deleteInventoryItem } =
+    usePartner();
 
   return (
     <View style={styles.container}>
@@ -332,7 +386,7 @@ export const InventoryScreen = ({ navigation }) => {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>My Products ({inventory.length})</Text>
         <TouchableOpacity
-          onPress={() => navigation.navigate('AddProduct')}
+          onPress={() => navigation.navigate("AddProduct")}
           style={styles.addNavBtn}
           activeOpacity={0.8}
         >
@@ -341,39 +395,61 @@ export const InventoryScreen = ({ navigation }) => {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         {inventory.length === 0 ? (
           <View style={styles.emptyBox}>
             <Ionicons name="bag-remove-outline" size={44} color="#94a3b8" />
             <Text style={styles.emptyTitle}>No Products Added Yet</Text>
-            <Text style={styles.emptySub}>Tap "Add Item" at top right to start selling produce.</Text>
+            <Text style={styles.emptySub}>
+              Tap "Add Item" at top right to start selling produce.
+            </Text>
           </View>
         ) : (
           inventory.map((item) => (
             <View key={item.id} style={styles.itemCard}>
               <View style={styles.itemBadgeIcon}>
-                <Ionicons name="leaf-outline" size={20} color={colors.primary} />
+                <Ionicons
+                  name="leaf-outline"
+                  size={20}
+                  color={colors.primary}
+                />
               </View>
-              
+
               <View style={{ flex: 1, paddingHorizontal: 12 }}>
                 <Text style={styles.itemTitle}>{item.name}</Text>
                 <Text style={styles.itemCategory}>
-                  {item.category} • <Text style={{ color: '#16a34a', fontWeight: '500' }}>₹{item.price}</Text> / {item.unit}
+                  {item.category} •{" "}
+                  <Text style={{ color: "#16a34a", fontWeight: "500" }}>
+                    ₹{item.price}
+                  </Text>{" "}
+                  / {item.unit}
                 </Text>
                 <Text style={styles.itemStock}>
-                  Stock: <Text style={{ fontWeight: '500', color: '#0f172a' }}>{item.stock}</Text> units
+                  Stock:{" "}
+                  <Text style={{ fontWeight: "500", color: "#0f172a" }}>
+                    {item.stock}
+                  </Text>{" "}
+                  units
                 </Text>
               </View>
 
               <View style={styles.toggleSection}>
-                <Text style={[styles.toggleText, { color: item.isAvailable ? '#15803d' : '#94a3b8' }]}>
-                  {item.isAvailable ? 'IN STOCK' : 'OUT'}
+                <Text
+                  style={[
+                    styles.toggleText,
+                    { color: item.isAvailable ? "#15803d" : "#94a3b8" },
+                  ]}
+                >
+                  {item.isAvailable ? "IN STOCK" : "OUT"}
                 </Text>
                 <Switch
                   value={item.isAvailable}
                   onValueChange={() => toggleItemAvailability(item.id)}
-                  trackColor={{ false: '#cbd5e1', true: '#bbf7d0' }}
-                  thumbColor={item.isAvailable ? '#16a34a' : '#94a3b8'}
+                  trackColor={{ false: "#cbd5e1", true: "#bbf7d0" }}
+                  thumbColor={item.isAvailable ? "#16a34a" : "#94a3b8"}
                 />
 
                 {deleteInventoryItem && (
@@ -404,7 +480,10 @@ export const SettlementsScreen = ({ navigation }) => {
         <Text style={styles.headerTitleLarge}>Wednesdays Settlements</Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Wednesday Hero Payout Box */}
         <View style={styles.wedCard}>
           <View style={styles.wedIconBox}>
@@ -412,10 +491,14 @@ export const SettlementsScreen = ({ navigation }) => {
           </View>
           <View style={{ flex: 1, paddingLeft: 14 }}>
             <Text style={styles.wedTitle}>Upcoming Wednesday Payout</Text>
-            <Text style={styles.wedAmount}>₹{vendor?.wednesdaySettlement || 0}</Text>
+            <Text style={styles.wedAmount}>
+              ₹{vendor?.wednesdaySettlement || 0}
+            </Text>
             <View style={styles.bankTag}>
               <Ionicons name="checkmark-circle" size={13} color="#15803d" />
-              <Text style={styles.bankTagText}>Direct Transfer to Bank A/c (*4321)</Text>
+              <Text style={styles.bankTagText}>
+                Direct Transfer to Bank A/c (*4321)
+              </Text>
             </View>
           </View>
         </View>
@@ -423,15 +506,30 @@ export const SettlementsScreen = ({ navigation }) => {
         <Text style={styles.sectionTitle}>Previous Weekly Settlements</Text>
         {settlementHistory.map((item, idx) => (
           <View key={idx} style={styles.settleCard}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <View
+                style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
+              >
                 <Ionicons name="arrow-down-circle" size={20} color="#16a34a" />
                 <Text style={styles.settleDate}>{item.date}</Text>
               </View>
               <Text style={styles.settleTotal}>+₹{item.total}</Text>
             </View>
 
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 10, alignItems: 'center' }}>
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                marginTop: 10,
+                alignItems: "center",
+              }}
+            >
               <View style={styles.settleStatusBadge}>
                 <Text style={styles.settleStatusText}>{item.status}</Text>
               </View>
@@ -447,19 +545,24 @@ export const SettlementsScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: "#f8fafc",
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
+    borderBottomColor: "#e2e8f0",
     ...Platform.select({
-      ios: { shadowColor: '#0f172a', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 6 },
+      ios: {
+        shadowColor: "#0f172a",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.04,
+        shadowRadius: 6,
+      },
       android: { elevation: 3 },
     }),
   },
@@ -467,31 +570,31 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 12,
-    backgroundColor: '#f1f5f9',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#f1f5f9",
+    justifyContent: "center",
+    alignItems: "center",
   },
   headerTitle: {
     fontSize: 17,
-    fontWeight: '500',
-    color: '#0f172a',
+    fontWeight: "500",
+    color: "#0f172a",
   },
   headerTitleLarge: {
     fontSize: 20,
-    fontWeight: '500',
-    color: '#0f172a',
+    fontWeight: "500",
+    color: "#0f172a",
   },
   scrollContent: {
     padding: 20,
     paddingBottom: 40,
   },
   formCard: {
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     borderRadius: 22,
     padding: 22,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
-    shadowColor: 'rgba(15, 23, 42, 0.08)',
+    borderColor: "#e2e8f0",
+    shadowColor: "rgba(15, 23, 42, 0.08)",
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 1,
     shadowRadius: 20,
@@ -499,13 +602,13 @@ const styles = StyleSheet.create({
   },
   cardHeaderTitle: {
     fontSize: 11,
-    fontWeight: '500',
+    fontWeight: "500",
     color: colors.primary,
     letterSpacing: 1,
   },
   cardHeaderSub: {
     fontSize: 13,
-    color: '#64748b',
+    color: "#64748b",
     marginTop: 4,
     marginBottom: 16,
     lineHeight: 18,
@@ -515,50 +618,50 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 13,
-    fontWeight: '500',
-    color: '#334155',
+    fontWeight: "500",
+    color: "#334155",
     marginBottom: 6,
   },
   inputWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f8fafc',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f8fafc",
     borderWidth: 1.5,
-    borderColor: '#e2e8f0',
+    borderColor: "#e2e8f0",
     borderRadius: 14,
     paddingHorizontal: 14,
     height: 52,
   },
   inputWrapFocused: {
     borderColor: colors.primary,
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
   },
   inputIcon: {
     marginRight: 10,
   },
   currencyPrefix: {
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: "500",
     color: colors.primary,
     marginRight: 8,
   },
   input: {
     flex: 1,
     fontSize: 15,
-    color: '#0f172a',
-    fontWeight: '500',
+    color: "#0f172a",
+    fontWeight: "500",
   },
   catChipRow: {
     gap: 8,
     paddingVertical: 4,
   },
   catChip: {
-    backgroundColor: '#f1f5f9',
+    backgroundColor: "#f1f5f9",
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: "#e2e8f0",
   },
   catChipSelected: {
     backgroundColor: colors.primary,
@@ -566,21 +669,21 @@ const styles = StyleSheet.create({
   },
   catChipText: {
     fontSize: 12.5,
-    fontWeight: '500',
-    color: '#475569',
+    fontWeight: "500",
+    color: "#475569",
   },
   catChipTextSelected: {
-    color: '#ffffff',
-    fontWeight: '500',
+    color: "#ffffff",
+    fontWeight: "500",
   },
   row: {
-    flexDirection: 'row',
+    flexDirection: "row",
     marginBottom: 14,
   },
   submitBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     backgroundColor: colors.primary,
     borderRadius: 16,
     height: 54,
@@ -592,14 +695,17 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 6,
   },
+  submitBtnDisabled: {
+    opacity: 0.65,
+  },
   submitBtnText: {
-    color: '#ffffff',
+    color: "#ffffff",
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   addNavBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: colors.primary,
     paddingHorizontal: 14,
     paddingVertical: 8,
@@ -607,40 +713,40 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   addNavBtnText: {
-    color: '#ffffff',
+    color: "#ffffff",
     fontSize: 13,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   emptyBox: {
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     borderRadius: 20,
     padding: 36,
-    alignItems: 'center',
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: "#e2e8f0",
   },
   emptyTitle: {
     fontSize: 16,
-    fontWeight: '500',
-    color: '#0f172a',
+    fontWeight: "500",
+    color: "#0f172a",
     marginTop: 12,
   },
   emptySub: {
     fontSize: 13,
-    color: '#64748b',
-    textAlign: 'center',
+    color: "#64748b",
+    textAlign: "center",
     marginTop: 4,
   },
   itemCard: {
-    flexDirection: 'row',
-    backgroundColor: '#ffffff',
+    flexDirection: "row",
+    backgroundColor: "#ffffff",
     borderRadius: 18,
     padding: 16,
     marginBottom: 14,
-    alignItems: 'center',
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: '#e2e8f0',
-    shadowColor: 'rgba(15, 23, 42, 0.04)',
+    borderColor: "#e2e8f0",
+    shadowColor: "rgba(15, 23, 42, 0.04)",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 1,
     shadowRadius: 10,
@@ -650,35 +756,35 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 14,
-    backgroundColor: '#f0fdf4',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#f0fdf4",
+    justifyContent: "center",
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: '#bbf7d0',
+    borderColor: "#bbf7d0",
   },
   itemTitle: {
     fontSize: 15.5,
-    fontWeight: '500',
-    color: '#0f172a',
+    fontWeight: "500",
+    color: "#0f172a",
   },
   itemCategory: {
     fontSize: 12.5,
-    color: '#64748b',
+    color: "#64748b",
     marginTop: 3,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   itemStock: {
     fontSize: 12,
-    color: '#94a3b8',
+    color: "#94a3b8",
     marginTop: 2,
   },
   toggleSection: {
-    alignItems: 'center',
+    alignItems: "center",
     gap: 4,
   },
   toggleText: {
     fontSize: 10,
-    fontWeight: '500',
+    fontWeight: "500",
     letterSpacing: 0.5,
   },
   deleteBtn: {
@@ -686,14 +792,14 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   wedCard: {
-    flexDirection: 'row',
-    backgroundColor: '#ffffff',
+    flexDirection: "row",
+    backgroundColor: "#ffffff",
     borderRadius: 22,
     padding: 20,
     marginBottom: 20,
-    alignItems: 'center',
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: '#bbf7d0',
+    borderColor: "#bbf7d0",
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.1,
@@ -704,73 +810,72 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 20,
-    backgroundColor: '#f0fdf4',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#f0fdf4",
+    alignItems: "center",
+    justifyContent: "center",
     borderWidth: 1,
-    borderColor: '#bbf7d0',
+    borderColor: "#bbf7d0",
   },
   wedTitle: {
     fontSize: 13,
-    fontWeight: '500',
-    color: '#64748b',
+    fontWeight: "500",
+    color: "#64748b",
   },
   wedAmount: {
     fontSize: 30,
-    fontWeight: '500',
-    color: '#15803d',
+    fontWeight: "500",
+    color: "#15803d",
     marginTop: 2,
   },
   bankTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 4,
     marginTop: 4,
   },
   bankTagText: {
     fontSize: 11.5,
-    color: '#15803d',
-    fontWeight: '500',
+    color: "#15803d",
+    fontWeight: "500",
   },
   sectionTitle: {
     fontSize: 17,
-    fontWeight: '500',
-    color: '#0f172a',
+    fontWeight: "500",
+    color: "#0f172a",
     marginBottom: 14,
   },
   settleCard: {
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: "#e2e8f0",
   },
   settleDate: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#0f172a',
+    fontWeight: "500",
+    color: "#0f172a",
   },
   settleTotal: {
     fontSize: 16,
-    fontWeight: '500',
-    color: '#15803d',
+    fontWeight: "500",
+    color: "#15803d",
   },
   settleStatusBadge: {
-    backgroundColor: '#dcfce7',
+    backgroundColor: "#dcfce7",
     paddingHorizontal: 9,
     paddingVertical: 3,
     borderRadius: 8,
   },
   settleStatusText: {
     fontSize: 11,
-    fontWeight: '500',
-    color: '#15803d',
+    fontWeight: "500",
+    color: "#15803d",
   },
   settleRef: {
     fontSize: 12,
-    color: '#64748b',
-    fontWeight: '500',
+    color: "#64748b",
+    fontWeight: "500",
   },
 });
-

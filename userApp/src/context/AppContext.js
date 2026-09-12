@@ -9,6 +9,35 @@ import { useEffect } from "react";
 
 const AppContext = createContext();
 
+const normalizeProduct = (product) => {
+  const categoryMap = {
+    "Home Restro": "homerestro",
+    "Organic Farm": "veggies",
+    "Bakery & Sweets": "bakery",
+    "Desi Sweets": "sweets",
+    Dairy: "dairy",
+    "Village Hub Goods": "grocery",
+  };
+  const category =
+    categoryMap[product.category] || product.category || "grocery";
+  const serviceMap = {
+    homerestro: "homerestro",
+    veggies: "farm_harvest",
+    fruits: "farm_harvest",
+    bakery: "bakery_sweets",
+    sweets: "bakery_sweets",
+    dairy: "farmart_mart",
+    grocery: "farmart_mart",
+    handmade: "handmade_care",
+  };
+  return {
+    ...product,
+    id: String(product.id || product._id),
+    category,
+    service: product.service || serviceMap[category] || "farmart_mart",
+  };
+};
+
 export const AppProvider = ({ children }) => {
   const [activeRole, setActiveRole] = useState("customer");
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
@@ -22,12 +51,12 @@ export const AppProvider = ({ children }) => {
   // Address Management
   const [savedAddresses, setSavedAddresses] = useState([
     {
-      id: 'default_1',
-      label: 'Home',
-      fullName: 'Customer Name',
-      phone: '9999999999',
-      addressString: 'House 42, Model Town, City Center, 141002'
-    }
+      id: "default_1",
+      label: "Home",
+      fullName: "Customer Name",
+      phone: "9999999999",
+      addressString: "House 42, Model Town, City Center, 141002",
+    },
   ]);
   const [selectedAddress, setSelectedAddress] = useState(null);
 
@@ -40,8 +69,8 @@ export const AppProvider = ({ children }) => {
 
   const fetchProducts = async () => {
     const data = await apiService.getProducts();
-    if (data && data.success && data.products && data.products.length > 0) {
-      setProducts(data.products);
+    if (data && data.success && Array.isArray(data.products)) {
+      setProducts(data.products.map(normalizeProduct));
     }
   };
 
@@ -59,12 +88,12 @@ export const AppProvider = ({ children }) => {
 
   const addAddress = (address) => {
     const newAddr = { id: `addr_${Date.now()}`, ...address };
-    setSavedAddresses(prev => [...prev, newAddr]);
+    setSavedAddresses((prev) => [...prev, newAddr]);
     if (!selectedAddress) setSelectedAddress(newAddr);
   };
 
   const removeAddress = (id) => {
-    setSavedAddresses(prev => prev.filter(a => a.id !== id));
+    setSavedAddresses((prev) => prev.filter((a) => a.id !== id));
     if (selectedAddress?.id === id) setSelectedAddress(null);
   };
 
@@ -113,12 +142,20 @@ export const AppProvider = ({ children }) => {
 
   const placeOrder = async (paymentMethod, customDeliveryAddress) => {
     const totalAmount = getCartTotal();
-    const finalAddress = customDeliveryAddress || selectedAddress?.addressString || "Default Registered Address";
-    
+    const finalAddress =
+      customDeliveryAddress ||
+      selectedAddress?.addressString ||
+      "Default Registered Address";
+
     const orderData = {
       orderId: `FMT-ORD-${Math.floor(1000 + Math.random() * 9000)}`,
-      customerName: selectedAddress?.fullName || userProfile?.fullName || userProfile?.name || "Customer",
-      customerPhone: selectedAddress?.phone || userProfile?.phone || "9999999999",
+      customerName:
+        selectedAddress?.fullName ||
+        userProfile?.fullName ||
+        userProfile?.name ||
+        "Customer",
+      customerPhone:
+        selectedAddress?.phone || userProfile?.phone || "9999999999",
       deliveryAddress: finalAddress,
       pickupLocation: userProfile?.villageHub || "Central Hub",
       items: cart.map((item) => ({
@@ -129,7 +166,7 @@ export const AppProvider = ({ children }) => {
       totalAmount,
       paymentMethod,
       paymentStatus: paymentMethod === "RAZORPAY" ? "PAID" : "PENDING",
-      vendorId: "default_vendor" // or map based on items
+      vendorId: "default_vendor", // or map based on items
     };
 
     try {
@@ -154,7 +191,8 @@ export const AppProvider = ({ children }) => {
       id: `f-${Date.now()}`,
       ...listing,
       status: "ACCEPTED_BY_HUB",
-      hubAssigned: userProfile?.villageHub || userProfile?.city || "Central Hub",
+      hubAssigned:
+        userProfile?.villageHub || userProfile?.city || "Central Hub",
     };
     setFarmerListings([newListing, ...farmerListings]);
   };
@@ -186,7 +224,7 @@ export const AppProvider = ({ children }) => {
         selectedAddress,
         setSelectedAddress,
         addAddress,
-        removeAddress
+        removeAddress,
       }}
     >
       {children}

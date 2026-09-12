@@ -14,7 +14,7 @@ import * as Location from "expo-location";
 import { colors } from "../theme/colors";
 import { useApp } from "../context/AppContext";
 
-const LOGO = require("../../assets/farmart24_logo.jpg");
+const LOGO = require("../../assets/logo/WhatsApp Image 2026-09-10 at 12.22.02 PM (1).jpeg");
 
 export const Header = ({
   navigation,
@@ -125,6 +125,53 @@ export const Header = ({
     setAddressModalVisible(false);
   };
 
+  const useCurrentLocation = async () => {
+    setIsLocationLoading(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        setLocationSubtitle("Location permission denied");
+        return;
+      }
+
+      const currentLocation = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Low,
+      });
+      const [place] = await Location.reverseGeocodeAsync({
+        latitude: currentLocation.coords.latitude,
+        longitude: currentLocation.coords.longitude,
+      });
+      const nextAddress = [
+        place?.name,
+        place?.street,
+        place?.city,
+        place?.region,
+      ]
+        .filter(Boolean)
+        .join(", ");
+
+      if (!nextAddress) {
+        setLocationSubtitle("Could not find your address");
+        return;
+      }
+
+      setManualAddress(nextAddress);
+      setDisplayAddress(nextAddress);
+      setLocationSubtitle(place?.city || "Current location");
+      if (userProfile) {
+        setUserProfile({
+          ...userProfile,
+          address: nextAddress,
+          city: userProfile.city || place?.city || nextAddress,
+        });
+      }
+    } catch (error) {
+      setLocationSubtitle("Could not detect location");
+    } finally {
+      setIsLocationLoading(false);
+    }
+  };
+
   return (
     <View style={styles.wrapper}>
       <View style={styles.container}>
@@ -221,13 +268,31 @@ export const Header = ({
 
             <Text style={styles.modalLabel}>Your current delivery address</Text>
             <TextInput
-              style={styles.modalInput} 
+              style={styles.modalInput}
               value={manualAddress}
               onChangeText={setManualAddress}
               placeholder="Enter your address"
               placeholderTextColor={colors.textMuted}
               multiline
             />
+
+            <TouchableOpacity
+              style={styles.currentLocationButton}
+              onPress={useCurrentLocation}
+              disabled={isLocationLoading}
+              activeOpacity={0.8}
+            >
+              <Ionicons
+                name={isLocationLoading ? "locate-outline" : "navigate-outline"}
+                size={17}
+                color={colors.primary}
+              />
+              <Text style={styles.currentLocationText}>
+                {isLocationLoading
+                  ? "Detecting location..."
+                  : "Use current location"}
+              </Text>
+            </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.saveButton}
@@ -258,12 +323,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingVertical: 8,
     gap: 10,
   },
   logoImage: {
-    width: 92,
-    height: 40,
+    width: 108,
+    height: 48,
   },
   backBtn: {
     width: 40,
@@ -366,7 +431,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: "500",
     color: colors.textPrimary,
   },
   modalLabel: {
@@ -386,6 +451,22 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     marginBottom: 14,
   },
+  currentLocationButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+    paddingVertical: 10,
+    marginTop: -4,
+    marginBottom: 12,
+    borderRadius: 10,
+    backgroundColor: colors.primaryLight,
+  },
+  currentLocationText: {
+    color: colors.primaryDark,
+    fontSize: 13,
+    fontWeight: "600",
+  },
   saveButton: {
     backgroundColor: colors.primary,
     borderRadius: 12,
@@ -395,6 +476,6 @@ const styles = StyleSheet.create({
   saveButtonText: {
     color: "#ffffff",
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: "500",
   },
 });

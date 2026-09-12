@@ -1,8 +1,8 @@
-import React from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../theme/colors';
-import { useApp } from '../context/AppContext';
+import React from "react";
+import { View, Text, StyleSheet, Image, TouchableOpacity } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { colors } from "../theme/colors";
+import { useApp } from "../context/AppContext";
 
 export const ProductCard = ({ product, onPress, compact = false }) => {
   const { addToCart, updateQuantity, cart } = useApp();
@@ -16,7 +16,11 @@ export const ProductCard = ({ product, onPress, compact = false }) => {
       activeOpacity={0.92}
     >
       <View style={[styles.imageContainer, compact && styles.imageCompact]}>
-        <Image source={{ uri: product.image }} style={styles.image} resizeMode="cover" />
+        <Image
+          source={{ uri: product.image }}
+          style={styles.image}
+          resizeMode="cover"
+        />
         {product.discount ? (
           <View style={styles.discountBadge}>
             <Text style={styles.discountText}>{product.discount}</Text>
@@ -39,14 +43,54 @@ export const ProductCard = ({ product, onPress, compact = false }) => {
 
         <View style={styles.farmerRow}>
           <Ionicons name="shield-checkmark" size={11} color={colors.primary} />
-          <Text style={styles.farmerText} numberOfLines={2} ellipsizeMode="tail">
+          <Text
+            style={styles.farmerText}
+            numberOfLines={2}
+            ellipsizeMode="tail"
+          >
             {product.farmer}
           </Text>
         </View>
 
         <View style={styles.footer}>
           <Text style={styles.price}>₹{product.price}</Text>
-          <Ionicons name="chevron-forward-circle" size={24} color={colors.primary} />
+          {qty === 0 ? (
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={(event) => {
+                event.stopPropagation();
+                addToCart(product);
+              }}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="add" size={16} color={colors.primaryDark} />
+              <Text style={styles.addButtonText}>ADD</Text>
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.qtyControl}>
+              <TouchableOpacity
+                style={styles.qtyBtn}
+                onPress={(event) => {
+                  event.stopPropagation();
+                  updateQuantity(product.id, -1);
+                }}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="remove" size={14} color="#ffffff" />
+              </TouchableOpacity>
+              <Text style={styles.qtyText}>{qty}</Text>
+              <TouchableOpacity
+                style={styles.qtyBtn}
+                onPress={(event) => {
+                  event.stopPropagation();
+                  updateQuantity(product.id, 1);
+                }}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="add" size={14} color="#ffffff" />
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       </View>
     </TouchableOpacity>
@@ -55,149 +99,152 @@ export const ProductCard = ({ product, onPress, compact = false }) => {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#f1f5f9',
-    overflow: 'hidden',
+    borderColor: "#f1f5f9",
+    overflow: "hidden",
     minWidth: 0,
     marginBottom: 12,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
     shadowRadius: 10,
-    elevation: 3
+    elevation: 3,
   },
   cardCompact: {
     flex: 1,
-    marginBottom: 0
+    marginBottom: 0,
   },
   imageContainer: {
     height: 130,
-    width: '100%',
-    position: 'relative',
-    backgroundColor: '#f1f5f9'
+    width: "100%",
+    position: "relative",
+    backgroundColor: "#f1f5f9",
   },
   imageCompact: {
-    height: 110
+    height: 96,
   },
   image: {
-    width: '100%',
-    height: '100%'
+    width: "100%",
+    height: "100%",
   },
   discountBadge: {
-    position: 'absolute',
+    position: "absolute",
     top: 8,
     left: 8,
     backgroundColor: colors.secondary,
     paddingHorizontal: 7,
     paddingVertical: 3,
-    borderRadius: 6
+    borderRadius: 6,
   },
   discountText: {
-    color: '#ffffff',
+    color: "#ffffff",
     fontSize: 9,
-    fontWeight: '500'
+    fontWeight: "500",
   },
   ratingPill: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 8,
     right: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 4,
-    backgroundColor: 'rgba(255,255,255,0.95)',
+    backgroundColor: "rgba(255,255,255,0.95)",
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 10,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
   },
   ratingText: {
     fontSize: 11,
-    fontWeight: '700',
-    color: '#334155'
+    fontWeight: "700",
+    color: "#334155",
   },
   details: {
-    padding: 12,
+    padding: 10,
     flex: 1,
     minWidth: 0,
-    justifyContent: 'space-between'
+    justifyContent: "space-between",
   },
   title: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#0f172a',
-    lineHeight: 18
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#0f172a",
+    lineHeight: 17,
   },
   unit: {
-    fontSize: 12,
-    color: '#64748b',
+    fontSize: 11,
+    color: "#64748b",
     marginTop: 2,
-    marginBottom: 6,
-    fontWeight: '500',
-    lineHeight: 16
+    marginBottom: 4,
+    fontWeight: "500",
+    lineHeight: 14,
   },
   farmerRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    alignItems: "flex-start",
     gap: 4,
-    marginBottom: 10
+    marginBottom: 7,
   },
   farmerText: {
-    fontSize: 10,
+    fontSize: 9,
     color: colors.primaryDark,
-    fontWeight: '500',
+    fontWeight: "500",
     flex: 1,
     minWidth: 0,
-    lineHeight: 14
+    lineHeight: 12,
   },
   footer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 4
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 4,
   },
   price: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#0f172a',
-    flexShrink: 1
+    fontSize: 15,
+    fontWeight: "800",
+    color: "#0f172a",
+    flexShrink: 1,
   },
   addButton: {
     backgroundColor: colors.primaryLight,
+    flexDirection: "row",
+    gap: 3,
     borderWidth: 1.5,
     borderColor: colors.primary,
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 8,
     minWidth: 58,
-    alignItems: 'center'
+    alignItems: "center",
   },
   addButtonText: {
     color: colors.primaryDark,
     fontSize: 12,
-    fontWeight: '500'
+    fontWeight: "500",
   },
   qtyControl: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: colors.primary,
     borderRadius: 8,
-    overflow: 'hidden'
+    overflow: "hidden",
+    minHeight: 30,
   },
   qtyBtn: {
     paddingHorizontal: 8,
     paddingVertical: 6,
-    backgroundColor: colors.primary
+    backgroundColor: colors.primary,
   },
   qtyText: {
     fontSize: 13,
-    fontWeight: '500',
-    color: '#ffffff',
+    fontWeight: "500",
+    color: "#ffffff",
     minWidth: 20,
-    textAlign: 'center'
-  }
+    textAlign: "center",
+  },
 });

@@ -17,14 +17,20 @@ import { useApp } from "../../context/AppContext";
 import { apiService } from "../../services/api";
 
 export const CheckoutScreen = ({ navigation }) => {
-  const { cart, userProfile, getCartTotal, placeOrder, selectedAddress } = useApp();
+  const { cart, userProfile, getCartTotal, placeOrder, selectedAddress } =
+    useApp();
   const [loading, setLoading] = useState(false);
   const [selectedTip, setSelectedTip] = useState(0);
+  const [couponApplied, setCouponApplied] = useState(false);
 
   const subtotal = getCartTotal();
   const deliveryFee = subtotal > 300 ? 0 : 30; // free delivery over 300
   const platformFee = 15;
-  const total = subtotal + deliveryFee + platformFee + selectedTip;
+  const couponDiscount = couponApplied ? 50 : 0;
+  const total = Math.max(
+    0,
+    subtotal + deliveryFee + platformFee + selectedTip - couponDiscount,
+  );
 
   const tipOptions = [0, 10, 20, 30, 50];
 
@@ -32,7 +38,10 @@ export const CheckoutScreen = ({ navigation }) => {
     if (total === 0) return;
 
     if (!selectedAddress && !userProfile?.deliveryAddress) {
-      Alert.alert("Missing Address", "Please add a delivery address to proceed.");
+      Alert.alert(
+        "Missing Address",
+        "Please add a delivery address to proceed.",
+      );
       return;
     }
 
@@ -55,7 +64,7 @@ export const CheckoutScreen = ({ navigation }) => {
                 throw new Error("Payment verification failed");
               await placeOrder("RAZORPAY", selectedAddress?.addressString);
               Alert.alert("Success", "Payment successful! Order placed.");
-              navigation.navigate('MainTabs', { screen: 'OrderTracking' });
+              navigation.navigate("MainTabs", { screen: "OrderTracking" });
             } catch (error) {
               Alert.alert(
                 "Payment Verification Failed",
@@ -109,11 +118,17 @@ export const CheckoutScreen = ({ navigation }) => {
         <View style={styles.deliveryBanner}>
           <View style={styles.deliveryBannerLeft}>
             <View style={styles.deliveryIconBox}>
-              <MaterialCommunityIcons name="clock-fast" size={20} color="#ffffff" />
+              <MaterialCommunityIcons
+                name="clock-fast"
+                size={20}
+                color="#ffffff"
+              />
             </View>
             <View>
               <Text style={styles.deliveryTitle}>Delivery in 10-15 mins</Text>
-              <Text style={styles.deliverySub}>Shipment of {cart.length} item{cart.length > 1 ? 's' : ''}</Text>
+              <Text style={styles.deliverySub}>
+                Shipment of {cart.length} item{cart.length > 1 ? "s" : ""}
+              </Text>
             </View>
           </View>
         </View>
@@ -122,23 +137,55 @@ export const CheckoutScreen = ({ navigation }) => {
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <Text style={styles.cardTitle}>Delivery Address</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('AddressScreen')}>
-              <Text style={[styles.cardTitle, { color: colors.primary, fontSize: 13 }]}>Change</Text>
+            <TouchableOpacity
+              onPress={() => navigation.navigate("AddressScreen")}
+            >
+              <Text
+                style={[
+                  styles.cardTitle,
+                  { color: colors.primary, fontSize: 13 },
+                ]}
+              >
+                Change
+              </Text>
             </TouchableOpacity>
           </View>
-          
-          <View style={{ flexDirection: 'row', gap: 12 }}>
-            <Ionicons name="location" size={24} color={colors.primary} style={{ marginTop: 2 }} />
+
+          <View style={{ flexDirection: "row", gap: 12 }}>
+            <Ionicons
+              name="location"
+              size={24}
+              color={colors.primary}
+              style={{ marginTop: 2 }}
+            />
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 15, fontWeight: '600', color: '#0f172a', marginBottom: 4 }}>
-                {selectedAddress?.fullName || userProfile?.name || "Guest User"} 
+              <Text
+                style={{
+                  fontSize: 15,
+                  fontWeight: "600",
+                  color: "#0f172a",
+                  marginBottom: 4,
+                }}
+              >
+                {selectedAddress?.fullName || userProfile?.name || "Guest User"}
                 {selectedAddress && ` · ${selectedAddress.label}`}
               </Text>
-              <Text style={{ fontSize: 13, color: '#64748b', lineHeight: 20 }}>
-                {selectedAddress?.addressString || userProfile?.deliveryAddress || "Please add a delivery address to proceed"}
+              <Text style={{ fontSize: 13, color: "#64748b", lineHeight: 20 }}>
+                {selectedAddress?.addressString ||
+                  userProfile?.deliveryAddress ||
+                  "Please add a delivery address to proceed"}
               </Text>
-              <Text style={{ fontSize: 13, fontWeight: '500', color: '#334155', marginTop: 4 }}>
-                {selectedAddress?.phone || userProfile?.phone || "No phone linked"}
+              <Text
+                style={{
+                  fontSize: 13,
+                  fontWeight: "500",
+                  color: "#334155",
+                  marginTop: 4,
+                }}
+              >
+                {selectedAddress?.phone ||
+                  userProfile?.phone ||
+                  "No phone linked"}
               </Text>
             </View>
           </View>
@@ -148,9 +195,15 @@ export const CheckoutScreen = ({ navigation }) => {
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <Text style={styles.cardTitle}>Tip your delivery partner</Text>
-            <Text style={styles.cardSubTitle}>Thank them for delivering your essentials safely.</Text>
+            <Text style={styles.cardSubTitle}>
+              Thank them for delivering your essentials safely.
+            </Text>
           </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tipScroll}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.tipScroll}
+          >
             {tipOptions.map((amount, idx) => (
               <TouchableOpacity
                 key={idx}
@@ -158,15 +211,31 @@ export const CheckoutScreen = ({ navigation }) => {
                 onPress={() => setSelectedTip(amount)}
                 style={[
                   styles.tipBox,
-                  selectedTip === amount && styles.tipBoxActive
+                  selectedTip === amount && styles.tipBoxActive,
                 ]}
               >
                 {amount === 0 ? (
-                  <Text style={[styles.tipBoxText, selectedTip === amount && styles.tipBoxTextActive]}>No Tip</Text>
+                  <Text
+                    style={[
+                      styles.tipBoxText,
+                      selectedTip === amount && styles.tipBoxTextActive,
+                    ]}
+                  >
+                    No Tip
+                  </Text>
                 ) : (
                   <>
-                    {amount === 30 && <Text style={styles.tipPopular}>Popular</Text>}
-                    <Text style={[styles.tipBoxText, selectedTip === amount && styles.tipBoxTextActive]}>₹{amount}</Text>
+                    {amount === 30 && (
+                      <Text style={styles.tipPopular}>Popular</Text>
+                    )}
+                    <Text
+                      style={[
+                        styles.tipBoxText,
+                        selectedTip === amount && styles.tipBoxTextActive,
+                      ]}
+                    >
+                      ₹{amount}
+                    </Text>
                   </>
                 )}
               </TouchableOpacity>
@@ -175,17 +244,35 @@ export const CheckoutScreen = ({ navigation }) => {
         </View>
 
         {/* Coupon Section */}
-        <TouchableOpacity style={styles.couponCard} activeOpacity={0.8}>
+        <TouchableOpacity
+          style={styles.couponCard}
+          activeOpacity={0.8}
+          onPress={() => setCouponApplied((applied) => !applied)}
+        >
           <View style={styles.couponLeft}>
-            <MaterialCommunityIcons name="brightness-percent" size={24} color={colors.primary} />
-            <Text style={styles.couponText}>Apply Coupon</Text>
+            <MaterialCommunityIcons
+              name="brightness-percent"
+              size={24}
+              color={colors.primary}
+            />
+            <Text style={styles.couponText}>
+              {couponApplied
+                ? "FARM50 applied · ₹50 off"
+                : "Apply coupon · Save ₹50"}
+            </Text>
           </View>
-          <Ionicons name="chevron-forward" size={18} color="#64748b" />
+          <Ionicons
+            name={couponApplied ? "checkmark-circle" : "chevron-forward"}
+            size={18}
+            color={couponApplied ? colors.primary : "#64748b"}
+          />
         </TouchableOpacity>
 
         {/* Bill Summary */}
         <View style={styles.card}>
-          <Text style={[styles.cardTitle, { marginBottom: 16 }]}>Bill Details</Text>
+          <Text style={[styles.cardTitle, { marginBottom: 16 }]}>
+            Bill Details
+          </Text>
 
           <View style={styles.billRow}>
             <Text style={styles.billText}>Item Total</Text>
@@ -194,7 +281,12 @@ export const CheckoutScreen = ({ navigation }) => {
 
           <View style={styles.billRow}>
             <Text style={styles.billText}>Delivery Partner Fee</Text>
-            <Text style={[styles.billVal, deliveryFee === 0 && { color: "#16a34a" }]}>
+            <Text
+              style={[
+                styles.billVal,
+                deliveryFee === 0 && { color: "#16a34a" },
+              ]}
+            >
               {deliveryFee === 0 ? "FREE" : `₹${deliveryFee}`}
             </Text>
           </View>
@@ -211,6 +303,15 @@ export const CheckoutScreen = ({ navigation }) => {
             </View>
           )}
 
+          {couponApplied && (
+            <View style={styles.billRow}>
+              <Text style={styles.billText}>Coupon discount</Text>
+              <Text style={[styles.billVal, { color: colors.success }]}>
+                -₹{couponDiscount}
+              </Text>
+            </View>
+          )}
+
           <View style={styles.dashedLine} />
 
           <View style={[styles.billRow, { marginTop: 12 }]}>
@@ -221,10 +322,13 @@ export const CheckoutScreen = ({ navigation }) => {
 
         {/* Cancellation Policy */}
         <View style={styles.cancellationCard}>
-          <Text style={styles.cancellationTitle}>Review your order and address details to avoid cancellations</Text>
+          <Text style={styles.cancellationTitle}>
+            Review your order and address details to avoid cancellations
+          </Text>
           <Text style={styles.cancellationSub}>
-            <Text style={{ fontWeight: '600', color: '#ef4444' }}>Note: </Text>
-            If you choose to cancel, you can do it within 60 seconds after placing order. 100% cancellation fee applies after this period.
+            <Text style={{ fontWeight: "600", color: "#ef4444" }}>Note: </Text>
+            If you choose to cancel, you can do it within 60 seconds after
+            placing order. 100% cancellation fee applies after this period.
           </Text>
         </View>
       </ScrollView>
@@ -233,16 +337,18 @@ export const CheckoutScreen = ({ navigation }) => {
       <View style={styles.footer}>
         <View style={styles.secureBadge}>
           <Feather name="shield" size={12} color="#64748b" />
-          <Text style={styles.secureText}>100% Secure Payments powered by Razorpay</Text>
+          <Text style={styles.secureText}>
+            100% Secure Payments powered by Razorpay
+          </Text>
         </View>
-        
+
         <TouchableOpacity
           onPress={handleProceedToPay}
           disabled={loading}
           activeOpacity={0.9}
         >
           <LinearGradient
-            colors={['#16a34a', '#15803d']}
+            colors={["#16a34a", "#15803d"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={[styles.payBtn, loading && styles.disabledBtn]}
@@ -255,7 +361,9 @@ export const CheckoutScreen = ({ navigation }) => {
                   <Text style={styles.payBtnTotal}>₹{total}</Text>
                   <Text style={styles.payBtnSub}>TOTAL</Text>
                 </View>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                <View
+                  style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
+                >
                   <Text style={styles.payBtnAction}>Proceed to Pay</Text>
                   <Ionicons name="caret-forward" size={14} color="#ffffff" />
                 </View>
@@ -336,9 +444,9 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 12,
   },
   cardTitle: {
@@ -364,7 +472,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
     alignItems: "center",
     justifyContent: "center",
-    position: 'relative',
+    position: "relative",
     minWidth: 70,
   },
   tipBoxActive: {
@@ -380,16 +488,16 @@ const styles = StyleSheet.create({
     color: colors.primaryDark,
   },
   tipPopular: {
-    position: 'absolute',
+    position: "absolute",
     top: -8,
-    backgroundColor: '#3b82f6',
-    color: '#ffffff',
+    backgroundColor: "#3b82f6",
+    color: "#ffffff",
     fontSize: 9,
-    fontWeight: '700',
+    fontWeight: "700",
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   couponCard: {
     flexDirection: "row",
@@ -400,8 +508,8 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 14,
     borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: '#cbd5e1',
+    borderStyle: "dashed",
+    borderColor: "#cbd5e1",
   },
   couponLeft: {
     flexDirection: "row",
@@ -451,7 +559,7 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: 14,
     borderWidth: 1,
-    borderColor: '#fee2e2'
+    borderColor: "#fee2e2",
   },
   cancellationTitle: {
     fontSize: 13,
@@ -489,7 +597,7 @@ const styles = StyleSheet.create({
   secureText: {
     fontSize: 11,
     color: "#64748b",
-    fontWeight: '500'
+    fontWeight: "500",
   },
   payBtn: {
     borderRadius: 16,

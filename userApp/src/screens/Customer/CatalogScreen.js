@@ -1,29 +1,25 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TextInput
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { Header } from '../../components/Header';
-import { CategoryChip } from '../../components/CategoryChip';
-import { ProductCard } from '../../components/ProductCard';
-import { useApp } from '../../context/AppContext';
-import { colors } from '../../theme/colors';
+import React, { useState } from "react";
+import { View, Text, StyleSheet, FlatList, TextInput } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { Header } from "../../components/Header";
+import { CategoryChip } from "../../components/CategoryChip";
+import { ProductCard } from "../../components/ProductCard";
+import { useApp } from "../../context/AppContext";
+import { colors } from "../../theme/colors";
 
 const GAP = 10;
 
 export const CatalogScreen = ({ navigation, route }) => {
   const { products } = useApp();
-  const initialCategory = route?.params?.initialCategory || 'all';
+  const initialCategory = route?.params?.initialCategory || "all";
   const [selectedCat, setSelectedCat] = useState(initialCategory);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
 
   const filteredProducts = products.filter((p) => {
-    const matchesCat = selectedCat === 'all' || p.category === selectedCat;
-    const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCat = selectedCat === "all" || p.category === selectedCat;
+    const matchesSearch = p.name
+      .toLowerCase()
+      .includes(searchQuery.toLowerCase());
     return matchesCat && matchesSearch;
   });
 
@@ -45,12 +41,15 @@ export const CatalogScreen = ({ navigation, route }) => {
             name="close-circle"
             size={18}
             color={colors.textMuted}
-            onPress={() => setSearchQuery('')}
+            onPress={() => setSearchQuery("")}
           />
         )}
       </View>
 
-      <CategoryChip selectedCategory={selectedCat} onSelectCategory={setSelectedCat} />
+      <CategoryChip
+        selectedCategory={selectedCat}
+        onSelectCategory={setSelectedCat}
+      />
 
       <View style={styles.countRow}>
         <Text style={styles.countText}>{filteredProducts.length} products</Text>
@@ -65,18 +64,26 @@ export const CatalogScreen = ({ navigation, route }) => {
         showsVerticalScrollIndicator={false}
         renderItem={({ item }) => (
           <View style={styles.cardWrap}>
-            <ProductCard 
-              product={item} 
-              compact 
-              onPress={() => navigation.navigate('ProductDetails', { product: item })}
+            <ProductCard
+              product={item}
+              compact
+              onPress={() =>
+                navigation.navigate("ProductDetails", { product: item })
+              }
             />
           </View>
         )}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Ionicons name="basket-outline" size={48} color={colors.textMuted} />
+            <Ionicons
+              name="basket-outline"
+              size={48}
+              color={colors.textMuted}
+            />
             <Text style={styles.emptyText}>No items found</Text>
-            <Text style={styles.emptySub}>Try another category or search term</Text>
+            <Text style={styles.emptySub}>
+              Try another category or search term
+            </Text>
           </View>
         }
       />
@@ -87,11 +94,11 @@ export const CatalogScreen = ({ navigation, route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background
+    backgroundColor: colors.background,
   },
   searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: colors.card,
     marginHorizontal: 16,
     marginTop: 12,
@@ -101,53 +108,53 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
     borderColor: colors.border,
-    gap: 8
+    gap: 8,
   },
   searchInput: {
     flex: 1,
     minWidth: 0,
     fontSize: 13,
-    fontWeight: '500',
+    fontWeight: "500",
     color: colors.textPrimary,
-    padding: 0
+    padding: 0,
   },
   countRow: {
     paddingHorizontal: 16,
     paddingBottom: 8,
-    paddingTop: 4
+    paddingTop: 4,
   },
   countText: {
     fontSize: 12,
-    fontWeight: '500',
-    color: colors.textSecondary
+    fontWeight: "500",
+    color: colors.textSecondary,
   },
   listContainer: {
     paddingHorizontal: 16,
-    paddingBottom: 24
+    paddingBottom: 24,
   },
   row: {
     gap: GAP,
     marginBottom: GAP,
-    alignItems: 'stretch'
+    alignItems: "stretch",
   },
   cardWrap: {
     flex: 1,
-    minWidth: 0
+    minWidth: 0,
   },
   emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 50
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 50,
   },
   emptyText: {
     fontSize: 15,
-    fontWeight: '500',
+    fontWeight: "500",
     color: colors.textPrimary,
-    marginTop: 10
+    marginTop: 10,
   },
   emptySub: {
     fontSize: 12,
     color: colors.textSecondary,
-    marginTop: 4
-  }
+    marginTop: 4,
+  },
 });

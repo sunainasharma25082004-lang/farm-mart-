@@ -9,12 +9,13 @@ import {
   KeyboardAvoidingView,
   Platform,
   Image,
-  Animated,
+  ActivityIndicator,
+  Alert,
   ScrollView,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { usePartner } from '../context/PartnerContext';
+import { DEMO_PARTNER_ID, DEMO_PASSWORD, usePartner } from '../context/PartnerContext';
 import { colors } from '../theme/colors';
 
 export const LoginScreen = () => {
@@ -22,31 +23,27 @@ export const LoginScreen = () => {
   const [partnerId, setPartnerId] = useState('');
   const [password, setPassword] = useState('');
   const [focusedInput, setFocusedInput] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Animation values
-  const scaleAnim = React.useRef(new Animated.Value(1)).current;
-  const fadeAnim = React.useRef(new Animated.Value(0)).current;
-
-  React.useEffect(() => {
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 500,
-      useNativeDriver: true,
-    }).start();
-  }, []);
-
-  const handlePressIn = () => Animated.spring(scaleAnim, { toValue: 0.95, useNativeDriver: true }).start();
-  const handlePressOut = () => Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true }).start();
-
-  const handleLogin = () => {
-    if (partnerId.trim() && password.trim()) {
-      loginUser({ partnerId, password });
+  const handleLogin = async () => {
+    if (!partnerId.trim() || !password.trim()) {
+      Alert.alert('Incomplete login', 'Enter your Partner ID and password.');
+      return;
     }
+
+    setIsSubmitting(true);
+    await loginUser({ partnerId: partnerId.trim(), password });
+    setIsSubmitting(false);
+  };
+
+  const useDemoCredentials = () => {
+    setPartnerId(DEMO_PARTNER_ID);
+    setPassword(DEMO_PASSWORD);
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <Animated.View style={[styles.innerContainer, { opacity: fadeAnim }]}>
+      <View style={styles.innerContainer}>
         <KeyboardAvoidingView 
           behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
           style={styles.keyboardView}
@@ -95,28 +92,43 @@ export const LoginScreen = () => {
                 />
               </View>
 
-              <Animated.View style={{ transform: [{ scale: scaleAnim }], marginTop: 10 }}>
-                <TouchableOpacity onPressIn={handlePressIn} onPressOut={handlePressOut} onPress={handleLogin} activeOpacity={0.9}>
+              <View style={{ marginTop: 10 }}>
+                <TouchableOpacity onPress={handleLogin} disabled={isSubmitting} activeOpacity={0.9}>
                   <LinearGradient
                     colors={['#16a34a', '#047857']}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
                     style={styles.loginBtn}
                   >
-                    <Text style={styles.loginBtnText}>Secure Login</Text>
-                    <Ionicons name="arrow-forward" size={18} color="#ffffff" />
+                    {isSubmitting ? (
+                      <ActivityIndicator color="#ffffff" />
+                    ) : (
+                      <>
+                        <Text style={styles.loginBtnText}>Secure Login</Text>
+                        <Ionicons name="arrow-forward" size={18} color="#ffffff" />
+                      </>
+                    )}
                   </LinearGradient>
                 </TouchableOpacity>
-              </Animated.View>
+              </View>
             </View>
 
             <View style={styles.footer}>
               <Ionicons name="shield-checkmark" size={14} color="#64748b" />
               <Text style={styles.footerText}>Secured by Farmart Admin</Text>
             </View>
+            {__DEV__ && (
+              <>
+                <TouchableOpacity style={styles.demoBtn} onPress={useDemoCredentials} activeOpacity={0.8}>
+                  <Ionicons name="flask-outline" size={16} color={colors.primaryDark} />
+                  <Text style={styles.demoBtnText}>Use demo credentials</Text>
+                </TouchableOpacity>
+                <Text style={styles.demoHint}>Demo ID: {DEMO_PARTNER_ID}  ·  Password: {DEMO_PASSWORD}</Text>
+              </>
+            )}
           </ScrollView>
         </KeyboardAvoidingView>
-      </Animated.View>
+      </View>
     </SafeAreaView>
   );
 };
@@ -233,5 +245,29 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#64748b',
     fontWeight: '500'
+  },
+  demoBtn: {
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 18,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 10,
+    backgroundColor: '#f0fdf4',
+    borderWidth: 1,
+    borderColor: '#bbf7d0'
+  },
+  demoBtnText: {
+    color: colors.primaryDark,
+    fontSize: 12,
+    fontWeight: '600'
+  },
+  demoHint: {
+    color: '#94a3b8',
+    fontSize: 10,
+    textAlign: 'center',
+    marginTop: 8
   }
 });

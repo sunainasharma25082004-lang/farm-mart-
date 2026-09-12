@@ -13,7 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, roles } from '../theme/colors';
 import { useApp } from '../context/AppContext';
 
-const LOGO = require('../../assets/farmart24_logo.jpg');
+const LOGO = require('../../assets/logo/WhatsApp Image 2026-09-10 at 12.22.02 PM (1).jpeg');
 const safeRoles = Array.isArray(roles)
   ? roles
   : [
