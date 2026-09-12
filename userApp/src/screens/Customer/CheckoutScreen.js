@@ -48,8 +48,17 @@ export const CheckoutScreen = ({ navigation }) => {
     setLoading(true);
     try {
       const data = await apiService.createOrder(total);
-      if (data.success && data.order?.id && data.keyId) {
+      if (data.success && data.order?.id) {
         setLoading(false);
+
+        // Fallback for Demo Mode if no valid keyId is returned
+        if (!data.keyId || data.keyId === "demo_key" || String(data.keyId).includes("dummy")) {
+          Alert.alert("Demo Mode", "Simulating payment success...");
+          await placeOrder("CASH_ON_DELIVERY", selectedAddress?.addressString || userProfile?.deliveryAddress, total);
+          navigation.navigate("MainTabs", { screen: "OrderTracking" });
+          return;
+        }
+
         navigation.navigate("RazorpayCheckout", {
           order: data.order,
           keyId: data.keyId,

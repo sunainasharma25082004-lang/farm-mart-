@@ -6,10 +6,10 @@ import { colors } from "../../theme/colors";
 
 export const RazorpayCheckoutWebView = ({ route, navigation }) => {
   const { order, keyId, onSuccess, onFailure } = route.params;
-  const orderAmount = JSON.stringify(String(order.amount));
-  const orderCurrency = JSON.stringify(order.currency || "INR");
-  const razorpayKey = JSON.stringify(keyId);
-  const razorpayOrderId = JSON.stringify(order.id);
+  const orderAmount = JSON.stringify(String(order?.amount || "0"));
+  const orderCurrency = JSON.stringify(order?.currency || "INR");
+  const razorpayKey = JSON.stringify(keyId || "dummy_key");
+  const razorpayOrderId = JSON.stringify(order?.id || "dummy_order");
 
   // This HTML will load Razorpay checkout in the WebView.
   // It simulates what normally happens on a web frontend.
@@ -34,6 +34,11 @@ export const RazorpayCheckoutWebView = ({ route, navigation }) => {
         <script src="https://checkout.razorpay.com/v1/checkout.js" onload="openCheckout()"></script>
         <script>
           function openCheckout() {
+            if (!window.ReactNativeWebView) {
+               setTimeout(openCheckout, 100);
+               return;
+            }
+
             var options = {
                 "key": ${razorpayKey},
                 "amount": ${orderAmount},
@@ -54,13 +59,15 @@ export const RazorpayCheckoutWebView = ({ route, navigation }) => {
                 }
             };
             try {
+              if (!options.key || options.key === "dummy_key") {
+                 throw new Error("Invalid Razorpay Key provided by server");
+              }
               var rzp1 = new Razorpay(options);
               rzp1.open();
             } catch (error) {
               window.ReactNativeWebView.postMessage(JSON.stringify({ event: 'error', message: error.message }));
             }
           }
-            
         </script>
     </body>
     </html>
