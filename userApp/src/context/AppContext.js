@@ -69,7 +69,12 @@ export const AppProvider = ({ children }) => {
 
   const fetchProducts = async () => {
     const data = await apiService.getProducts();
-    if (data && data.success && Array.isArray(data.products) && data.products.length > 0) {
+    if (
+      data &&
+      data.success &&
+      Array.isArray(data.products) &&
+      data.products.length > 0
+    ) {
       setProducts(data.products.map(normalizeProduct));
     }
   };
