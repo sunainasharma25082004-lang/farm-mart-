@@ -17,6 +17,8 @@ import adminRoutes from './routes/adminRoutes.js';
 import paymentRoutes from './routes/paymentRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
 import productRoutes from './routes/productRoutes.js';
+import enquiryRoutes from './routes/enquiryRoutes.js';
+import authRoutes from './routes/authRoutes.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -50,6 +52,8 @@ app.use('/api/admin', adminRoutes);
 app.use('/api', paymentRoutes);
 app.use('/api', orderRoutes);
 app.use('/api', productRoutes);
+app.use('/api/enquiries', enquiryRoutes);
+app.use('/api/auth', authRoutes);
 
 // Global Error Handling Middleware
 app.use((err, req, res, next) => {

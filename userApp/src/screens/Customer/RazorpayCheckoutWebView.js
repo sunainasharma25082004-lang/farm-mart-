@@ -100,7 +100,8 @@ export const RazorpayCheckoutWebView = ({ route, navigation }) => {
         </TouchableOpacity>
       </View>
       <WebView
-        source={{ html: razorpayHtml }}
+        source={{ html: razorpayHtml, baseUrl: 'https://checkout.razorpay.com' }}
+        originAllowlist={['*']}
         onMessage={handleMessage}
         javaScriptEnabled={true}
         style={{ flex: 1 }}

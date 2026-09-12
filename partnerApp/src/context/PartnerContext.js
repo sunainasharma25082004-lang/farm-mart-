@@ -4,6 +4,7 @@ import {
   initialInventoryItems,
   settlementHistory as initialSettlements
 } from '../data/mockPartnerData';
+import { Alert } from 'react-native';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://farm-mart-api.onrender.com/api';
 
@@ -113,9 +114,28 @@ export const PartnerProvider = ({ children }) => {
     }
   };
 
-  const loginUser = (credentials) => {
-    // Mock login logic
-    setIsAuthenticated(true);
+  const loginUser = async (credentials) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          appId: credentials.partnerId,
+          password: credentials.password,
+          expectedRole: 'PARTNER'
+        })
+      });
+      const data = await response.json();
+      if (data.success) {
+        setIsAuthenticated(true);
+        // Optionally update vendor profile with data.user details
+        setVendor(prev => ({ ...prev, storeName: data.user.name, contact: data.user.phone }));
+      } else {
+        Alert.alert('Login Failed', data.message || 'Invalid ID or Password');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Could not connect to server.');
+    }
   };
 
   const logoutUser = () => {

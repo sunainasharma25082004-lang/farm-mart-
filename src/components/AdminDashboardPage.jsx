@@ -34,7 +34,8 @@ export default function AdminDashboardPage({ onNavigateHome }) {
     applications: [],
     jobApplications: [],
     users: [],
-    contactInquiries: []
+    contactInquiries: [],
+    appEnquiries: []
   });
 
   const fetchData = async () => {
@@ -42,13 +43,17 @@ export default function AdminDashboardPage({ onNavigateHome }) {
     try {
       const response = await fetch(`${API_BASE_URL}/admin/data`);
       const data = await response.json();
+      
+      const enqResponse = await fetch(`${API_BASE_URL}/enquiries/admin`);
+      const enqData = await enqResponse.json();
+
       if (data.success) {
-        // Reverse arrays to show newest first
         setDashboardData({
           applications: data.data.applications.reverse(),
           jobApplications: data.data.jobApplications.reverse(),
           users: data.data.users.reverse(),
-          contactInquiries: data.data.contactInquiries.reverse()
+          contactInquiries: data.data.contactInquiries.reverse(),
+          appEnquiries: (enqData.enquiries || []).reverse()
         });
       }
     } catch (error) {
@@ -63,6 +68,21 @@ export default function AdminDashboardPage({ onNavigateHome }) {
 
   const handleUpdateStatus = async (id, type, newStatus) => {
     try {
+      if (type === 'app-enquiry' && newStatus === 'Approved') {
+        const response = await fetch(`${API_BASE_URL}/enquiries/admin/${id}/approve`, {
+          method: 'POST'
+        });
+        const data = await response.json();
+        if (data.success) {
+          fetchData();
+          setSelectedItem({ ...selectedItem, status: 'APPROVED', generatedId: data.credentials.id, generatedPassword: data.credentials.password });
+          alert(`Approved! ID: ${data.credentials.id}, Password: ${data.credentials.password}`);
+        } else {
+          alert('Failed to approve: ' + data.message);
+        }
+        return;
+      }
+
       const response = await fetch(`${API_BASE_URL}/admin/update-status`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -257,6 +277,47 @@ export default function AdminDashboardPage({ onNavigateHome }) {
     );
   };
 
+  const renderAppEnquiriesTable = () => {
+    const filtered = dashboardData.appEnquiries.filter((enq) => {
+      const matchesSearch = enq.name.toLowerCase().includes(searchQuery.toLowerCase()) || enq.phone.includes(searchQuery);
+      return matchesSearch;
+    });
+
+    return (
+      <table className="admin-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Phone</th>
+            <th>Role</th>
+            <th>Status</th>
+            <th>Generated ID</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {filtered.length === 0 && (
+            <tr><td colSpan={6} className="empty-table-msg">No App Enquiries found.</td></tr>
+          )}
+          {filtered.map(enq => (
+            <tr key={enq._id} className="table-row-item">
+              <td><strong className="table-applicant-name">{enq.name}</strong></td>
+              <td><span className="table-phone"><Phone size={13} /> {enq.phone}</span></td>
+              <td><span className="table-category-pill">{enq.role}</span></td>
+              <td><span className={`status-badge status-${enq.status.toLowerCase().replace(' ', '-')}`}>{enq.status}</span></td>
+              <td><span className="table-ref-code">{enq.generatedId || '-'}</span></td>
+              <td>
+                <button className="btn-table-action" onClick={() => setSelectedItem({ ...enq, id: enq._id, _type: 'app-enquiry' })}>
+                  <Eye size={15} /> <span>Manage</span>
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    );
+  };
+
   return (
     <div className="admin-dashboard-wrapper">
       <header className="admin-header">
@@ -318,6 +379,14 @@ export default function AdminDashboardPage({ onNavigateHome }) {
                 <span className="stat-lbl">Contact Inquiries</span>
               </div>
             </div>
+
+            <div className={`admin-stat-card ${activeMainTab === 'app-enquiries' ? 'active-stat' : ''}`} onClick={() => setActiveMainTab('app-enquiries')} style={{ cursor: 'pointer' }}>
+              <div className="stat-icon-circle amber"><Briefcase size={22} /></div>
+              <div className="stat-info">
+                <span className="stat-val">{dashboardData.appEnquiries.length}</span>
+                <span className="stat-lbl">App Enquiries</span>
+              </div>
+            </div>
           </div>
 
           <div className="admin-control-bar">
@@ -358,6 +427,7 @@ export default function AdminDashboardPage({ onNavigateHome }) {
                 {activeMainTab === 'jobs' && renderJobsTable()}
                 {activeMainTab === 'users' && renderUsersTable()}
                 {activeMainTab === 'inquiries' && renderInquiriesTable()}
+                {activeMainTab === 'app-enquiries' && renderAppEnquiriesTable()}
               </>
             )}
           </div>
@@ -426,6 +496,26 @@ export default function AdminDashboardPage({ onNavigateHome }) {
                     <button className={`status-action-btn ${selectedItem.status === 'Under Review' ? 'active-status' : ''}`} onClick={() => handleUpdateStatus(selectedItem.id, selectedItem._type, 'Under Review')}>⏳ Reviewing</button>
                     <button className={`status-action-btn ${selectedItem.status === 'Approved' ? 'active-status' : ''}`} onClick={() => handleUpdateStatus(selectedItem.id, selectedItem._type, 'Approved')}>🟢 Approve</button>
                     <button className={`status-action-btn ${selectedItem.status === 'Rejected' ? 'active-status' : ''}`} onClick={() => handleUpdateStatus(selectedItem.id, selectedItem._type, 'Rejected')}>⚫ Reject</button>
+                  </div>
+                </div>
+              )}
+
+              {/* Status Update Bar for App Enquiries */}
+              {selectedItem._type === 'app-enquiry' && selectedItem.status === 'PENDING' && (
+                <div className="modal-status-update-bar">
+                  <span className="update-lbl">Update Status:</span>
+                  <div className="status-btn-group">
+                    <button className="status-action-btn" onClick={() => handleUpdateStatus(selectedItem.id, selectedItem._type, 'Approved')}>🟢 Generate App ID & Approve</button>
+                  </div>
+                </div>
+              )}
+
+              {selectedItem._type === 'app-enquiry' && selectedItem.status === 'APPROVED' && (
+                <div className="modal-status-update-bar" style={{ backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0' }}>
+                  <span className="update-lbl" style={{ color: '#166534' }}>App Credentials Generated!</span>
+                  <div style={{ marginTop: 8 }}>
+                    <p><strong>ID:</strong> {selectedItem.generatedId}</p>
+                    <p><strong>Password:</strong> {selectedItem.generatedPassword}</p>
                   </div>
                 </div>
               )}

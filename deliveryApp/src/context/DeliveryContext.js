@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { driverProfile as initialProfile, weeklyEarningsHistory as initialHistory } from '../data/mockDeliveryData';
+import { Alert } from 'react-native';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://farm-mart-api.onrender.com/api';
 
@@ -97,9 +98,27 @@ export const DeliveryProvider = ({ children }) => {
     setCurrentTask(task);
   };
 
-  const loginUser = (credentials) => {
-    // Mock login logic
-    setIsAuthenticated(true);
+  const loginUser = async (credentials) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          appId: credentials.riderId,
+          password: credentials.password,
+          expectedRole: 'DELIVERY'
+        })
+      });
+      const data = await response.json();
+      if (data.success) {
+        setIsAuthenticated(true);
+        setProfile(prev => ({ ...prev, name: data.user.name }));
+      } else {
+        Alert.alert('Login Failed', data.message || 'Invalid ID or Password');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Could not connect to server.');
+    }
   };
 
   const logoutUser = () => {
