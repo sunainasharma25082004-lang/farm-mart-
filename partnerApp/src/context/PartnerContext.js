@@ -11,8 +11,8 @@ const API_BASE_URL =
 
 const PartnerContext = createContext();
 
-export const DEMO_PARTNER_ID = 'DEMO-PARTNER';
-export const DEMO_PASSWORD = 'demo1234';
+export const DEMO_PARTNER_ID = "DEMO-PARTNER";
+export const DEMO_PASSWORD = "demo1234";
 
 const normalizeProduct = (item) => {
   const categoryMap = {
@@ -168,9 +168,17 @@ export const PartnerProvider = ({ children }) => {
   };
 
   const loginUser = async (credentials) => {
-    if (__DEV__ && credentials.partnerId === DEMO_PARTNER_ID && credentials.password === DEMO_PASSWORD) {
+    if (
+      __DEV__ &&
+      credentials.partnerId === DEMO_PARTNER_ID &&
+      credentials.password === DEMO_PASSWORD
+    ) {
       setIsAuthenticated(true);
-      setVendor((prev) => ({ ...prev, storeName: 'Demo Farmart Partner', ownerName: 'Demo Partner' }));
+      setVendor((prev) => ({
+        ...prev,
+        storeName: "Demo Farmart Partner",
+        ownerName: "Demo Partner",
+      }));
       return true;
     }
 
