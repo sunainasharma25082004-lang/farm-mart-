@@ -268,6 +268,55 @@ export const products = [
     description: 'Hand-roasted whole spices stone-ground into intensely aromatic Garam Masala.',
     discount: 'HANDGROUND',
     inStock: true
+  },
+  // 6. Newly Uploaded Partner Products (from Chef Sunita Sharma / Partner ID: default_vendor)
+  {
+    id: 'p17',
+    name: 'Special Amritsari Chole Kulche Thali',
+    category: 'homerestro',
+    service: 'homerestro',
+    price: 140,
+    unit: 'thali',
+    rating: 5.0,
+    reviewsCount: 42,
+    farmer: 'Chef Sunita Sharma (Sunita Home Restro & Sweets)',
+    partnerId: 'default_vendor',
+    image: 'https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?w=500&auto=format&fit=crop&q=80',
+    description: 'Authentic Amritsari Chole slow-cooked with roasted spices, served with 2 soft butter kulchas, pickled onions & green chutney.',
+    discount: 'NEW PARTNER LAUNCH',
+    inStock: true
+  },
+  {
+    id: 'p18',
+    name: 'Desi Ghee Moong Dal Halwa',
+    category: 'sweets',
+    service: 'bakery_sweets',
+    price: 180,
+    unit: '250g',
+    rating: 4.9,
+    reviewsCount: 31,
+    farmer: 'Chef Sunita Sharma (Sunita Home Restro & Sweets)',
+    partnerId: 'default_vendor',
+    image: 'https://images.unsplash.com/photo-1599785209707-a456fc1337bb?w=500&auto=format&fit=crop&q=80',
+    description: 'Rich, aromatic winter delicacy prepared with slow-roasted yellow lentils, pure A2 desi cow ghee, cashews & saffron.',
+    discount: 'NEW PARTNER LAUNCH',
+    inStock: true
+  },
+  {
+    id: 'p19',
+    name: 'Farm Fresh Organic Yellow Capsicum',
+    category: 'veggies',
+    service: 'farm_harvest',
+    price: 60,
+    unit: '500g',
+    rating: 4.8,
+    reviewsCount: 24,
+    farmer: 'Chef Sunita Sharma (Sunita Home Restro & Sweets)',
+    partnerId: 'default_vendor',
+    image: 'https://images.unsplash.com/photo-1563565375-f3fdfdbefa83?w=500&auto=format&fit=crop&q=80',
+    description: 'Crispy, sweet, vitamin-rich greenhouse grown organic yellow bell peppers freshly harvested today.',
+    discount: 'NEW PARTNER LAUNCH',
+    inStock: true
   }
 ];
 

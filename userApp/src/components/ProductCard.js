@@ -2,11 +2,12 @@ import React from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
-import { useApp } from '../context/AppContext';
+import { useCart } from '../context/CartContext';
 
 export const ProductCard = ({ product, onPress, compact = false }) => {
-  const { addToCart, updateQuantity, cart } = useApp();
-  const cartItem = cart.find((item) => item.product.id === product.id);
+  const { addToCart, updateQuantity, items } = useCart();
+  const prodId = product._id || product.id;
+  const cartItem = items?.find((item) => (item.product._id || item.product.id) === prodId);
   const qty = cartItem ? cartItem.quantity : 0;
 
   return (

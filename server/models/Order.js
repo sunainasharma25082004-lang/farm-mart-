@@ -1,71 +1,127 @@
 import mongoose from 'mongoose';
 
-const orderSchema = new mongoose.Schema({
-  orderId: {
-    type: String,
-    required: true,
-    unique: true
+const orderSchema = new mongoose.Schema(
+  {
+    orderNumber: {
+      type: String,
+      unique: true,
+      required: true,
+      index: true
+    },
+    orderId: {
+      type: String,
+      default: function() {
+        return this.orderNumber;
+      }
+    },
+    clientOrderId: {
+      type: String,
+      unique: true,
+      sparse: true,
+      index: true
+    },
+    customer: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+      index: true
+    },
+    vendor: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Vendor',
+      required: true,
+      index: true
+    },
+    items: [
+      {
+        product: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'Product',
+          required: true
+        },
+        name: { type: String, required: true },
+        image: { type: String, default: '' },
+        unit: { type: String, default: 'unit' },
+        price: { type: Number, required: true },
+        qty: { type: Number, required: true, min: 1 },
+        lineTotal: { type: Number, required: true }
+      }
+    ],
+    pricing: {
+      itemsTotal: { type: Number, required: true, default: 0 },
+      deliveryFee: { type: Number, default: 0 },
+      taxes: { type: Number, default: 0 },
+      discount: { type: Number, default: 0 },
+      grandTotal: { type: Number, required: true, default: 0 }
+    },
+    payment: {
+      method: {
+        type: String,
+        enum: ['COD', 'RAZORPAY', 'ONLINE_UPI', 'UPI', 'CARD', 'WALLET'],
+        required: true
+      },
+      status: {
+        type: String,
+        enum: ['PENDING', 'PAID', 'FAILED', 'REFUNDED'],
+        default: 'PENDING'
+      },
+      razorpayOrderId: String,
+      razorpayPaymentId: String,
+      razorpaySignature: String
+    },
+    address: {
+      name: { type: String, required: true },
+      phone: { type: String, required: true },
+      line1: { type: String, required: true },
+      city: { type: String, default: 'Ludhiana' },
+      pincode: { type: String, default: '141001' },
+      lat: Number,
+      lng: Number
+    },
+    status: {
+      type: String,
+      enum: [
+        'NEW_ORDER',
+        'ACCEPTED',
+        'PREPARING',
+        'READY_FOR_RIDER',
+        'OUT_FOR_DELIVERY',
+        'DELIVERED',
+        'CANCELLED',
+        'REJECTED'
+      ],
+      default: 'NEW_ORDER',
+      index: true
+    },
+    statusHistory: [
+      {
+        status: { type: String, required: true },
+        at: { type: Date, default: Date.now },
+        by: { type: String, default: 'SYSTEM' }
+      }
+    ],
+    rejectionReason: {
+      type: String,
+      default: ''
+    },
+    deliveryOtp: {
+      type: String,
+      default: () => Math.floor(1000 + Math.random() * 9000).toString()
+    },
+    riderId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null
+    },
+    placedAt: {
+      type: Date,
+      default: Date.now
+    }
   },
-  customerName: {
-    type: String,
-    required: true
-  },
-  customerPhone: {
-    type: String,
-    required: true
-  },
-  deliveryAddress: {
-    type: String,
-    required: true
-  },
-  pickupLocation: {
-    type: String,
-    default: 'Central Hub'
-  },
-  items: [{
-    name: String,
-    qty: Number,
-    price: Number
-  }],
-  itemsCount: {
-    type: Number,
-    default: 0
-  },
-  totalAmount: {
-    type: Number,
-    required: true
-  },
-  paymentMethod: {
-    type: String,
-    enum: ['COD', 'RAZORPAY'],
-    required: true
-  },
-  paymentStatus: {
-    type: String,
-    enum: ['PENDING', 'PAID', 'FAILED'],
-    default: 'PENDING'
-  },
-  status: {
-    type: String,
-    enum: ['NEW_ORDER', 'ACCEPTED', 'PREPARING', 'READY_FOR_PICKUP', 'READY_FOR_RIDER', 'ASSIGNED', 'OUT_FOR_DELIVERY', 'DELIVERED', 'CANCELLED'],
-    default: 'NEW_ORDER'
-  },
-  deliveryType: {
-    type: String,
-    default: 'Express Rider Dispatch'
-  },
-  otpRequired: {
-    type: String,
-    default: () => Math.floor(1000 + Math.random() * 9000).toString()
-  },
-  vendorId: {
-    type: String,
-    default: 'default_vendor'
-  },
-  deliveryAgentId: {
-    type: String,
-    default: null
-  }
-}, { timestamps: true });
+  { timestamps: true }
+);
+
+orderSchema.index({ vendor: 1, status: 1 });
+orderSchema.index({ customer: 1, createdAt: -1 });
 
 export default mongoose.model('Order', orderSchema);

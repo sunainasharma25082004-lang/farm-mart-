@@ -8,6 +8,8 @@ import { colors } from '../../theme/colors';
 export const FarmerDashboardScreen = ({ navigation }) => {
   const { farmerListings, userProfile } = useApp();
 
+  const listings = Array.isArray(farmerListings) ? farmerListings : [];
+
   return (
     <View style={styles.container}>
       <Header navigation={navigation} title="Farmer Partner Portal" />
@@ -27,7 +29,7 @@ export const FarmerDashboardScreen = ({ navigation }) => {
         {/* Quick Stats */}
         <View style={styles.statsRow}>
           <View style={styles.statBox}>
-            <Text style={styles.statVal}>{farmerListings.length}</Text>
+            <Text style={styles.statVal}>{listings.length}</Text>
             <Text style={styles.statLabel}>Active Harvests</Text>
           </View>
           <View style={styles.statBox}>
@@ -51,12 +53,12 @@ export const FarmerDashboardScreen = ({ navigation }) => {
 
         {/* Existing Listings */}
         <Text style={styles.sectionTitle}>Your Harvest Produce Listings</Text>
-        {farmerListings.map((item) => (
+        {listings.map((item) => (
           <View key={item.id} style={styles.listingCard}>
             <View style={styles.listingHeader}>
               <Text style={styles.cropTitle}>{item.cropName}</Text>
               <View style={styles.statusPill}>
-                <Text style={styles.statusText}>{item.status.replace(/_/g, ' ')}</Text>
+                <Text style={styles.statusText}>{(item.status || 'SUBMITTED').replace(/_/g, ' ')}</Text>
               </View>
             </View>
 

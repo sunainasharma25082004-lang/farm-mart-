@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,243 +6,273 @@ import {
   ScrollView,
   TextInput,
   TouchableOpacity,
-  ImageBackground,
-  Dimensions
+  Image,
+  Dimensions,
+  StatusBar,
+  Platform
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Header } from '../../components/Header';
-import { CategoryChip } from '../../components/CategoryChip';
-import { ProductCard } from '../../components/ProductCard';
-import { products, services } from '../../data/mockData';
+import { apiService } from '../../services/api';
+import { useCart } from '../../context/CartContext';
+import { ClearCartModal } from '../../components/ClearCartModal';
 import { colors } from '../../theme/colors';
 
 const { width } = Dimensions.get('window');
-const CARD_GAP = 10;
-const CARD_WIDTH = (width - 32 - CARD_GAP) / 2;
 
 export const HomeScreen = ({ navigation }) => {
-  const [selectedCat, setSelectedCat] = useState('all');
-  const [selectedService, setSelectedService] = useState('all');
+  const [categories, setCategories] = useState([]);
+  const [vendors, setVendors] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
 
-  const scrollViewRef = useRef(null);
-  const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
+  const {
+    billSummary,
+    conflictModal,
+    confirmReplaceCart,
+    cancelReplaceCart
+  } = useCart();
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      let nextIndex = currentBannerIndex + 1;
-      if (nextIndex >= 3) {
-        nextIndex = 0;
+    loadHomeData();
+  }, []);
+
+  const loadHomeData = async () => {
+    try {
+      setIsLoading(true);
+      const [catRes, vendRes] = await Promise.all([
+        apiService.getCategories(),
+        apiService.getVendors()
+      ]);
+      if (catRes.success && Array.isArray(catRes.categories)) {
+        setCategories(catRes.categories);
       }
-      setCurrentBannerIndex(nextIndex);
-      // Banner width (280) + marginRight (12) = 292
-      scrollViewRef.current?.scrollTo({ x: nextIndex * 292, animated: true });
-    }, 3000);
+      if (vendRes.success && Array.isArray(vendRes.vendors)) {
+        setVendors(vendRes.vendors);
+      }
+    } catch (err) {
+      console.warn('Failed to load home data:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    return () => clearInterval(timer);
-  }, [currentBannerIndex]);
-
-  const filteredProducts = products.filter((p) => {
-    const matchesService = selectedService === 'all' || p.service === selectedService;
-    const matchesCat = selectedCat === 'all' || p.category === selectedCat;
-    const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesService && matchesCat && matchesSearch;
-  });
-
-  const productRows = [];
-  for (let i = 0; i < filteredProducts.length; i += 2) {
-    productRows.push(filteredProducts.slice(i, i + 2));
-  }
+  const homeChefs = vendors.filter((v) => v.storeType === 'HOME_CHEF');
+  const farmers = vendors.filter((v) => v.storeType === 'FARMER');
 
   return (
     <View style={styles.container}>
       <Header navigation={navigation} />
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        {/* Search */}
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[
+          styles.scrollContent,
+          billSummary.totalCount > 0 && { paddingBottom: 90 }
+        ]}
+      >
+        {/* Search Bar */}
         <View style={styles.searchSection}>
           <Ionicons name="search" size={18} color={colors.primary} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search veggies, thalis, sweets, ghee..."
+            placeholder="Search stores, veggies, home thalis, sweets..."
             placeholderTextColor={colors.textMuted}
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
-          {searchQuery.length > 0 ? (
+          {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuery('')}>
               <Ionicons name="close-circle" size={18} color={colors.textMuted} />
             </TouchableOpacity>
-          ) : (
-            <View style={styles.micWrap}>
-              <Ionicons name="mic-outline" size={16} color={colors.textSecondary} />
-            </View>
           )}
         </View>
 
-        {/* Quick info strip */}
-        <View style={styles.infoStrip}>
-          <View style={styles.infoItem}>
-            <Ionicons name="flash" size={14} color={colors.accent} />
-            <Text style={styles.infoText}>30–45 min delivery</Text>
-          </View>
-          <View style={styles.infoDot} />
-          <View style={styles.infoItem}>
-            <Ionicons name="leaf" size={14} color={colors.primary} />
-            <Text style={styles.infoText}>Farm fresh daily</Text>
-          </View>
-          <View style={styles.infoDot} />
-          <View style={styles.infoItem}>
-            <Ionicons name="shield-checkmark" size={14} color={colors.info} />
-            <Text style={styles.infoText}>Quality checked</Text>
-          </View>
-        </View>
-
-        {/* Promo banners */}
-        <ScrollView
-          ref={scrollViewRef}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.bannerSlider}
-        >
-          <ImageBackground
+        {/* Promo Top Banner */}
+        <View style={styles.bannerWrapper}>
+          <Image
             source={{
               uri: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&auto=format&fit=crop&q=80'
             }}
-            style={styles.heroBanner}
-            imageStyle={{ borderRadius: 16 }}
-          >
-            <View style={styles.heroOverlay}>
-              <View style={styles.pillBadge}>
-                <Ionicons name="sparkles" size={11} color="#ffffff" />
-                <Text style={styles.pillText}>DIRECT FROM FARMERS</Text>
-              </View>
-              <Text style={styles.heroTitle}>100% Organic & Fresh</Text>
-              <Text style={styles.heroSub}>Harvested daily from local farms</Text>
+            style={styles.bannerImg}
+          />
+          <View style={styles.bannerOverlay}>
+            <View style={styles.pillBadge}>
+              <Ionicons name="sparkles" size={11} color="#ffffff" />
+              <Text style={styles.pillText}>DIRECT FROM LOCAL STORES</Text>
             </View>
-          </ImageBackground>
+            <Text style={styles.bannerTitle}>Pesticide-Free & Fresh 🌾</Text>
+            <Text style={styles.bannerSub}>Organic farm produce & home-cooked food delivered in 30 mins</Text>
+          </View>
+        </View>
 
-          <ImageBackground
-            source={{
-              uri: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=800&auto=format&fit=crop&q=80'
-            }}
-            style={styles.heroBanner}
-            imageStyle={{ borderRadius: 16 }}
-          >
-            <View style={[styles.heroOverlay, { backgroundColor: 'rgba(220, 38, 38, 0.72)' }]}>
-              <View style={[styles.pillBadge, { backgroundColor: '#ffffff' }]}>
-                <Ionicons name="restaurant" size={11} color={colors.secondary} />
-                <Text style={[styles.pillText, { color: colors.secondary }]}>HOME CHEFS</Text>
-              </View>
-              <Text style={styles.heroTitle}>Homestyle Thalis</Text>
-              <Text style={styles.heroSub}>Cooked with pure ghee & care</Text>
-            </View>
-          </ImageBackground>
+        {/* 1. Category-First Grid (8 Categories from MongoDB) */}
+        <View style={styles.categorySection}>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionHeading}>WHAT ARE YOU LOOKING FOR?</Text>
+            <Text style={styles.sectionBadge}>8 Categories</Text>
+          </View>
 
-          <ImageBackground
-            source={{
-              uri: 'https://images.unsplash.com/photo-1599785209707-a456fc1337bb?w=800&auto=format&fit=crop&q=80'
-            }}
-            style={styles.heroBanner}
-            imageStyle={{ borderRadius: 16 }}
-          >
-            <View style={[styles.heroOverlay, { backgroundColor: 'rgba(124, 58, 237, 0.72)' }]}>
-              <View style={[styles.pillBadge, { backgroundColor: '#ffffff' }]}>
-                <Ionicons name="gift" size={11} color="#7c3aed" />
-                <Text style={[styles.pillText, { color: '#7c3aed' }]}>SWEETS & BAKERY</Text>
-              </View>
-              <Text style={styles.heroTitle}>Festival Specials</Text>
-              <Text style={styles.heroSub}>Gur ladoo, kaju katli & more</Text>
-            </View>
-          </ImageBackground>
-        </ScrollView>
+          <View style={styles.categoryGrid}>
+            {categories.map((cat) => (
+              <TouchableOpacity
+                key={cat._id}
+                style={styles.catCard}
+                onPress={() => navigation.navigate('CategoryVendors', { category: cat })}
+                activeOpacity={0.8}
+              >
+                <View style={styles.catIconWrap}>
+                  <Text style={styles.catIconText}>{cat.icon || '🥦'}</Text>
+                </View>
+                <Text style={styles.catName} numberOfLines={2}>
+                  {cat.name}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
 
-        {/* Services grid */}
-        <View style={styles.servicesContainer}>
-          <Text style={styles.superAppHeading}>FARMART SERVICES</Text>
-          <View style={styles.servicesGrid}>
-            {services.map((serv) => {
-              const isSelected = selectedService === serv.id;
+        {/* 2. Popular Stores Near You */}
+        <View style={styles.vendorSection}>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionHeading}>POPULAR STORES NEAR YOU</Text>
+            <Text style={styles.sectionSubText}>Express Delivery</Text>
+          </View>
+
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.vendorRail}>
+            {vendors.map((v) => {
+              const isOpen = v.isOpen !== false;
               return (
                 <TouchableOpacity
-                  key={serv.id}
-                  style={[
-                    styles.serviceTile,
-                    { backgroundColor: serv.bg },
-                    isSelected && styles.selectedServiceTile
-                  ]}
-                  onPress={() => setSelectedService(isSelected ? 'all' : serv.id)}
+                  key={v._id}
+                  style={[styles.vendorRailCard, !isOpen && { opacity: 0.7 }]}
+                  onPress={() => navigation.navigate('VendorStore', { vendor: v })}
                   activeOpacity={0.85}
                 >
-                  <View style={[styles.serviceIconCircle, { backgroundColor: serv.color }]}>
-                    <Ionicons name={serv.icon} size={18} color="#ffffff" />
+                  <Image
+                    source={{
+                      uri: v.banner || 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400'
+                    }}
+                    style={styles.railImg}
+                  />
+                  <View style={styles.railRatingBadge}>
+                    <Ionicons name="star" size={10} color="#ffffff" />
+                    <Text style={styles.railRatingText}>{v.rating || 4.8}</Text>
                   </View>
-                  <Text style={styles.serviceTitle} numberOfLines={2}>
-                    {serv.title}
-                  </Text>
-                  <Text style={styles.serviceSub} numberOfLines={1}>
-                    {serv.subtitle}
-                  </Text>
+
+                  <View style={styles.railInfo}>
+                    <Text style={styles.railStoreName} numberOfLines={1}>
+                      {v.storeName}
+                    </Text>
+                    <Text style={styles.railPrepTime}>
+                      ⚡ {v.avgPrepTimeMins || 25} mins • {v.address?.city || 'Ludhiana'}
+                    </Text>
+                    <Text style={[styles.railStatus, { color: isOpen ? '#15803d' : '#b91c1c' }]}>
+                      {isOpen ? '🟢 Open Now' : '🔴 Closed'}
+                    </Text>
+                  </View>
                 </TouchableOpacity>
               );
             })}
-          </View>
+          </ScrollView>
         </View>
 
-        {/* Categories */}
-        <CategoryChip selectedCategory={selectedCat} onSelectCategory={setSelectedCat} />
-
-        {/* Products */}
-        <View style={styles.sectionHeader}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.sectionTitle}>
-              {selectedService !== 'all'
-                ? services.find((s) => s.id === selectedService)?.title
-                : 'Popular near you'}
-            </Text>
-            <Text style={styles.sectionSub}>
-              {filteredProducts.length} items · Quality assured by Farmart
-            </Text>
-          </View>
-
-          {selectedService !== 'all' && (
-            <TouchableOpacity style={styles.clearBtn} onPress={() => setSelectedService('all')}>
-              <Text style={styles.resetFilterText}>Clear</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {filteredProducts.length === 0 ? (
-          <View style={styles.emptyBox}>
-            <Ionicons name="search-outline" size={40} color={colors.textMuted} />
-            <Text style={styles.emptyText}>No products match your filters</Text>
-            <TouchableOpacity
-              onPress={() => {
-                setSelectedCat('all');
-                setSelectedService('all');
-                setSearchQuery('');
-              }}
-            >
-              <Text style={styles.resetFilterText}>Reset filters</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          productRows.map((row, rowIndex) => (
-            <View key={`row-${rowIndex}`} style={styles.productRow}>
-              {row.map((product) => (
-                <View key={product.id} style={styles.productCell}>
-                  <ProductCard
-                    product={product}
-                    compact
-                    onPress={() => navigation.navigate('ProductDetails', { product })}
-                  />
-                </View>
-              ))}
-              {row.length === 1 && <View style={styles.productCell} />}
+        {/* 3. Ghar Ka Khana (Home Chefs) Rail */}
+        {homeChefs.length > 0 && (
+          <View style={styles.vendorSection}>
+            <View style={styles.sectionHeaderRow}>
+              <Text style={styles.sectionHeading}>GHAR KA KHANA (HOME CHEFS)</Text>
+              <Text style={styles.sectionSubText}>Motherly Love</Text>
             </View>
-          ))
+
+            {homeChefs.map((v) => (
+              <TouchableOpacity
+                key={v._id}
+                style={styles.featuredVendorCard}
+                onPress={() => navigation.navigate('VendorStore', { vendor: v })}
+                activeOpacity={0.9}
+              >
+                <Image
+                  source={{
+                    uri: v.banner || 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=800'
+                  }}
+                  style={styles.featuredImg}
+                />
+                <View style={styles.featuredInfo}>
+                  <View style={styles.featuredHeader}>
+                    <Text style={styles.featuredTitle}>{v.storeName}</Text>
+                    <View style={styles.ratingBadge}>
+                      <Ionicons name="star" size={11} color="#ffffff" />
+                      <Text style={styles.ratingBadgeText}>{v.rating || 4.9}</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.featuredSub}>{v.description}</Text>
+                  <View style={styles.featuredMeta}>
+                    <Text style={styles.metaTag}>🍛 Fresh Punjabi Thali</Text>
+                    <Text style={styles.metaTag}>🍰 Desi Ghee Mithai</Text>
+                    <Text style={styles.metaTag}>⚡ 25 mins</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
+        {/* 4. Farm Direct Produce */}
+        {farmers.length > 0 && (
+          <View style={styles.vendorSection}>
+            <View style={styles.sectionHeaderRow}>
+              <Text style={styles.sectionHeading}>DIRECT FROM FARMS & ORCHARDS</Text>
+              <Text style={styles.sectionSubText}>0 Middlemen</Text>
+            </View>
+
+            <View style={styles.farmerGrid}>
+              {farmers.map((v) => (
+                <TouchableOpacity
+                  key={v._id}
+                  style={styles.farmerCard}
+                  onPress={() => navigation.navigate('VendorStore', { vendor: v })}
+                  activeOpacity={0.9}
+                >
+                  <Image source={{ uri: v.banner }} style={styles.farmerImg} />
+                  <View style={styles.farmerInfo}>
+                    <Text style={styles.farmerStoreName} numberOfLines={1}>{v.storeName}</Text>
+                    <Text style={styles.farmerOwner}>👨‍🌾 {v.ownerName}</Text>
+                    <Text style={styles.farmerDesc} numberOfLines={2}>{v.description}</Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
         )}
       </ScrollView>
+
+      {/* Sticky Bottom Cart Bar */}
+      {billSummary.totalCount > 0 && (
+        <View style={styles.stickyCartBar}>
+          <View>
+            <Text style={styles.cartCountText}>{billSummary.totalCount} ITEM(S)</Text>
+            <Text style={styles.cartTotalText}>₹{billSummary.grandTotal}</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.viewCartBtn}
+            onPress={() => navigation.navigate('Cart')}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.viewCartText}>View Cart</Text>
+            <Ionicons name="arrow-forward" size={18} color="#ffffff" />
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Global Single-Vendor Conflict Modal */}
+      <ClearCartModal
+        visible={conflictModal.visible}
+        currentVendorName={conflictModal.currentVendorName}
+        newVendorName={conflictModal.newVendorName}
+        onCancel={cancelReplaceCart}
+        onConfirm={confirmReplaceCart}
+      />
     </View>
   );
 };
@@ -250,7 +280,7 @@ export const HomeScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background
+    backgroundColor: '#f8fafc'
   },
   scrollContent: {
     paddingBottom: 28
@@ -258,131 +288,42 @@ const styles = StyleSheet.create({
   searchSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.card,
+    backgroundColor: '#ffffff',
     marginHorizontal: 16,
     marginTop: 12,
-    marginBottom: 10,
+    marginBottom: 12,
     paddingHorizontal: 14,
-    paddingVertical: 11,
+    paddingVertical: 10,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: colors.border,
-    gap: 10,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 2
+    borderColor: '#e2e8f0',
+    gap: 10
   },
   searchInput: {
     flex: 1,
-    fontSize: 13,
+    fontSize: 13.5,
     fontWeight: '500',
-    color: colors.textPrimary,
+    color: '#0f172a',
     padding: 0
   },
-  micWrap: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
-    backgroundColor: colors.background,
-    alignItems: 'center',
+  bannerWrapper: {
+    height: 130,
+    marginHorizontal: 16,
+    marginBottom: 18,
+    borderRadius: 18,
+    overflow: 'hidden',
+    position: 'relative'
+  },
+  bannerImg: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover'
+  },
+  bannerOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    padding: 16,
     justifyContent: 'center'
-  },
-  infoStrip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 16,
-    marginBottom: 12,
-    gap: 8,
-    flexWrap: 'wrap'
-  },
-  infoItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4
-  },
-  infoText: {
-    fontSize: 10,
-    fontWeight: '500',
-    color: colors.textSecondary
-  },
-  infoDot: {
-    width: 3,
-    height: 3,
-    borderRadius: 2,
-    backgroundColor: colors.textMuted
-  },
-  servicesContainer: {
-    paddingHorizontal: 16,
-    marginBottom: 14
-  },
-  superAppHeading: {
-    fontSize: 11,
-    fontWeight: '500',
-    color: colors.textMuted,
-    letterSpacing: 1.1,
-    marginBottom: 10
-  },
-  servicesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10
-  },
-  serviceTile: {
-    width: '48%',
-    borderRadius: 14,
-    padding: 12,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.8)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
-    justifyContent: 'center'
-  },
-  selectedServiceTile: {
-    borderColor: colors.primary,
-    shadowColor: colors.primary,
-    shadowOpacity: 0.1,
-  },
-  serviceIconCircle: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8
-  },
-  serviceTitle: {
-    fontSize: 11,
-    fontWeight: '500',
-    color: colors.textPrimary,
-    lineHeight: 16
-  },
-  serviceSub: {
-    fontSize: 10,
-    color: colors.textSecondary,
-    marginTop: 2
-  },
-  bannerSlider: {
-    paddingLeft: 16,
-    paddingRight: 4,
-    marginBottom: 8
-  },
-  heroBanner: {
-    width: 280,
-    height: 132,
-    marginRight: 12
-  },
-  heroOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.62)',
-    borderRadius: 16,
-    padding: 14,
-    justifyContent: 'flex-end'
   },
   pillBadge: {
     flexDirection: 'row',
@@ -398,64 +339,273 @@ const styles = StyleSheet.create({
   pillText: {
     color: '#ffffff',
     fontSize: 9,
-    fontWeight: '500'
+    fontWeight: '700'
   },
-  heroTitle: {
-    fontSize: 15,
-    fontWeight: '500',
+  bannerTitle: {
+    fontSize: 17,
+    fontWeight: '800',
     color: '#ffffff'
   },
-  heroSub: {
-    fontSize: 11,
+  bannerSub: {
+    fontSize: 11.5,
     color: '#e2e8f0',
     marginTop: 2
   },
-  sectionHeader: {
+  categorySection: {
+    paddingHorizontal: 16,
+    marginBottom: 20
+  },
+  sectionHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    marginTop: 8,
     marginBottom: 12
   },
-  sectionTitle: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: colors.textPrimary
+  sectionHeading: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#64748b',
+    letterSpacing: 0.8
   },
-  sectionSub: {
+  sectionBadge: {
     fontSize: 11,
-    color: colors.textSecondary,
+    fontWeight: '700',
+    color: '#16a34a'
+  },
+  sectionSubText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#64748b'
+  },
+  categoryGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    justifyContent: 'space-between'
+  },
+  catCard: {
+    width: '23%',
+    backgroundColor: '#ffffff',
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 6,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    shadowColor: 'rgba(15, 23, 42, 0.04)',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 1,
+    shadowRadius: 4,
+    elevation: 1
+  },
+  catIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#f0fdf4',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 6
+  },
+  catIconText: {
+    fontSize: 22
+  },
+  catName: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: '#1e293b',
+    textAlign: 'center',
+    lineHeight: 14
+  },
+  vendorSection: {
+    marginBottom: 22,
+    paddingHorizontal: 16
+  },
+  vendorRail: {
+    gap: 12,
+    paddingVertical: 4
+  },
+  vendorRailCard: {
+    width: 170,
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#e2e8f0'
+  },
+  railImg: {
+    width: '100%',
+    height: 95,
+    resizeMode: 'cover'
+  },
+  railRatingBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    backgroundColor: 'rgba(15, 23, 42, 0.85)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6
+  },
+  railRatingText: {
+    color: '#ffffff',
+    fontSize: 10,
+    fontWeight: '800'
+  },
+  railInfo: {
+    padding: 10
+  },
+  railStoreName: {
+    fontSize: 13.5,
+    fontWeight: '700',
+    color: '#0f172a'
+  },
+  railPrepTime: {
+    fontSize: 11,
+    color: '#64748b',
     marginTop: 2
   },
-  clearBtn: {
-    backgroundColor: colors.secondaryLight,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8
+  railStatus: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    marginTop: 4
   },
-  resetFilterText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: colors.secondary
+  featuredVendorCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 18,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    marginBottom: 12
   },
-  productRow: {
+  featuredImg: {
+    width: '100%',
+    height: 120,
+    resizeMode: 'cover'
+  },
+  featuredInfo: {
+    padding: 14
+  },
+  featuredHeader: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
-    gap: CARD_GAP,
-    marginBottom: CARD_GAP
+    justifyContent: 'space-between',
+    alignItems: 'center'
   },
-  productCell: {
-    width: CARD_WIDTH
+  featuredTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0f172a'
   },
-  emptyBox: {
+  ratingBadge: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 40,
-    gap: 8
+    gap: 3,
+    backgroundColor: '#16a34a',
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 6
   },
-  emptyText: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    fontWeight: '500'
+  ratingBadgeText: {
+    color: '#ffffff',
+    fontSize: 11,
+    fontWeight: '800'
+  },
+  featuredSub: {
+    fontSize: 12.5,
+    color: '#64748b',
+    marginTop: 4
+  },
+  featuredMeta: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 10,
+    flexWrap: 'wrap'
+  },
+  metaTag: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#15803d',
+    backgroundColor: '#f0fdf4',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6
+  },
+  farmerGrid: {
+    gap: 12
+  },
+  farmerCard: {
+    flexDirection: 'row',
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#e2e8f0'
+  },
+  farmerImg: {
+    width: 100,
+    height: 100,
+    resizeMode: 'cover'
+  },
+  farmerInfo: {
+    flex: 1,
+    padding: 12,
+    justifyContent: 'center'
+  },
+  farmerStoreName: {
+    fontSize: 14.5,
+    fontWeight: '700',
+    color: '#0f172a'
+  },
+  farmerOwner: {
+    fontSize: 12,
+    color: '#15803d',
+    fontWeight: '600',
+    marginTop: 2
+  },
+  farmerDesc: {
+    fontSize: 12,
+    color: '#64748b',
+    marginTop: 4
+  },
+  stickyCartBar: {
+    position: 'absolute',
+    bottom: 16,
+    left: 16,
+    right: 16,
+    backgroundColor: '#15803d',
+    borderRadius: 16,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    shadowColor: '#15803d',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 8
+  },
+  cartCountText: {
+    color: '#bbf7d0',
+    fontSize: 11,
+    fontWeight: '700'
+  },
+  cartTotalText: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: '800'
+  },
+  viewCartBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6
+  },
+  viewCartText: {
+    color: '#ffffff',
+    fontWeight: '800',
+    fontSize: 15
   }
 });

@@ -1,124 +1,112 @@
-import React, { createContext, useState, useContext } from "react";
-import {
-  initialOrders,
-  initialFarmerListings,
-  products,
-} from "../data/mockData";
-import { apiService } from "../services/api";
+import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
+import { apiService, setAuthToken } from '../services/api';
 
 const AppContext = createContext();
 
-export const AppProvider = ({ children }) => {
-  const [activeRole, setActiveRole] = useState("customer");
-  const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
-  const [cart, setCart] = useState([
-    { product: products[0], quantity: 2 },
-    { product: products[1], quantity: 1 },
-  ]);
-  const [orders, setOrders] = useState(initialOrders);
-  const [farmerListings, setFarmerListings] = useState(initialFarmerListings);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [userProfile, setUserProfile] = useState(null);
+const INITIAL_FARMER_LISTINGS = [
+  {
+    id: 'fl-1',
+    cropName: 'Organic Red Vine Tomatoes',
+    quantity: '250 kg',
+    expectedPrice: 35,
+    status: 'ACTIVE_LISTING',
+    hubAssigned: 'Tarn Taran Village Hub'
+  },
+  {
+    id: 'fl-2',
+    cropName: 'Fresh Punjab Green Spinach (Palak)',
+    quantity: '120 kg',
+    expectedPrice: 22,
+    status: 'PROCURED',
+    hubAssigned: 'Model Town Hub'
+  },
+  {
+    id: 'fl-3',
+    cropName: 'Kinnow Mandarin Citrus',
+    quantity: '500 kg',
+    expectedPrice: 65,
+    status: 'IN_TRANSIT',
+    hubAssigned: 'Abohar Hub'
+  }
+];
 
-  const loginUser = (user) => {
-    setUserProfile(user);
+export const AppProvider = ({ children }) => {
+  const [activeRole, setActiveRole] = useState('customer');
+  const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(true); // Default true for seamless demo
+  const [token, setToken] = useState(null);
+  const [userProfile, setUserProfile] = useState({
+    name: 'Rajesh Kumar',
+    fullName: 'Rajesh Kumar',
+    phone: '9876543210',
+    email: 'rajesh.customer@farmart.in',
+    city: 'Ludhiana',
+    address: 'Flat 302, Green Avenue, Model Town, Ludhiana',
+    walletBalance: 250
+  });
+
+  // Farmer portal listings state
+  const [farmerListings, setFarmerListings] = useState(INITIAL_FARMER_LISTINGS);
+
+  const addFarmerListing = useCallback((newListing) => {
+    setFarmerListings((prev) => [
+      {
+        id: `fl-${Date.now()}`,
+        status: 'SUBMITTED',
+        hubAssigned: 'Ludhiana Central Hub',
+        ...newListing
+      },
+      ...prev
+    ]);
+  }, []);
+
+  // Login customer with phone & password or directly pass demo profile
+  const loginUser = useCallback(async (userOrPhone = '9876543210', password = 'demo123') => {
+    // If a profile object is passed directly (from demo login / skip login)
+    if (typeof userOrPhone === 'object' && userOrPhone !== null) {
+      setUserProfile((prev) => ({ ...prev, ...userOrPhone }));
+      setIsAuthenticated(true);
+      return userOrPhone;
+    }
+
+    try {
+      const res = await apiService.customerLogin(userOrPhone, password);
+      if (res && res.success && res.user) {
+        setUserProfile(res.user);
+        if (res.token) setToken(res.token);
+        setIsAuthenticated(true);
+        return res.user;
+      }
+    } catch (e) {
+      console.warn('Customer login API fallback:', e);
+    }
+
+    // Graceful demo fallback so login is never blocked offline
+    const fallbackUser = {
+      name: 'Rajesh Kumar',
+      fullName: 'Rajesh Kumar',
+      phone: typeof userOrPhone === 'string' ? userOrPhone : '9876543210',
+      email: 'rajesh.customer@farmart.in',
+      city: 'Ludhiana',
+      address: 'Flat 302, Green Avenue, Model Town, Ludhiana',
+      walletBalance: 250
+    };
+    setUserProfile(fallbackUser);
     setIsAuthenticated(true);
-  };
+    return fallbackUser;
+  }, []);
 
   const logoutUser = () => {
     setUserProfile(null);
+    setToken(null);
+    setAuthToken(null);
     setIsAuthenticated(false);
-    clearCart();
   };
 
-  const addToCart = (product) => {
-    setCart((prevCart) => {
-      const existing = prevCart.find((item) => item.product.id === product.id);
-      if (existing) {
-        return prevCart.map((item) =>
-          item.product.id === product.id
-            ? { ...item, quantity: item.quantity + 1 }
-            : item,
-        );
-      }
-      return [...prevCart, { product, quantity: 1 }];
-    });
-  };
-
-  const removeFromCart = (productId) => {
-    setCart((prevCart) =>
-      prevCart.filter((item) => item.product.id !== productId),
-    );
-  };
-
-  const updateQuantity = (productId, delta) => {
-    setCart((prevCart) =>
-      prevCart
-        .map((item) => {
-          if (item.product.id === productId) {
-            const newQty = item.quantity + delta;
-            return newQty > 0 ? { ...item, quantity: newQty } : null;
-          }
-          return item;
-        })
-        .filter(Boolean),
-    );
-  };
-
-  const clearCart = () => setCart([]);
-
-  const getCartTotal = () => {
-    return cart.reduce(
-      (total, item) => total + item.product.price * item.quantity,
-      0,
-    );
-  };
-
-  const placeOrder = async (paymentMethod, deliveryAddress) => {
-    const totalAmount = getCartTotal();
-    const orderData = {
-      orderId: `FMT-ORD-${Math.floor(1000 + Math.random() * 9000)}`,
-      customerName: userProfile?.fullName || userProfile?.name || "Customer",
-      customerPhone: userProfile?.phone || "9999999999",
-      deliveryAddress: deliveryAddress || "Default Registered Address",
-      pickupLocation: userProfile?.villageHub || "Central Hub",
-      items: cart.map((item) => ({
-        name: item.product.name,
-        qty: item.quantity,
-        price: item.product.price,
-      })),
-      totalAmount,
-      paymentMethod,
-      paymentStatus: paymentMethod === "RAZORPAY" ? "PAID" : "PENDING",
-      vendorId: "default_vendor" // or map based on items
-    };
-
-    try {
-      const response = await apiService.placeOrder(orderData);
-      if (response.success) {
-        setOrders([response.order, ...orders]);
-        clearCart();
-        return response.order;
-      }
-    } catch (e) {
-      console.warn("Backend error, falling back to local orders state:", e);
-      // Fallback for demo mode
-      const localOrder = { ...orderData, status: "NEW_ORDER" };
-      setOrders([localOrder, ...orders]);
-      clearCart();
-      return localOrder;
-    }
-  };
-
-  const addFarmerListing = (listing) => {
-    const newListing = {
-      id: `f-${Date.now()}`,
-      ...listing,
-      status: "ACCEPTED_BY_HUB",
-      hubAssigned: userProfile?.villageHub || userProfile?.city || "Central Hub",
-    };
-    setFarmerListings([newListing, ...farmerListings]);
-  };
+  // Initial customer login to obtain JWT token for socket & API
+  useEffect(() => {
+    loginUser('9876543210', 'demo123');
+  }, [loginUser]);
 
   return (
     <AppContext.Provider
@@ -127,21 +115,14 @@ export const AppProvider = ({ children }) => {
         setActiveRole,
         isRoleModalOpen,
         setIsRoleModalOpen,
-        cart,
-        addToCart,
-        removeFromCart,
-        updateQuantity,
-        clearCart,
-        getCartTotal,
-        orders,
-        placeOrder,
-        farmerListings,
-        addFarmerListing,
+        isAuthenticated,
         userProfile,
         setUserProfile,
-        isAuthenticated,
+        token,
         loginUser,
         logoutUser,
+        farmerListings,
+        addFarmerListing
       }}
     >
       {children}

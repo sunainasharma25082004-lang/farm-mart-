@@ -12,21 +12,22 @@ import {
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
-import { useApp } from '../../context/AppContext';
+import { useCart } from '../../context/CartContext';
 import { products } from '../../data/mockData';
 import { ProductCard } from '../../components/ProductCard';
 
 const { width } = Dimensions.get('window');
 
 export const ProductDetailsScreen = ({ route, navigation }) => {
-  const { product } = route.params;
-  const { addToCart, updateQuantity, cart } = useApp();
+  const product = route.params?.product || products[0] || {};
+  const { addToCart, updateQuantity, items, billSummary } = useCart();
   
-  const cartItem = cart.find(item => item.product.id === product.id);
+  const prodId = product._id || product.id || 'p1';
+  const cartItem = items?.find(item => (item.product?._id || item.product?.id) === prodId);
   const qtyInCart = cartItem ? cartItem.quantity : 0;
 
   const similarProducts = products
-    .filter(p => p.category === product.category && p.id !== product.id)
+    .filter(p => p.category === product.category && (p._id || p.id) !== prodId)
     .slice(0, 5);
 
   return (
@@ -38,9 +39,9 @@ export const ProductDetailsScreen = ({ route, navigation }) => {
         </TouchableOpacity>
         <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.navigate('Cart')}>
           <Ionicons name="cart-outline" size={26} color={colors.textPrimary} />
-          {cart.length > 0 && (
+          {billSummary.totalCount > 0 && (
             <View style={styles.badge}>
-              <Text style={styles.badgeText}>{cart.length}</Text>
+              <Text style={styles.badgeText}>{billSummary.totalCount}</Text>
             </View>
           )}
         </TouchableOpacity>

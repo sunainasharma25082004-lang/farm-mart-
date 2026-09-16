@@ -1,10 +1,11 @@
-import React, { useEffect, Component } from 'react';
+import React, { Component } from 'react';
 import { StyleSheet, StatusBar, Platform, View, Text, TouchableOpacity } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer } from '@react-navigation/native';
-import { AppProvider } from './src/context/AppContext';
+import { AppProvider, useApp } from './src/context/AppContext';
+import { CartProvider } from './src/context/CartContext';
+import { SocketProvider } from './src/context/SocketContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
-import { apiService } from './src/services/api';
 import { colors } from './src/theme/colors';
 
 class ErrorBoundary extends Component {
@@ -43,25 +44,30 @@ class ErrorBoundary extends Component {
   }
 }
 
-export default function App() {
-  useEffect(() => {
-    apiService.checkHealth().then((data) => {
-      console.log('Farmart API Health:', data);
-    }).catch(() => {
-      // Backend may be offline during local UI work
-    });
-  }, []);
+// Inner container that passes customer auth token and userId to SocketProvider
+function UserAppContainer() {
+  const { userProfile, token } = useApp();
 
+  return (
+    <SocketProvider token={token} userId={userProfile?._id || userProfile?.id}>
+      <CartProvider>
+        <View style={styles.container}>
+          <StatusBar barStyle="dark-content" backgroundColor={colors.card} />
+          <NavigationContainer>
+            <RootNavigator />
+          </NavigationContainer>
+        </View>
+      </CartProvider>
+    </SocketProvider>
+  );
+}
+
+export default function App() {
   return (
     <ErrorBoundary>
       <SafeAreaProvider>
         <AppProvider>
-          <View style={styles.container}>
-            <StatusBar barStyle="dark-content" backgroundColor={colors.card} />
-            <NavigationContainer>
-              <RootNavigator />
-            </NavigationContainer>
-          </View>
+          <UserAppContainer />
         </AppProvider>
       </SafeAreaProvider>
     </ErrorBoundary>
@@ -79,30 +85,30 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
+    padding: 24
   },
   errorTitle: {
     fontSize: 22,
-    fontWeight: '500',
+    fontWeight: '700',
     color: '#0f172a',
-    marginBottom: 8,
+    marginBottom: 8
   },
   errorSub: {
     fontSize: 14,
     color: '#64748b',
     textAlign: 'center',
     marginBottom: 20,
-    lineHeight: 20,
+    lineHeight: 20
   },
   restartBtn: {
     backgroundColor: colors.primary,
     paddingHorizontal: 24,
     paddingVertical: 12,
-    borderRadius: 12,
+    borderRadius: 12
   },
   restartBtnText: {
     color: '#ffffff',
     fontSize: 15,
-    fontWeight: '500',
-  },
+    fontWeight: '600'
+  }
 });

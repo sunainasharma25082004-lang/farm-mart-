@@ -69,6 +69,36 @@ export const initialInventoryItems = [
     unit: '500g',
     stock: 8,
     isAvailable: true
+  },
+  {
+    id: 'v-item-4',
+    name: 'Special Amritsari Chole Kulche Thali',
+    category: 'Home Restro',
+    price: 140,
+    unit: 'thali',
+    stock: 20,
+    isAvailable: true,
+    partnerId: 'default_vendor'
+  },
+  {
+    id: 'v-item-5',
+    name: 'Desi Ghee Moong Dal Halwa',
+    category: 'Desi Sweets',
+    price: 180,
+    unit: '250g',
+    stock: 15,
+    isAvailable: true,
+    partnerId: 'default_vendor'
+  },
+  {
+    id: 'v-item-6',
+    name: 'Farm Fresh Organic Yellow Capsicum',
+    category: 'Organic Farm',
+    price: 60,
+    unit: '500g',
+    stock: 35,
+    isAvailable: true,
+    partnerId: 'default_vendor'
   }
 ];
 

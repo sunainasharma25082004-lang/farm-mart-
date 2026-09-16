@@ -63,8 +63,9 @@ export const RoleSelectorModal = () => {
           </View>
 
           <ScrollView style={styles.roleList} showsVerticalScrollIndicator={false}>
-            {safeRoles.map((role) => {
-              const isSelected = activeRole === role.id;
+            {safeRoles && safeRoles.length > 0 ? (
+              safeRoles.map((role) => {
+                const isSelected = activeRole === role.id;
                 return (
                   <TouchableOpacity
                     key={role.id}

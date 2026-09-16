@@ -1,0 +1,215 @@
+import Vendor from '../models/Vendor.js';
+import Product from '../models/Product.js';
+import Order from '../models/Order.js';
+
+export const getAllVendors = async (req, res) => {
+  try {
+    const { storeType, openOnly, category } = req.query;
+    const query = { isActive: true };
+
+    if (storeType) {
+      query.storeType = storeType.toUpperCase();
+    }
+    if (openOnly === 'true') {
+      query.isOpen = true;
+    }
+    if (category) {
+      query.categories = category;
+    }
+
+    const vendors = await Vendor.find(query)
+      .populate('categories', 'name slug icon type')
+      .sort({ isOpen: -1, rating: -1 });
+
+    res.json({
+      success: true,
+      count: vendors.length,
+      vendors
+    });
+  } catch (err) {
+    console.error('Error fetching vendors:', err);
+    res.status(500).json({ success: false, message: 'Failed to fetch vendors' });
+  }
+};
+
+export const getVendorById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const vendor = await Vendor.findById(id).populate('categories');
+
+    if (!vendor) {
+      return res.status(404).json({ success: false, message: 'Vendor not found' });
+    }
+
+    res.json({ success: true, vendor });
+  } catch (err) {
+    console.error('Error fetching vendor:', err);
+    res.status(500).json({ success: false, message: 'Failed to fetch vendor' });
+  }
+};
+
+export const getVendorProducts = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { category, subCategory } = req.query;
+
+    const query = { vendor: id, isActive: true };
+    if (category) query.category = category;
+    if (subCategory) query.subCategory = subCategory;
+
+    const products = await Product.find(query)
+      .populate('category', 'name slug icon type')
+      .sort({ inStock: -1, price: 1 });
+
+    res.json({
+      success: true,
+      count: products.length,
+      products
+    });
+  } catch (err) {
+    console.error('Error fetching vendor products:', err);
+    res.status(500).json({ success: false, message: 'Failed to fetch vendor products' });
+  }
+};
+
+export const toggleStoreStatus = async (req, res) => {
+  try {
+    const vendorId = req.user.vendorId || req.user.id;
+    const { isOpen } = req.body;
+
+    const vendor = await Vendor.findById(vendorId);
+    if (!vendor) {
+      return res.status(404).json({ success: false, message: 'Vendor not found' });
+    }
+
+    vendor.isOpen = typeof isOpen === 'boolean' ? isOpen : !vendor.isOpen;
+    await vendor.save();
+
+    console.log(`🏪 Vendor ${vendor.storeName} toggled store: ${vendor.isOpen ? 'OPEN' : 'CLOSED'}`);
+
+    res.json({
+      success: true,
+      message: `Store is now ${vendor.isOpen ? 'ONLINE (Accepting Orders)' : 'OFFLINE (Closed)'}`,
+      isOpen: vendor.isOpen,
+      vendor
+    });
+  } catch (err) {
+    console.error('Error toggling store status:', err);
+    res.status(500).json({ success: false, message: 'Failed to update store status' });
+  }
+};
+
+export const getVendorOrders = async (req, res) => {
+  try {
+    const vendorId = req.user.vendorId || req.user.id;
+    const { status, limit = 50 } = req.query;
+
+    const query = { vendor: vendorId };
+
+    if (status === 'active') {
+      query.status = { $in: ['NEW_ORDER', 'ACCEPTED', 'PREPARING', 'READY_FOR_RIDER', 'OUT_FOR_DELIVERY'] };
+    } else if (status === 'completed') {
+      query.status = 'DELIVERED';
+    } else if (status && status !== 'all') {
+      query.status = status;
+    }
+
+    const orders = await Order.find(query)
+      .populate('customer', 'name phone')
+      .sort({ createdAt: -1 })
+      .limit(parseInt(limit, 10));
+
+    res.json({
+      success: true,
+      count: orders.length,
+      orders
+    });
+  } catch (err) {
+    console.error('Error fetching vendor orders:', err);
+    res.status(500).json({ success: false, message: 'Failed to fetch vendor orders' });
+  }
+};
+
+export const getVendorStats = async (req, res) => {
+  try {
+    const vendorId = req.user.vendorId || req.user.id;
+
+    // Start of today in UTC
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+
+    const [todayDelivered, todayOrdersCount, activeCount, allTimeOrders] = await Promise.all([
+      // Today's Delivered Revenue
+      Order.aggregate([
+        {
+          $match: {
+            vendor: vendorId,
+            status: 'DELIVERED',
+            createdAt: { $gte: startOfToday }
+          }
+        },
+        {
+          $group: {
+            _id: null,
+            totalSales: { $sum: '$pricing.grandTotal' },
+            count: { $sum: 1 }
+          }
+        }
+      ]),
+      // Today's total placed orders
+      Order.countDocuments({
+        vendor: vendorId,
+        createdAt: { $gte: startOfToday }
+      }),
+      // Active orders in progress right now
+      Order.countDocuments({
+        vendor: vendorId,
+        status: { $in: ['NEW_ORDER', 'ACCEPTED', 'PREPARING', 'READY_FOR_RIDER'] }
+      }),
+      // All-time completed orders
+      Order.countDocuments({
+        vendor: vendorId,
+        status: 'DELIVERED'
+      })
+    ]);
+
+    const todaySales = todayDelivered[0]?.totalSales || 0;
+    const todayDeliveredCount = todayDelivered[0]?.count || 0;
+
+    res.json({
+      success: true,
+      stats: {
+        todaySales,
+        todayOrdersCount,
+        todayDeliveredCount,
+        activeOrdersCount: activeCount,
+        allTimeDelivered: allTimeOrders
+      }
+    });
+  } catch (err) {
+    console.error('Error fetching vendor stats:', err);
+    res.status(500).json({ success: false, message: 'Failed to fetch vendor stats' });
+  }
+};
+
+export const updateVendorProfile = async (req, res) => {
+  try {
+    const vendorId = req.user.vendorId || req.user.id;
+    const { storeName, description, avgPrepTimeMins, minOrderValue, deliveryRadiusKm } = req.body;
+
+    const vendor = await Vendor.findById(vendorId);
+    if (!vendor) return res.status(404).json({ success: false, message: 'Vendor not found' });
+
+    if (storeName) vendor.storeName = storeName.trim();
+    if (description !== undefined) vendor.description = description.trim();
+    if (avgPrepTimeMins) vendor.avgPrepTimeMins = Number(avgPrepTimeMins);
+    if (minOrderValue) vendor.minOrderValue = Number(minOrderValue);
+    if (deliveryRadiusKm) vendor.deliveryRadiusKm = Number(deliveryRadiusKm);
+
+    await vendor.save();
+    res.json({ success: true, vendor });
+  } catch (err) {
+    console.error('Error updating vendor profile:', err);
+    res.status(500).json({ success: false, message: 'Failed to update vendor profile' });
+  }
+};

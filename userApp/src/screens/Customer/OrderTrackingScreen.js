@@ -1,129 +1,347 @@
-import React, { Fragment } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Linking,
+  StatusBar,
+  Platform
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Header } from '../../components/Header';
-import { useApp } from '../../context/AppContext';
+import { apiService } from '../../services/api';
+import { useCustomerSocket } from '../../context/SocketContext';
 import { colors } from '../../theme/colors';
 
-const statusMeta = {
-  PLACED: { label: 'Placed', color: colors.info, bg: '#dbeafe' },
-  PACKED: { label: 'Packed', color: colors.accent, bg: colors.accentLight },
-  IN_TRANSIT: { label: 'On the way', color: colors.orange, bg: colors.orangeLight },
-  DELIVERED: { label: 'Delivered', color: colors.success, bg: colors.primaryLight }
-};
+const TRACKING_STEPS = [
+  { key: 'NEW_ORDER', title: 'Placed', icon: 'receipt-outline' },
+  { key: 'ACCEPTED', title: 'Accepted', icon: 'checkmark-circle-outline' },
+  { key: 'PREPARING', title: 'Preparing', icon: 'flame-outline' },
+  { key: 'READY_FOR_RIDER', title: 'Order Packed', icon: 'cube-outline' },
+  { key: 'OUT_FOR_DELIVERY', title: 'On Way', icon: 'bicycle-outline' },
+  { key: 'DELIVERED', title: 'Delivered', icon: 'home-outline' }
+];
 
-export const OrderTrackingScreen = ({ navigation }) => {
-  const { orders } = useApp();
+export const OrderTrackingScreen = ({ route, navigation }) => {
+  const initialOrder = route.params?.order;
+  const [activeOrder, setActiveOrder] = useState(initialOrder || null);
+  const [orders, setOrders] = useState(initialOrder ? [initialOrder] : []);
+  const [isLoading, setIsLoading] = useState(!initialOrder);
 
-  const getStepState = (orderStatus, step) => {
-    const order = ['PLACED', 'PACKED', 'IN_TRANSIT', 'DELIVERED'];
-    // Treat unknown as at least PLACED
-    let idx = order.indexOf(orderStatus);
-    if (idx < 0) idx = 0;
-    // Map PACKED into timeline: PLACED -> PACKED (hub) -> IN_TRANSIT -> DELIVERED
-    // Our steps: 0 placed, 1 packed, 2 transit, 3 delivered
-    if (orderStatus === 'PLACED' && step === 0) return 'done';
-    if (orderStatus === 'PLACED' && step === 1) return 'current';
-    if (orderStatus === 'IN_TRANSIT' && step <= 2) return step < 2 ? 'done' : 'current';
-    if (orderStatus === 'DELIVERED') return 'done';
-    if (step < idx) return 'done';
-    if (step === idx) return 'current';
-    return 'todo';
+  const { activeOrderUpdate, trackOrder } = useCustomerSocket();
+
+  useEffect(() => {
+    fetchMyOrders();
+    const interval = setInterval(fetchMyOrders, 8000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    if (activeOrder?._id) {
+      trackOrder(activeOrder._id);
+    }
+  }, [activeOrder?._id]);
+
+  // Live Socket Status update listener
+  useEffect(() => {
+    if (activeOrderUpdate && (activeOrderUpdate.orderId || activeOrderUpdate.orderNumber)) {
+      const isTarget =
+        (activeOrder?._id && String(activeOrder._id) === String(activeOrderUpdate.orderId)) ||
+        (activeOrder?.orderNumber && activeOrder.orderNumber === activeOrderUpdate.orderNumber);
+
+      if (isTarget) {
+        console.log('⚡ Updating active order state from socket:', activeOrderUpdate.status);
+        setActiveOrder((prev) => ({
+          ...prev,
+          status: activeOrderUpdate.status,
+          rejectionReason: activeOrderUpdate.rejectionReason,
+          statusHistory: activeOrderUpdate.statusHistory || prev?.statusHistory
+        }));
+      }
+
+      setOrders((prev) =>
+        prev.map((o) => {
+          const match =
+            (o._id && String(o._id) === String(activeOrderUpdate.orderId)) ||
+            (o.orderNumber && o.orderNumber === activeOrderUpdate.orderNumber);
+          return match
+            ? { ...o, status: activeOrderUpdate.status, rejectionReason: activeOrderUpdate.rejectionReason }
+            : o;
+        })
+      );
+    }
+  }, [activeOrderUpdate, activeOrder?._id, activeOrder?.orderNumber]);
+
+  const fetchMyOrders = async () => {
+    try {
+      setIsLoading(true);
+      const res = await apiService.getCustomerOrders();
+      if (res.success && Array.isArray(res.orders) && res.orders.length > 0) {
+        setOrders(res.orders);
+        if (!activeOrder) {
+          setActiveOrder(res.orders[0]);
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to fetch customer orders:', e);
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  const getStepIndex = (status) => {
+    const idx = TRACKING_STEPS.findIndex((s) => s.key === status);
+    return idx >= 0 ? idx : 0;
+  };
+
+  const currentStepIdx = getStepIndex(activeOrder?.status || 'NEW_ORDER');
+
+  const callStore = (phone) => {
+    if (phone) {
+      Linking.openURL(`tel:${phone}`);
+    }
+  };
+
+  const getStatusInfo = (status) => {
+    switch (status) {
+      case 'NEW_ORDER':
+        return {
+          title: 'Order Placed with Store ⏳',
+          sub: 'Waiting for store to confirm and start preparation.',
+          bg: '#eff6ff',
+          border: '#bfdbfe',
+          textColor: '#1e40af',
+          icon: 'time-outline'
+        };
+      case 'ACCEPTED':
+      case 'PREPARING':
+        return {
+          title: 'Preparing Your Order 🔥',
+          sub: 'The kitchen/store is preparing your fresh order and packing it with care.',
+          bg: '#fff7ed',
+          border: '#fed7aa',
+          textColor: '#c2410c',
+          icon: 'flame-outline'
+        };
+      case 'READY_FOR_RIDER':
+        return {
+          title: 'Done! Order is Packed 📦',
+          sub: 'Done! Your order is packed, and soon our delivery partner will pick and deliver to you.',
+          bg: '#f0fdf4',
+          border: '#86efac',
+          textColor: '#15803d',
+          icon: 'checkmark-circle'
+        };
+      case 'OUT_FOR_DELIVERY':
+        return {
+          title: 'Out for Delivery 🚴',
+          sub: 'Our delivery partner has picked up your package and is on the way to you!',
+          bg: '#ecfeff',
+          border: '#a5f3fc',
+          textColor: '#0e7490',
+          icon: 'bicycle-outline'
+        };
+      case 'DELIVERED':
+        return {
+          title: 'Order Delivered Successfully 🎉',
+          sub: 'Delivered! Enjoy your fresh meal and farm produce.',
+          bg: '#f0fdf4',
+          border: '#bbf7d0',
+          textColor: '#166534',
+          icon: 'checkmark-done-circle'
+        };
+      case 'REJECTED':
+      case 'CANCELLED':
+        return {
+          title: 'Order Cancelled ❌',
+          sub: activeOrder?.rejectionReason || 'Store was unable to accept this order.',
+          bg: '#fef2f2',
+          border: '#fecaca',
+          textColor: '#991b1b',
+          icon: 'close-circle'
+        };
+      default:
+        return {
+          title: 'Order Processing',
+          sub: 'Your order is being processed by the store.',
+          bg: '#f8fafc',
+          border: '#e2e8f0',
+          textColor: '#334155',
+          icon: 'information-circle-outline'
+        };
+    }
+  };
+
+  const statusInfo = getStatusInfo(activeOrder?.status || 'NEW_ORDER');
 
   return (
     <View style={styles.container}>
-      <Header navigation={navigation} title="Your Orders" />
+      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+      <Header navigation={navigation} title="Live Order Tracker" showCart={false} showBack />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {orders.length === 0 ? (
-          <View style={styles.emptyView}>
-            <View style={styles.emptyIcon}>
-              <Ionicons name="cube-outline" size={40} color={colors.primary} />
+        {activeOrder ? (
+          <View style={styles.activeCard}>
+            {/* Live Header Status */}
+            <View style={styles.activeHeader}>
+              <View>
+                <Text style={styles.orderNum}>#{activeOrder.orderNumber || activeOrder._id?.slice(-6)}</Text>
+                <Text style={styles.vendorName}>
+                  {activeOrder.vendor?.storeName || 'Partner Store'}
+                </Text>
+              </View>
+              <View
+                style={[
+                  styles.statusBadge,
+                  activeOrder.status === 'DELIVERED'
+                    ? styles.statusDelivered
+                    : activeOrder.status === 'REJECTED'
+                    ? styles.statusRejected
+                    : styles.statusLive
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.statusText,
+                    activeOrder.status === 'DELIVERED'
+                      ? { color: '#15803d' }
+                      : activeOrder.status === 'REJECTED'
+                      ? { color: '#b91c1c' }
+                      : { color: '#1e40af' }
+                  ]}
+                >
+                  {(activeOrder.status || 'NEW_ORDER').replace(/_/g, ' ')}
+                </Text>
+              </View>
             </View>
-            <Text style={styles.emptyTitle}>No orders yet</Text>
-            <Text style={styles.emptyText}>Your recent orders will show up here</Text>
-          </View>
-        ) : (
-          orders.map((order) => {
-            const meta = statusMeta[order.status] || statusMeta.PLACED;
-            const steps = [
-              { key: 0, title: 'Placed', icon: 'checkmark' },
-              { key: 1, title: 'Packed', icon: 'cube' },
-              { key: 2, title: 'On way', icon: 'bicycle' },
-              { key: 3, title: 'Done', icon: 'home' }
-            ];
 
-            return (
-              <View key={order.id} style={styles.orderCard}>
-                <View style={styles.orderHeader}>
-                  <View>
-                    <Text style={styles.orderId}>{order.id}</Text>
-                    <Text style={styles.orderDate}>{order.date}</Text>
-                  </View>
-                  <View style={[styles.statusBadge, { backgroundColor: meta.bg }]}>
-                    <Text style={[styles.statusText, { color: meta.color }]}>{meta.label}</Text>
-                  </View>
-                </View>
+            {/* Prominent Live Status Announcement Card */}
+            <View
+              style={[
+                styles.statusAnnouncementBox,
+                {
+                  backgroundColor: statusInfo.bg,
+                  borderColor: statusInfo.border
+                }
+              ]}
+            >
+              <View style={styles.statusAnnouncementIconBox}>
+                <Ionicons name={statusInfo.icon} size={22} color={statusInfo.textColor} />
+              </View>
+              <View style={{ flex: 1, marginLeft: 12 }}>
+                <Text style={[styles.statusAnnouncementTitle, { color: statusInfo.textColor }]}>
+                  {statusInfo.title}
+                </Text>
+                <Text style={[styles.statusAnnouncementSub, { color: statusInfo.textColor }]}>
+                  {statusInfo.sub}
+                </Text>
+              </View>
+            </View>
 
-                <View style={styles.itemsBox}>
-                  {order.items.map((item, idx) => (
-                    <View key={idx} style={styles.itemRow}>
-                      <Text style={styles.itemText} numberOfLines={1}>
-                        {item.name} × {item.qty}
-                      </Text>
-                      <Text style={styles.itemPrice}>₹{item.price * item.qty}</Text>
-                    </View>
-                  ))}
-                  {order.total != null && (
-                    <View style={[styles.itemRow, styles.totalLine]}>
-                      <Text style={styles.totalLabel}>Total</Text>
-                      <Text style={styles.totalPrice}>₹{order.total}</Text>
-                    </View>
-                  )}
-                </View>
+            {/* OTP Banner */}
+            <View style={styles.otpBanner}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.otpLabel}>DELIVERY CONFIRMATION OTP</Text>
+                <Text style={styles.otpCode}>{activeOrder.deliveryOtp || '4819'}</Text>
+                <Text style={styles.otpSub}>Share with rider only when order arrives</Text>
+              </View>
+              <Ionicons name="key-outline" size={28} color="#15803d" />
+            </View>
 
-                <View style={styles.timeline}>
-                  {steps.map((step, i) => {
-                    const state = getStepState(order.status, step.key);
-                    const active = state === 'done' || state === 'current';
+            {/* Live Stepper */}
+            {activeOrder.status !== 'REJECTED' ? (
+              <View style={styles.stepperContainer}>
+                <View style={styles.stepperBar}>
+                  {TRACKING_STEPS.map((step, idx) => {
+                    const isDone = idx <= currentStepIdx;
+                    const isCurrent = idx === currentStepIdx;
                     return (
-                      <Fragment key={step.key}>
-                        <View style={styles.timelineStep}>
-                          <View
-                            style={[
-                              styles.stepDot,
-                              active && styles.stepActive,
-                              state === 'current' && styles.stepCurrent
-                            ]}
-                          >
-                            <Ionicons
-                              name={step.icon}
-                              size={11}
-                              color={active ? '#ffffff' : colors.textMuted}
-                            />
-                          </View>
-                          <Text style={[styles.stepTitle, active && styles.stepTitleActive]}>
-                            {step.title}
-                          </Text>
+                      <View key={step.key} style={styles.stepItem}>
+                        <View
+                          style={[
+                            styles.stepCircle,
+                            isDone && styles.stepCircleDone,
+                            isCurrent && styles.stepCircleCurrent
+                          ]}
+                        >
+                          <Ionicons
+                            name={step.icon}
+                            size={14}
+                            color={isDone ? '#ffffff' : '#94a3b8'}
+                          />
                         </View>
-                        {i < steps.length - 1 && (
-                          <View style={[styles.stepLine, active && i < 2 && styles.stepLineActive]} />
-                        )}
-                      </Fragment>
+                        <Text style={[styles.stepLabel, isDone && styles.stepLabelActive]}>
+                          {step.title}
+                        </Text>
+                      </View>
                     );
                   })}
                 </View>
-
-                <View style={styles.hubFooter}>
-                  <Ionicons name="business" size={14} color={colors.primary} />
-                  <Text style={styles.hubText}>
-                    {order.hubName || order.deliveryAddress || 'Village Hub'}
-                  </Text>
-                </View>
               </View>
-            );
-          })
+            ) : (
+              <View style={styles.rejectionNotice}>
+                <Ionicons name="close-circle" size={22} color="#ef4444" />
+                <Text style={styles.rejectionText}>
+                  Order was rejected: {activeOrder.rejectionReason || 'Store is currently unavailable'}
+                </Text>
+              </View>
+            )}
+
+            {/* Ordered Items Summary */}
+            <View style={styles.itemsSummary}>
+              <Text style={styles.itemsTitle}>ORDER DETAILS</Text>
+              {activeOrder.items?.map((item, idx) => (
+                <View key={idx} style={styles.itemRow}>
+                  <Text style={styles.itemName}>
+                    {item.qty}x {item.name}
+                  </Text>
+                  <Text style={styles.itemPrice}>₹{item.lineTotal || item.price * item.qty}</Text>
+                </View>
+              ))}
+
+              <View style={styles.totalDivider} />
+              <View style={styles.itemRow}>
+                <Text style={styles.totalLabel}>Total Paid / Payable</Text>
+                <Text style={styles.totalVal}>
+                  ₹{activeOrder.pricing?.grandTotal || activeOrder.totalAmount || 0}
+                </Text>
+              </View>
+            </View>
+
+            {/* Store Contact Button */}
+            <View style={styles.actionButtonsRow}>
+              <TouchableOpacity
+                style={styles.callStoreBtn}
+                onPress={() => callStore(activeOrder.vendor?.phone || '9876543211')}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="call" size={16} color="#ffffff" />
+                <Text style={styles.callStoreText}>Call Store / Kitchen</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.refreshOrderBtn}
+                onPress={fetchMyOrders}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="refresh" size={16} color="#475569" />
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : (
+          <View style={styles.emptyCard}>
+            <Ionicons name="receipt-outline" size={48} color="#94a3b8" />
+            <Text style={styles.emptyCardTitle}>No Recent Orders</Text>
+            <Text style={styles.emptyCardSub}>Place an order to see live real-time preparation steps.</Text>
+            <TouchableOpacity
+              style={styles.browseStoresBtn}
+              onPress={() => navigation.navigate('Home')}
+            >
+              <Text style={styles.browseStoresText}>Browse Stores</Text>
+            </TouchableOpacity>
+          </View>
         )}
       </ScrollView>
     </View>
@@ -133,174 +351,273 @@ export const OrderTrackingScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background
+    backgroundColor: '#f8fafc'
   },
   scrollContent: {
     padding: 16,
-    paddingBottom: 28
+    paddingBottom: 40
   },
-  emptyView: {
-    alignItems: 'center',
-    paddingVertical: 60
-  },
-  emptyIcon: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: colors.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12
-  },
-  emptyTitle: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: colors.textPrimary
-  },
-  emptyText: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    marginTop: 4
-  },
-  orderCard: {
-    backgroundColor: colors.card,
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 14,
+  activeCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 22,
+    padding: 18,
     borderWidth: 1,
-    borderColor: colors.border,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 2
+    borderColor: '#e2e8f0',
+    shadowColor: 'rgba(15, 23, 42, 0.08)',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 1,
+    shadowRadius: 18,
+    elevation: 4
   },
-  orderHeader: {
+  activeHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    paddingBottom: 10,
-    marginBottom: 10
+    marginBottom: 16
   },
-  orderId: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: colors.textPrimary
+  orderNum: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#0f172a'
   },
-  orderDate: {
-    fontSize: 11,
-    color: colors.textSecondary,
+  vendorName: {
+    fontSize: 13.5,
+    fontWeight: '600',
+    color: '#16a34a',
     marginTop: 2
   },
   statusBadge: {
     paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingVertical: 4,
     borderRadius: 12
   },
-  statusText: {
-    fontSize: 11,
+  statusLive: {
+    backgroundColor: '#eff6ff'
+  },
+  statusDelivered: {
+    backgroundColor: '#f0fdf4'
+  },
+  statusRejected: {
+    backgroundColor: '#fef2f2'
+  },
+  statusAnnouncementBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    marginBottom: 16
+  },
+  statusAnnouncementIconBox: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2
+  },
+  statusAnnouncementTitle: {
+    fontSize: 14,
+    fontWeight: '800'
+  },
+  statusAnnouncementSub: {
+    fontSize: 12.5,
+    marginTop: 3,
+    lineHeight: 18,
     fontWeight: '500'
   },
-  itemsBox: {
-    backgroundColor: colors.background,
-    padding: 10,
+  otpBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f0fdf4',
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#bbf7d0',
+    marginBottom: 18
+  },
+  otpLabel: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: '#15803d',
+    letterSpacing: 0.5
+  },
+  otpCode: {
+    fontSize: 24,
+    fontWeight: '900',
+    color: '#166534',
+    letterSpacing: 3,
+    marginVertical: 2
+  },
+  otpSub: {
+    fontSize: 11,
+    color: '#15803d'
+  },
+  stepperContainer: {
+    backgroundColor: '#f8fafc',
+    paddingVertical: 14,
+    paddingHorizontal: 6,
+    borderRadius: 14,
+    marginBottom: 18
+  },
+  stepperBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center'
+  },
+  stepItem: {
+    alignItems: 'center',
+    width: '16%'
+  },
+  stepCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#e2e8f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 4
+  },
+  stepCircleDone: {
+    backgroundColor: '#16a34a'
+  },
+  stepCircleCurrent: {
+    borderWidth: 2,
+    borderColor: '#86efac',
+    backgroundColor: '#15803d'
+  },
+  stepLabel: {
+    fontSize: 9,
+    color: '#94a3b8',
+    fontWeight: '600',
+    textAlign: 'center'
+  },
+  stepLabelActive: {
+    color: '#15803d',
+    fontWeight: '700'
+  },
+  rejectionNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fee2e2',
+    padding: 12,
     borderRadius: 12,
-    marginBottom: 14
+    gap: 8,
+    marginBottom: 18
+  },
+  rejectionText: {
+    color: '#991b1b',
+    fontSize: 13,
+    fontWeight: '600',
+    flex: 1
+  },
+  itemsSummary: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 16
+  },
+  itemsTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#64748b',
+    letterSpacing: 0.5,
+    marginBottom: 8
   },
   itemRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 4
+    paddingVertical: 4
   },
-  itemText: {
-    flex: 1,
-    fontSize: 12,
-    color: colors.textPrimary,
-    fontWeight: '500',
-    marginRight: 8
+  itemName: {
+    fontSize: 13,
+    color: '#1e293b',
+    fontWeight: '500'
   },
   itemPrice: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: colors.textSecondary
-  },
-  totalLine: {
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    marginTop: 6,
-    paddingTop: 6,
-    marginBottom: 0
-  },
-  totalLabel: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: colors.textPrimary
-  },
-  totalPrice: {
     fontSize: 13,
-    fontWeight: '500',
-    color: colors.primaryDark
+    color: '#0f172a',
+    fontWeight: '700'
   },
-  timeline: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 4,
+  totalDivider: {
+    height: 1,
+    backgroundColor: '#e2e8f0',
     marginVertical: 8
   },
-  timelineStep: {
-    alignItems: 'center',
-    width: 58
+  totalLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0f172a'
   },
-  stepDot: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center'
+  totalVal: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#15803d'
   },
-  stepActive: {
-    backgroundColor: colors.primary
+  actionButtonsRow: {
+    flexDirection: 'row',
+    gap: 10
   },
-  stepCurrent: {
-    borderWidth: 2,
-    borderColor: colors.primaryLight
-  },
-  stepTitle: {
-    fontSize: 9,
-    fontWeight: '500',
-    color: colors.textMuted,
-    marginTop: 4,
-    textAlign: 'center'
-  },
-  stepTitleActive: {
-    color: colors.primaryDark
-  },
-  stepLine: {
+  callStoreBtn: {
     flex: 1,
-    height: 2,
-    backgroundColor: colors.border,
-    marginBottom: 14
-  },
-  stepLineActive: {
-    backgroundColor: colors.primary
-  },
-  hubFooter: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    paddingTop: 10,
-    marginTop: 6
+    justifyContent: 'center',
+    backgroundColor: colors.primary,
+    paddingVertical: 12,
+    borderRadius: 12,
+    gap: 6
   },
-  hubText: {
-    flex: 1,
-    fontSize: 11,
-    color: colors.textSecondary,
-    fontWeight: '500'
+  callStoreText: {
+    color: '#ffffff',
+    fontSize: 13.5,
+    fontWeight: '700'
+  },
+  refreshOrderBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#f1f5f9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e2e8f0'
+  },
+  emptyCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    padding: 40,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e2e8f0'
+  },
+  emptyCardTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#0f172a',
+    marginTop: 12
+  },
+  emptyCardSub: {
+    fontSize: 13,
+    color: '#64748b',
+    textAlign: 'center',
+    marginTop: 4,
+    marginBottom: 20
+  },
+  browseStoresBtn: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12
+  },
+  browseStoresText: {
+    color: '#ffffff',
+    fontWeight: '700',
+    fontSize: 14
   }
 });

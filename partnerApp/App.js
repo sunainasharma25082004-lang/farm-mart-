@@ -2,7 +2,9 @@ import React, { Component } from 'react';
 import { StyleSheet, StatusBar, Platform, View, Text, TouchableOpacity } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer } from '@react-navigation/native';
-import { PartnerProvider } from './src/context/PartnerContext';
+import { PartnerProvider, usePartner } from './src/context/PartnerContext';
+import { SocketProvider, useSocket } from './src/context/SocketContext';
+import { NewOrderModal } from './src/components/NewOrderModal';
 import { PartnerNavigator } from './src/navigation/PartnerNavigator';
 import { colors } from './src/theme/colors';
 
@@ -36,17 +38,46 @@ class ErrorBoundary extends Component {
   }
 }
 
+// Inner container that connects Socket and Context
+function PartnerMain() {
+  const { vendor, token, fetchOrders } = usePartner();
+
+  return (
+    <SocketProvider vendor={vendor} token={token} onOrderReceived={() => fetchOrders(vendor?._id)}>
+      <PartnerContent />
+    </SocketProvider>
+  );
+}
+
+function PartnerContent() {
+  const { pendingOrder, acceptOrder, rejectOrder, dismissPendingOrder, connectionMode } = useSocket();
+
+  return (
+    <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor={colors.card} />
+      <NavigationContainer>
+        <PartnerNavigator connectionMode={connectionMode} />
+      </NavigationContainer>
+
+      {/* Global Real-Time New Order Pop-up with Looping Audio Alert */}
+      {pendingOrder && (
+        <NewOrderModal
+          order={pendingOrder}
+          onAccept={acceptOrder}
+          onReject={rejectOrder}
+          onClose={dismissPendingOrder}
+        />
+      )}
+    </View>
+  );
+}
+
 export default function App() {
   return (
     <ErrorBoundary>
       <SafeAreaProvider>
         <PartnerProvider>
-          <View style={styles.container}>
-            <StatusBar barStyle="dark-content" backgroundColor={colors.card} />
-            <NavigationContainer>
-              <PartnerNavigator />
-            </NavigationContainer>
-          </View>
+          <PartnerMain />
         </PartnerProvider>
       </SafeAreaProvider>
     </ErrorBoundary>

@@ -1,77 +1,256 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
-import {
-  vendorProfile as initialProfile,
-  initialInventoryItems,
-  settlementHistory as initialSettlements
-} from '../data/mockPartnerData';
+import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://farm-mart-api.onrender.com/api';
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000/api';
 
 const PartnerContext = createContext();
 
 export const PartnerProvider = ({ children }) => {
-  const [vendor, setVendor] = useState(initialProfile);
+  const [vendor, setVendor] = useState(null);
+  const [token, setToken] = useState(null);
   const [orders, setOrders] = useState([]);
-  const [inventory, setInventory] = useState(initialInventoryItems);
-  const [settlementHistory, setSettlementHistory] = useState(initialSettlements);
+  const [inventory, setInventory] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [stats, setStats] = useState({
+    todaySales: 0,
+    todayOrdersCount: 0,
+    activeOrdersCount: 0,
+    allTimeDelivered: 0
+  });
+  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    fetchOrders();
-    // Poll for new orders every 10 seconds for production readiness without websockets
-    const interval = setInterval(fetchOrders, 10000);
-    return () => clearInterval(interval);
+  // Default vendor login (Sunita Home Restro: 9876543211)
+  const loginVendor = useCallback(async (phone = '9876543211', password = 'demo123') => {
+    try {
+      setIsLoading(true);
+      const res = await fetch(`${API_BASE_URL}/auth/vendor/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, password })
+      });
+      const data = await res.json();
+      if (data.success && data.vendor) {
+        setVendor(data.vendor);
+        setToken(data.token);
+        return data.vendor;
+      }
+    } catch (err) {
+      console.warn('Vendor login failed, fallback to local state:', err);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
-  const fetchOrders = async () => {
+  // Fetch Categories for product creation
+  const fetchCategories = useCallback(async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/orders/vendor/default_vendor`);
-      const data = await response.json();
-      if (data.success) {
+      const res = await fetch(`${API_BASE_URL}/categories`);
+      const data = await res.json();
+      if (data.success && Array.isArray(data.categories)) {
+        setCategories(data.categories);
+      }
+    } catch (e) {
+      console.warn('Failed to fetch categories:', e);
+    }
+  }, []);
+
+  // Fetch Vendor Inventory Products
+  const fetchInventory = useCallback(async (vId) => {
+    const id = vId || vendor?._id;
+    if (!id) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/vendors/${id}/products`);
+      const data = await res.json();
+      if (data.success && Array.isArray(data.products)) {
+        const mapped = data.products.map((p) => ({
+          id: p._id,
+          productId: p._id,
+          name: p.name,
+          category: p.category?.name || 'General',
+          categoryId: p.category?._id,
+          price: p.price,
+          mrp: p.mrp || p.price,
+          unit: p.unit,
+          stock: p.stockQty,
+          stockQty: p.stockQty,
+          isAvailable: p.inStock,
+          image: p.image,
+          description: p.description
+        }));
+        setInventory(mapped);
+      }
+    } catch (e) {
+      console.warn('Failed to fetch inventory:', e);
+    }
+  }, [vendor?._id]);
+
+  // Fetch Vendor Orders Queue
+  const fetchOrders = useCallback(async (vId) => {
+    const id = vId || vendor?._id;
+    if (!id) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/orders/vendor/${id}`);
+      const data = await res.json();
+      if (data.success && Array.isArray(data.orders)) {
         setOrders(data.orders);
       }
     } catch (e) {
-      console.warn("Could not fetch live vendor orders, fallback or empty");
+      console.warn('Failed to fetch orders:', e);
     }
-  };
+  }, [vendor?._id]);
 
-  const toggleStoreStatus = () => {
-    setVendor((prev) => ({ ...prev, isStoreOpen: !prev.isStoreOpen }));
-  };
-
-  const updateOrderStatus = async (orderId, newStatus) => {
+  // Fetch Vendor Stats
+  const fetchStats = useCallback(async (authToken) => {
+    const t = authToken || token;
+    if (!t) return;
     try {
-      await fetch(`${API_BASE_URL}/orders/${orderId}/status`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus })
+      const res = await fetch(`${API_BASE_URL}/vendors/me/stats`, {
+        headers: { Authorization: `Bearer ${t}` }
       });
-      // Optimistic UI update
-      setOrders((prev) =>
-        prev.map((o) => (o._id === orderId || o.orderId === orderId ? { ...o, status: newStatus } : o))
-      );
+      const data = await res.json();
+      if (data.success && data.stats) {
+        setStats(data.stats);
+      }
     } catch (e) {
-      console.warn("Failed to update status on server");
+      console.warn('Failed to fetch stats:', e);
+    }
+  }, [token]);
+
+  // Initial load
+  useEffect(() => {
+    loginVendor('9876543211').then((v) => {
+      fetchCategories();
+      if (v) {
+        fetchInventory(v._id);
+        fetchOrders(v._id);
+      }
+    });
+  }, [loginVendor, fetchCategories, fetchInventory, fetchOrders]);
+
+  // Periodic polling fallback (every 10 seconds)
+  useEffect(() => {
+    if (!vendor?._id) return;
+    const interval = setInterval(() => {
+      fetchOrders(vendor._id);
+      fetchInventory(vendor._id);
+      if (token) fetchStats(token);
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [vendor?._id, token, fetchOrders, fetchInventory, fetchStats]);
+
+  // Toggle Store Online / Offline status
+  const toggleStoreStatus = async () => {
+    if (!vendor) return;
+    const nextState = !vendor.isOpen;
+    setVendor((prev) => ({ ...prev, isOpen: nextState }));
+
+    try {
+      await fetch(`${API_BASE_URL}/vendors/toggle-store`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { Authorization: `Bearer ${token}` })
+        },
+        body: JSON.stringify({ isOpen: nextState })
+      });
+    } catch (e) {
+      console.warn('Store status toggle failed on server:', e);
     }
   };
 
-  const addInventoryItem = (item) => {
-    const newItem = {
-      id: `v-item-${Date.now()}`,
-      stock: 10,
-      isAvailable: true,
-      ...item
-    };
-    setInventory((prev) => [newItem, ...prev]);
+  // Update order status
+  const updateOrderStatus = async (orderId, newStatus, reason = '') => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/orders/${orderId}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { Authorization: `Bearer ${token}` })
+        },
+        body: JSON.stringify({ status: newStatus, rejectionReason: reason })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setOrders((prev) =>
+          prev.map((o) => (o._id === orderId ? data.order : o))
+        );
+        if (vendor?._id) {
+          fetchStats(token);
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to update status on server:', e);
+    }
   };
 
-  const toggleItemAvailability = (itemId) => {
+  // Add Product permanently to MongoDB
+  const addInventoryItem = async (item) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/products`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { Authorization: `Bearer ${token}` })
+        },
+        body: JSON.stringify({
+          name: item.name,
+          category: item.categoryId || item.category,
+          vendor: vendor?._id,
+          price: Number(item.price),
+          mrp: Number(item.mrp || item.price),
+          unit: item.unit || '1 pc',
+          stockQty: Number(item.stock || 25),
+          description: item.description || '',
+          image: item.image || 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=500&auto=format&fit=crop&q=80',
+          isVeg: item.isVeg !== undefined ? item.isVeg : true
+        })
+      });
+      const data = await res.json();
+      if (data.success && data.product) {
+        console.log('✅ Product saved in MongoDB:', data.product.name);
+        fetchInventory(vendor?._id);
+        return data.product;
+      }
+    } catch (e) {
+      console.warn('Failed to save product in MongoDB:', e);
+    }
+  };
+
+  // Toggle in-stock / out-of-stock
+  const toggleItemAvailability = async (itemId) => {
+    const currentItem = inventory.find((i) => i.id === itemId);
+    const newStatus = currentItem ? !currentItem.isAvailable : true;
+
     setInventory((prev) =>
-      prev.map((i) => (i.id === itemId ? { ...i, isAvailable: !i.isAvailable } : i))
+      prev.map((i) => (i.id === itemId ? { ...i, isAvailable: newStatus } : i))
     );
+
+    try {
+      await fetch(`${API_BASE_URL}/products/${itemId}/stock`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { Authorization: `Bearer ${token}` })
+        },
+        body: JSON.stringify({ inStock: newStatus })
+      });
+    } catch (e) {
+      console.warn('Stock status update failed on server:', e);
+    }
   };
 
-  const deleteInventoryItem = (itemId) => {
+  // Delete product
+  const deleteInventoryItem = async (itemId) => {
     setInventory((prev) => prev.filter((i) => i.id !== itemId));
+    try {
+      await fetch(`${API_BASE_URL}/products/${itemId}`, {
+        method: 'DELETE',
+        headers: {
+          ...(token && { Authorization: `Bearer ${token}` })
+        }
+      });
+    } catch (e) {
+      console.warn('Item delete failed on server:', e);
+    }
   };
 
   return (
@@ -79,14 +258,20 @@ export const PartnerProvider = ({ children }) => {
       value={{
         vendor,
         setVendor,
+        token,
+        loginVendor,
         toggleStoreStatus,
         orders,
+        fetchOrders,
         updateOrderStatus,
         inventory,
+        fetchInventory,
         addInventoryItem,
         toggleItemAvailability,
         deleteInventoryItem,
-        settlementHistory
+        categories,
+        stats,
+        isLoading
       }}
     >
       {children}

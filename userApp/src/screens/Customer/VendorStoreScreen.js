@@ -1,0 +1,593 @@
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Image,
+  ActivityIndicator,
+  StatusBar,
+  Platform
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { apiService } from '../../services/api';
+import { useCart } from '../../context/CartContext';
+import { colors } from '../../theme/colors';
+
+export const VendorStoreScreen = ({ route, navigation }) => {
+  const { vendor } = route.params || {};
+  const [products, setProducts] = useState([]);
+  const [selectedSubCat, setSelectedSubCat] = useState('ALL');
+  const [isLoading, setIsLoading] = useState(true);
+
+  const {
+    items,
+    addToCart,
+    updateQuantity,
+    billSummary,
+    vendorId: currentCartVendorId
+  } = useCart();
+
+  const isStoreOpen = vendor?.isOpen !== false;
+
+  useEffect(() => {
+    if (vendor?._id) {
+      fetchProducts(vendor._id);
+    }
+  }, [vendor?._id]);
+
+  const fetchProducts = async (vId) => {
+    try {
+      setIsLoading(true);
+      const res = await apiService.getVendorProducts(vId);
+      if (res.success && Array.isArray(res.products)) {
+        setProducts(res.products);
+      }
+    } catch (e) {
+      console.warn('Failed to load store products:', e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Extract unique subCategories or categories
+  const subCategories = ['ALL', ...new Set(products.map((p) => p.subCategory || p.category?.name).filter(Boolean))];
+
+  const filteredProducts = selectedSubCat === 'ALL'
+    ? products
+    : products.filter((p) => (p.subCategory || p.category?.name) === selectedSubCat);
+
+  const getItemQuantity = (productId) => {
+    const item = items.find(
+      (it) => (it.product?._id || it.product?.id) === productId
+    );
+    return item ? item.quantity : 0;
+  };
+
+  return (
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+
+      {/* Store Banner Hero Header */}
+      <View style={styles.heroBanner}>
+        <Image
+          source={{
+            uri:
+              vendor?.banner ||
+              'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=800&auto=format&fit=crop&q=80'
+          }}
+          style={styles.heroImg}
+        />
+        <View style={styles.heroOverlay} />
+
+        <TouchableOpacity
+          style={styles.backButtonCircle}
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="arrow-back" size={20} color="#ffffff" />
+        </TouchableOpacity>
+
+        <View style={styles.heroTextContainer}>
+          <Text style={styles.heroStoreName}>{vendor?.storeName}</Text>
+          <Text style={styles.heroStoreType}>
+            {vendor?.storeType === 'HOME_CHEF'
+              ? '👩‍🍳 Fresh Home Food & Mithai'
+              : '🌾 Direct Farm Harvest'}
+          </Text>
+          <View style={styles.heroBadgesRow}>
+            <View style={styles.ratingBadge}>
+              <Ionicons name="star" size={12} color="#ffffff" />
+              <Text style={styles.ratingBadgeText}>{vendor?.rating || 4.8}</Text>
+            </View>
+            <Text style={styles.heroBadgeText}>⚡ {vendor?.avgPrepTimeMins || 25} mins prep</Text>
+            <Text style={styles.heroBadgeText}>• Min ₹{vendor?.minOrderValue || 99}</Text>
+          </View>
+        </View>
+      </View>
+
+      {/* Closed Warning Banner */}
+      {!isStoreOpen && (
+        <View style={styles.closedBanner}>
+          <Ionicons name="alert-circle" size={18} color="#b91c1c" />
+          <Text style={styles.closedBannerText}>
+            This store is currently closed. Browsing is enabled, but ordering is paused.
+          </Text>
+        </View>
+      )}
+
+      {/* Subcategory Filter Tabs */}
+      {subCategories.length > 1 && (
+        <View style={styles.tabContainer}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabsRow}>
+            {subCategories.map((cat) => {
+              const isSelected = selectedSubCat === cat;
+              return (
+                <TouchableOpacity
+                  key={cat}
+                  style={[styles.tabChip, isSelected && styles.tabChipSelected]}
+                  onPress={() => setSelectedSubCat(cat)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.tabText, isSelected && styles.tabTextSelected]}>
+                    {cat}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+      )}
+
+      {/* Products List */}
+      {isLoading ? (
+        <View style={styles.loadingBox}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.loadingText}>Loading menu & produce...</Text>
+        </View>
+      ) : (
+        <ScrollView
+          contentContainerStyle={[
+            styles.scrollContent,
+            billSummary.totalCount > 0 && { paddingBottom: 100 }
+          ]}
+          showsVerticalScrollIndicator={false}
+        >
+          {filteredProducts.length === 0 ? (
+            <View style={styles.emptyBox}>
+              <Ionicons name="fast-food-outline" size={44} color="#94a3b8" />
+              <Text style={styles.emptyTitle}>No Items in this Section</Text>
+            </View>
+          ) : (
+            filteredProducts.map((product) => {
+              const qty = getItemQuantity(product._id);
+              const isOutOfStock = !product.inStock || product.stockQty <= 0;
+
+              return (
+                <View key={product._id} style={styles.productCard}>
+                  <View style={styles.productMeta}>
+                    {/* Veg Indicator */}
+                    <View style={styles.vegBox}>
+                      <View style={styles.vegDot} />
+                    </View>
+
+                    <Text style={styles.productName}>{product.name}</Text>
+
+                    <View style={styles.priceRow}>
+                      <Text style={styles.price}>₹{product.price}</Text>
+                      {product.mrp > product.price && (
+                        <Text style={styles.mrp}>₹{product.mrp}</Text>
+                      )}
+                      <Text style={styles.unitText}>/ {product.unit}</Text>
+                    </View>
+
+                    {product.description ? (
+                      <Text style={styles.descText} numberOfLines={2}>
+                        {product.description}
+                      </Text>
+                    ) : null}
+                  </View>
+
+                  <View style={styles.productRight}>
+                    {product.image ? (
+                      <Image source={{ uri: product.image }} style={styles.prodImg} />
+                    ) : (
+                      <View style={styles.prodImgPlaceholder}>
+                        <Ionicons name="restaurant-outline" size={28} color="#94a3b8" />
+                      </View>
+                    )}
+
+                    {/* Stepper / Add Button */}
+                    <View style={styles.actionWrap}>
+                      {isOutOfStock ? (
+                        <View style={styles.outOfStockBtn}>
+                          <Text style={styles.outOfStockText}>OUT OF STOCK</Text>
+                        </View>
+                      ) : qty > 0 ? (
+                        <View style={styles.stepperBox}>
+                          <TouchableOpacity
+                            style={styles.stepperBtn}
+                            onPress={() => updateQuantity(product._id, -1)}
+                          >
+                            <Text style={styles.stepperBtnText}>−</Text>
+                          </TouchableOpacity>
+                          <Text style={styles.stepperQty}>{qty}</Text>
+                          <TouchableOpacity
+                            style={styles.stepperBtn}
+                            onPress={() => updateQuantity(product._id, 1)}
+                          >
+                            <Text style={styles.stepperBtnText}>+</Text>
+                          </TouchableOpacity>
+                        </View>
+                      ) : (
+                        <TouchableOpacity
+                          style={styles.addBtn}
+                          onPress={() => addToCart({ ...product, vendor })}
+                          activeOpacity={0.85}
+                          disabled={!isStoreOpen}
+                        >
+                          <Text style={styles.addBtnText}>ADD</Text>
+                          <Text style={styles.addBtnPlus}>+</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  </View>
+                </View>
+              );
+            })
+          )}
+        </ScrollView>
+      )}
+
+      {/* Sticky Bottom Cart Bar */}
+      {billSummary.totalCount > 0 && (
+        <View style={styles.stickyCartBar}>
+          <View>
+            <Text style={styles.cartCountText}>{billSummary.totalCount} ITEM(S)</Text>
+            <Text style={styles.cartTotalText}>₹{billSummary.grandTotal}</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.viewCartBtn}
+            onPress={() => navigation.navigate('Cart')}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.viewCartText}>View Cart</Text>
+            <Ionicons name="arrow-forward" size={18} color="#ffffff" />
+          </TouchableOpacity>
+        </View>
+      )}
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f8fafc'
+  },
+  heroBanner: {
+    height: 180,
+    position: 'relative',
+    justifyContent: 'flex-end',
+    padding: 16
+  },
+  heroImg: {
+    ...StyleSheet.absoluteFillObject,
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover'
+  },
+  heroOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(15, 23, 42, 0.65)'
+  },
+  backButtonCircle: {
+    position: 'absolute',
+    top: Platform.OS === 'web' ? 16 : 44,
+    left: 16,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(15, 23, 42, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10
+  },
+  heroTextContainer: {
+    zIndex: 5
+  },
+  heroStoreName: {
+    color: '#ffffff',
+    fontSize: 22,
+    fontWeight: '800'
+  },
+  heroStoreType: {
+    color: '#86efac',
+    fontSize: 13,
+    fontWeight: '600',
+    marginTop: 2
+  },
+  heroBadgesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 6
+  },
+  ratingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#16a34a',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    gap: 3
+  },
+  ratingBadgeText: {
+    color: '#ffffff',
+    fontSize: 11,
+    fontWeight: '800'
+  },
+  heroBadgeText: {
+    color: '#e2e8f0',
+    fontSize: 12,
+    fontWeight: '500'
+  },
+  closedBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fee2e2',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    gap: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#fca5a5'
+  },
+  closedBannerText: {
+    color: '#991b1b',
+    fontSize: 12.5,
+    fontWeight: '600',
+    flex: 1
+  },
+  tabContainer: {
+    backgroundColor: '#ffffff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0'
+  },
+  tabsRow: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    gap: 8
+  },
+  tabChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: '#f1f5f9'
+  },
+  tabChipSelected: {
+    backgroundColor: colors.primary
+  },
+  tabText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#475569'
+  },
+  tabTextSelected: {
+    color: '#ffffff',
+    fontWeight: '700'
+  },
+  loadingBox: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 14,
+    color: '#64748b'
+  },
+  scrollContent: {
+    padding: 16,
+    gap: 14
+  },
+  emptyBox: {
+    alignItems: 'center',
+    padding: 40
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#64748b',
+    marginTop: 10
+  },
+  productCard: {
+    flexDirection: 'row',
+    backgroundColor: '#ffffff',
+    borderRadius: 18,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    shadowColor: 'rgba(15, 23, 42, 0.04)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 10,
+    elevation: 2
+  },
+  productMeta: {
+    flex: 1,
+    paddingRight: 12
+  },
+  vegBox: {
+    width: 15,
+    height: 15,
+    borderWidth: 1.5,
+    borderColor: '#16a34a',
+    borderRadius: 3,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 6
+  },
+  vegDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: '#16a34a'
+  },
+  productName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0f172a'
+  },
+  priceRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 6,
+    marginTop: 4,
+    marginBottom: 6
+  },
+  price: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0f172a'
+  },
+  mrp: {
+    fontSize: 13,
+    color: '#94a3b8',
+    textDecorationLine: 'line-through'
+  },
+  unitText: {
+    fontSize: 12,
+    color: '#64748b'
+  },
+  descText: {
+    fontSize: 12.5,
+    color: '#64748b',
+    lineHeight: 17
+  },
+  productRight: {
+    alignItems: 'center',
+    width: 110
+  },
+  prodImg: {
+    width: 100,
+    height: 90,
+    borderRadius: 14,
+    resizeMode: 'cover'
+  },
+  prodImgPlaceholder: {
+    width: 100,
+    height: 90,
+    borderRadius: 14,
+    backgroundColor: '#f1f5f9',
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  actionWrap: {
+    marginTop: -16
+  },
+  addBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 20,
+    paddingVertical: 7,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: '#16a34a',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3
+  },
+  addBtnText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#16a34a'
+  },
+  addBtnPlus: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#16a34a',
+    marginLeft: 4
+  },
+  stepperBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#16a34a',
+    borderRadius: 10,
+    paddingHorizontal: 6,
+    paddingVertical: 5,
+    gap: 10,
+    shadowColor: '#16a34a',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3
+  },
+  stepperBtn: {
+    paddingHorizontal: 6
+  },
+  stepperBtnText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '800'
+  },
+  stepperQty: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '800'
+  },
+  outOfStockBtn: {
+    backgroundColor: '#f1f5f9',
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e2e8f0'
+  },
+  outOfStockText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#94a3b8'
+  },
+  stickyCartBar: {
+    position: 'absolute',
+    bottom: 16,
+    left: 16,
+    right: 16,
+    backgroundColor: '#15803d',
+    borderRadius: 16,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    shadowColor: '#15803d',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 8
+  },
+  cartCountText: {
+    color: '#bbf7d0',
+    fontSize: 11,
+    fontWeight: '700'
+  },
+  cartTotalText: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: '800'
+  },
+  viewCartBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6
+  },
+  viewCartText: {
+    color: '#ffffff',
+    fontWeight: '800',
+    fontSize: 15
+  }
+});

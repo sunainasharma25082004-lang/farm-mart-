@@ -1,11 +1,21 @@
 import express from 'express';
-import { createOrder, getVendorOrders, getDeliveryOrders, updateOrderStatus } from '../controllers/orderController.js';
+import {
+  createOrder,
+  getOrderById,
+  getCustomerOrders,
+  getVendorOrders,
+  getDeliveryOrders,
+  updateOrderStatus
+} from '../controllers/orderController.js';
+import { optionalAuth, verifyToken } from '../middleware/auth.js';
 
 const router = express.Router();
 
-router.post('/orders', createOrder);
-router.get('/orders/vendor/:vendorId', getVendorOrders);
-router.get('/orders/delivery', getDeliveryOrders);
-router.put('/orders/:id/status', updateOrderStatus);
+router.post('/orders', optionalAuth, createOrder);
+router.get('/orders/customer/my', verifyToken, getCustomerOrders);
+router.get('/orders/delivery/pending', getDeliveryOrders);
+router.get('/orders/vendor/:vendorId', optionalAuth, getVendorOrders);
+router.get('/orders/:id', optionalAuth, getOrderById);
+router.patch('/orders/:id/status', optionalAuth, updateOrderStatus);
 
 export default router;

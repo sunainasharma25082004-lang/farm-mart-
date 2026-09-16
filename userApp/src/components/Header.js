@@ -13,6 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import { colors } from "../theme/colors";
 import { useApp } from "../context/AppContext";
+import { useCart } from "../context/CartContext";
 
 const LOGO = require("../../assets/farmart24_logo.jpg");
 
@@ -22,8 +23,9 @@ export const Header = ({
   showCart = true,
   showBack = false,
 }) => {
-  const { cart, userProfile, setUserProfile } = useApp();
-  const cartItemCount = cart.reduce((acc, item) => acc + item.quantity, 0);
+  const { userProfile, setUserProfile } = useApp();
+  const { billSummary } = useCart();
+  const cartItemCount = billSummary?.totalCount || 0;
   const canGoBack =
     showBack || (navigation && navigation.canGoBack && navigation.canGoBack());
 

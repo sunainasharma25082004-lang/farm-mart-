@@ -5,6 +5,8 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 
 import { HomeScreen } from '../screens/Customer/HomeScreen';
+import { CategoryVendorsScreen } from '../screens/Customer/CategoryVendorsScreen';
+import { VendorStoreScreen } from '../screens/Customer/VendorStoreScreen';
 import { CatalogScreen } from '../screens/Customer/CatalogScreen';
 import { HomeRestroScreen } from '../screens/Customer/HomeRestroScreen';
 import { CartScreen } from '../screens/Customer/CartScreen';
@@ -39,7 +41,7 @@ const MainTabs = () => {
         tabBarInactiveTintColor: colors.textMuted,
         tabBarLabelStyle: {
           fontSize: 10,
-          fontWeight: '500',
+          fontWeight: '600',
           marginTop: 2
         },
         tabBarStyle: {
@@ -66,7 +68,7 @@ const MainTabs = () => {
       })}
     >
       <Tab.Screen name="Home" component={HomeScreen} options={{ tabBarLabel: 'Home' }} />
-      <Tab.Screen name="Catalog" component={CatalogScreen} options={{ tabBarLabel: 'Market' }} />
+      <Tab.Screen name="Catalog" component={CatalogScreen} options={{ tabBarLabel: 'Stores' }} />
       <Tab.Screen
         name="HomeRestro"
         component={HomeRestroScreen}
@@ -75,7 +77,7 @@ const MainTabs = () => {
       <Tab.Screen
         name="OrderTracking"
         component={OrderTrackingScreen}
-        options={{ tabBarLabel: 'Orders' }}
+        options={{ tabBarLabel: 'Live Tracker' }}
       />
       <Tab.Screen
         name="ProfileWallet"
@@ -101,12 +103,19 @@ export const RootNavigator = () => {
         // App Stack
         <>
           <Stack.Screen name="MainTabs" component={MainTabs} />
+          <Stack.Screen name="CategoryVendors" component={CategoryVendorsScreen} />
+          <Stack.Screen name="VendorStore" component={VendorStoreScreen} />
           <Stack.Screen name="Cart" component={CartScreen} />
-          <Stack.Screen name="ProductDetails" component={ProductDetailsScreen} />
           <Stack.Screen name="Checkout" component={CheckoutScreen} />
+          <Stack.Screen name="OrderTracking" component={OrderTrackingScreen} />
+          <Stack.Screen name="ProductDetails" component={ProductDetailsScreen} />
           <Stack.Screen name="FarmerDashboard" component={FarmerDashboardScreen} />
           <Stack.Screen name="AddHarvest" component={AddHarvestScreen} />
-          <Stack.Screen name="RazorpayCheckout" component={RazorpayCheckoutWebView} options={{ presentation: 'modal' }} />
+          <Stack.Screen
+            name="RazorpayCheckout"
+            component={RazorpayCheckoutWebView}
+            options={{ presentation: 'modal' }}
+          />
         </>
       )}
     </Stack.Navigator>

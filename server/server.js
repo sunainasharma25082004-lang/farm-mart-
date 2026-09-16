@@ -1,4 +1,5 @@
 import express from 'express';
+import http from 'http';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -8,20 +9,34 @@ dotenv.config({ path: path.resolve(process.cwd(), 'server', '.env') });
 
 import connectDB from './config/db.js';
 import { seedAdmin } from './controllers/adminController.js';
+import { initSocket } from './socket/index.js';
+import { errorHandler } from './middleware/errorHandler.js';
 
+import authRoutes from './routes/authRoutes.js';
+import categoryRoutes from './routes/categoryRoutes.js';
+import vendorRoutes from './routes/vendorRoutes.js';
+import productRoutes from './routes/productRoutes.js';
+import orderRoutes from './routes/orderRoutes.js';
+import paymentRoutes from './routes/paymentRoutes.js';
 import applicationRoutes from './routes/applicationRoutes.js';
 import contactRoutes from './routes/contactRoutes.js';
 import jobRoutes from './routes/jobRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
-import paymentRoutes from './routes/paymentRoutes.js';
-import orderRoutes from './routes/orderRoutes.js';
 
 const app = express();
+const httpServer = http.createServer(app);
 const PORT = process.env.PORT || 5000;
 
+// Initialize Socket.io
+const io = initSocket(httpServer);
+
 // Middlewares
-app.use(cors());
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json());
 
 // Initialize Database Connection
@@ -35,27 +50,30 @@ connectDB().then((isConnected) => {
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'OK',
-    message: 'Farmart MERN Production Backend Operational',
+    message: 'Farmart MERN Production Backend Operational with Real-Time Sockets',
     timestamp: new Date()
   });
 });
 
 // Mount Routes
+app.use('/api/auth', authRoutes);
+app.use('/api', categoryRoutes);
+app.use('/api', vendorRoutes);
+app.use('/api', productRoutes);
+app.use('/api', orderRoutes);
+app.use('/api', paymentRoutes);
 app.use('/api', applicationRoutes);
 app.use('/api', contactRoutes);
 app.use('/api', jobRoutes);
 app.use('/api', userRoutes);
 app.use('/api/admin', adminRoutes);
-app.use('/api', paymentRoutes);
-app.use('/api', orderRoutes);
 
 // Global Error Handling Middleware
-app.use((err, req, res, next) => {
-  console.error('Unhandled Error:', err.stack);
-  res.status(500).json({ success: false, message: 'Internal Server Error' });
+app.use(errorHandler);
+
+// Start Server with Socket.IO
+httpServer.listen(PORT, () => {
+  console.log(`🌾 Farmart Real-Time Backend running on http://localhost:${PORT}`);
 });
 
-// Start Server
-app.listen(PORT, () => {
-  console.log(`🌾 Farmart Production Modular Backend running on http://localhost:${PORT}`);
-});
+export { app, httpServer, io };

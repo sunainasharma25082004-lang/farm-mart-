@@ -1,85 +1,140 @@
 import axios from 'axios';
 
-// Update IP if testing on physical mobile device via Expo Go
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://farm-mart-api.onrender.com/api';
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000/api';
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 5000,
+  timeout: 10000,
   headers: {
     'Content-Type': 'application/json'
   }
 });
 
+let authToken = null;
+
+export const setAuthToken = (token) => {
+  authToken = token;
+  if (token) {
+    apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+  } else {
+    delete apiClient.defaults.headers.common['Authorization'];
+  }
+};
+
 export const apiService = {
-  checkHealth: async () => {
+  // Categories
+  getCategories: async (type) => {
     try {
-      const response = await apiClient.get('/health');
+      const url = type ? `/categories?type=${type}` : '/categories';
+      const response = await apiClient.get(url);
       return response.data;
     } catch (error) {
-      console.warn('Backend server offline, running in standalone client mode.');
-      return { status: 'OFFLINE', message: 'Offline Demo Mode Active' };
+      console.warn('Failed to fetch categories:', error.message);
+      return { success: false, categories: [] };
     }
   },
 
-  createOrder: async (amount) => {
+  getCategoryVendors: async (slug) => {
     try {
-      const response = await apiClient.post('/create-order', { amount });
+      const response = await apiClient.get(`/categories/${slug}/vendors`);
       return response.data;
     } catch (error) {
-      console.warn('Backend fallback for order creation:', error.message);
-      return {
-        success: true,
-        order: { id: `dummy_order_${Date.now()}`, amount: amount * 100 }
-      };
+      console.warn('Failed to fetch category vendors:', error.message);
+      return { success: false, vendors: [] };
     }
   },
 
-  verifyPayment: async (paymentData) => {
+  // Vendors
+  getVendors: async (params = {}) => {
     try {
-      const response = await apiClient.post('/verify-payment', paymentData);
+      const response = await apiClient.get('/vendors', { params });
       return response.data;
     } catch (error) {
-      console.warn('Backend fallback for payment verification:', error.message);
-      return { success: true, message: 'Offline Mock Payment verified' };
+      console.warn('Failed to fetch vendors:', error.message);
+      return { success: false, vendors: [] };
     }
   },
 
+  getVendorById: async (id) => {
+    try {
+      const response = await apiClient.get(`/vendors/${id}`);
+      return response.data;
+    } catch (error) {
+      console.warn('Failed to fetch vendor:', error.message);
+      return { success: false, vendor: null };
+    }
+  },
+
+  getVendorProducts: async (vendorId, params = {}) => {
+    try {
+      const response = await apiClient.get(`/vendors/${vendorId}/products`, { params });
+      return response.data;
+    } catch (error) {
+      console.warn('Failed to fetch vendor products:', error.message);
+      return { success: false, products: [] };
+    }
+  },
+
+  // Products
+  getProducts: async (params = {}) => {
+    try {
+      const response = await apiClient.get('/products', { params });
+      return response.data;
+    } catch (error) {
+      console.warn('Backend products fetch failed:', error.message);
+      return { success: false, products: [] };
+    }
+  },
+
+  getProductById: async (id) => {
+    try {
+      const response = await apiClient.get(`/products/${id}`);
+      return response.data;
+    } catch (error) {
+      return { success: false, product: null };
+    }
+  },
+
+  // Auth
+  customerLogin: async (phone = '9876543210', password = 'demo123') => {
+    try {
+      const response = await apiClient.post('/auth/customer/login', { phone, password });
+      if (response.data?.token) {
+        setAuthToken(response.data.token);
+      }
+      return response.data;
+    } catch (error) {
+      console.warn('Customer login failed:', error.message);
+      return { success: false, message: error.response?.data?.message || error.message };
+    }
+  },
+
+  // Orders
   placeOrder: async (orderData) => {
     try {
       const response = await apiClient.post('/orders', orderData);
       return response.data;
     } catch (error) {
-      console.error('Failed to place order:', error);
-      throw error;
+      console.error('Failed to place order:', error.response?.data || error);
+      throw error.response?.data || error;
     }
   },
 
-  submitPartnerApplication: async (payload) => {
+  getCustomerOrders: async () => {
     try {
-      const response = await apiClient.post('/apply', payload);
+      const response = await apiClient.get('/orders/customer/my');
       return response.data;
     } catch (error) {
-      console.warn('Backend fallback for application submission:', error.message);
-      return {
-        success: true,
-        message: 'Application recorded locally (Offline Demo)!',
-        applicationId: `FMT-APP-${Date.now()}`
-      };
+      return { success: false, orders: [] };
     }
   },
 
-  submitInquiry: async (payload) => {
+  getOrderById: async (id) => {
     try {
-      const response = await apiClient.post('/contact', payload);
+      const response = await apiClient.get(`/orders/${id}`);
       return response.data;
     } catch (error) {
-      console.warn('Backend fallback for inquiry:', error.message);
-      return {
-        success: true,
-        message: 'Inquiry saved locally (Offline Demo)!',
-        inquiryId: `FMT-MSG-${Date.now()}`
-      };
+      return { success: false, order: null };
     }
   }
 };
