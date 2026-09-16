@@ -188,6 +188,7 @@ export const CartProvider = ({ children }) => {
     }
 
     const payload = {
+      clientOrderId: `ORD_CLI_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
       vendorId,
       items: items.map((it) => ({
         productId: it.product._id || it.product.id,

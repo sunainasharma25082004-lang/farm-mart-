@@ -137,14 +137,25 @@ export const PartnerProvider = ({ children }) => {
     return () => clearInterval(interval);
   }, [vendor?._id, token, fetchOrders, fetchInventory, fetchStats]);
 
-  // Toggle Store Online / Offline status
+  const [isTogglingStore, setIsTogglingStore] = useState(false);
+
+  // Logout Vendor
+  const logoutVendor = useCallback(() => {
+    setVendor(null);
+    setToken(null);
+    setOrders([]);
+    setInventory([]);
+  }, []);
+
+  // Toggle Store Online / Offline status with idempotency lock
   const toggleStoreStatus = async () => {
-    if (!vendor) return;
+    if (!vendor || isTogglingStore) return;
+    setIsTogglingStore(true);
     const nextState = !vendor.isOpen;
     setVendor((prev) => ({ ...prev, isOpen: nextState }));
 
     try {
-      await fetch(`${API_BASE_URL}/vendors/toggle-store`, {
+      const res = await fetch(`${API_BASE_URL}/vendors/toggle-store`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -152,8 +163,14 @@ export const PartnerProvider = ({ children }) => {
         },
         body: JSON.stringify({ isOpen: nextState })
       });
+      const data = await res.json();
+      if (data.success && data.vendor) {
+        setVendor(data.vendor);
+      }
     } catch (e) {
       console.warn('Store status toggle failed on server:', e);
+    } finally {
+      setIsTogglingStore(false);
     }
   };
 
@@ -176,9 +193,12 @@ export const PartnerProvider = ({ children }) => {
         if (vendor?._id) {
           fetchStats(token);
         }
+        return { success: true, order: data.order };
       }
+      return { success: false, message: data.message };
     } catch (e) {
       console.warn('Failed to update status on server:', e);
+      return { success: false, error: e };
     }
   };
 
@@ -271,7 +291,9 @@ export const PartnerProvider = ({ children }) => {
         deleteInventoryItem,
         categories,
         stats,
-        isLoading
+        isLoading,
+        logoutVendor,
+        isTogglingStore
       }}
     >
       {children}

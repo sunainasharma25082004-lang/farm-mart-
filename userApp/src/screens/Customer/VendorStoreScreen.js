@@ -8,7 +8,8 @@ import {
   Image,
   ActivityIndicator,
   StatusBar,
-  Platform
+  Platform,
+  Alert
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { apiService } from '../../services/api';
@@ -16,7 +17,8 @@ import { useCart } from '../../context/CartContext';
 import { colors } from '../../theme/colors';
 
 export const VendorStoreScreen = ({ route, navigation }) => {
-  const { vendor } = route.params || {};
+  const initialVendor = route.params?.vendor || {};
+  const [vendor, setVendor] = useState(initialVendor);
   const [products, setProducts] = useState([]);
   const [selectedSubCat, setSelectedSubCat] = useState('ALL');
   const [isLoading, setIsLoading] = useState(true);
@@ -34,8 +36,26 @@ export const VendorStoreScreen = ({ route, navigation }) => {
   useEffect(() => {
     if (vendor?._id) {
       fetchProducts(vendor._id);
+      fetchVendorDetails(vendor._id);
+
+      // Periodic polling to stay updated with live Partner Online/Offline status
+      const interval = setInterval(() => {
+        fetchVendorDetails(vendor._id);
+      }, 6000);
+      return () => clearInterval(interval);
     }
   }, [vendor?._id]);
+
+  const fetchVendorDetails = async (vId) => {
+    try {
+      const res = await apiService.getVendorById(vId);
+      if (res.success && res.vendor) {
+        setVendor(res.vendor);
+      }
+    } catch (e) {
+      // quiet fallback
+    }
+  };
 
   const fetchProducts = async (vId) => {
     try {
@@ -63,6 +83,15 @@ export const VendorStoreScreen = ({ route, navigation }) => {
       (it) => (it.product?._id || it.product?.id) === productId
     );
     return item ? item.quantity : 0;
+  };
+
+  const handleClosedStoreTap = () => {
+    const msg = `${vendor?.storeName || 'This store'} is currently closed and not accepting new orders right now. You can browse the menu; ordering will reopen as soon as the partner comes online.`;
+    if (Platform.OS === 'web') {
+      alert(msg);
+    } else {
+      Alert.alert('Store Currently Closed', msg);
+    }
   };
 
   return (
@@ -103,6 +132,18 @@ export const VendorStoreScreen = ({ route, navigation }) => {
             </View>
             <Text style={styles.heroBadgeText}>⚡ {vendor?.avgPrepTimeMins || 25} mins prep</Text>
             <Text style={styles.heroBadgeText}>• Min ₹{vendor?.minOrderValue || 99}</Text>
+
+            {/* Store Open/Closed Badge */}
+            <View
+              style={[
+                styles.storeStatusBadge,
+                { backgroundColor: isStoreOpen ? '#16a34a' : '#ef4444' }
+              ]}
+            >
+              <Text style={styles.storeStatusBadgeText}>
+                {isStoreOpen ? '● ONLINE' : '● CLOSED'}
+              </Text>
+            </View>
           </View>
         </View>
       </View>
@@ -110,10 +151,13 @@ export const VendorStoreScreen = ({ route, navigation }) => {
       {/* Closed Warning Banner */}
       {!isStoreOpen && (
         <View style={styles.closedBanner}>
-          <Ionicons name="alert-circle" size={18} color="#b91c1c" />
-          <Text style={styles.closedBannerText}>
-            This store is currently closed. Browsing is enabled, but ordering is paused.
-          </Text>
+          <Ionicons name="alert-circle" size={20} color="#b91c1c" />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.closedBannerTitle}>STORE CURRENTLY CLOSED</Text>
+            <Text style={styles.closedBannerText}>
+              Browsing is enabled, but ordering is paused. You can view all items and prices below.
+            </Text>
+          </View>
         </View>
       )}
 
@@ -198,9 +242,18 @@ export const VendorStoreScreen = ({ route, navigation }) => {
                       </View>
                     )}
 
-                    {/* Stepper / Add Button */}
+                    {/* Stepper / Add Button / Store Closed Pill */}
                     <View style={styles.actionWrap}>
-                      {isOutOfStock ? (
+                      {!isStoreOpen ? (
+                        <TouchableOpacity
+                          style={styles.storeClosedBtn}
+                          onPress={handleClosedStoreTap}
+                          activeOpacity={0.8}
+                        >
+                          <Ionicons name="lock-closed" size={10} color="#94a3b8" style={{ marginRight: 3 }} />
+                          <Text style={styles.storeClosedBtnText}>CLOSED</Text>
+                        </TouchableOpacity>
+                      ) : isOutOfStock ? (
                         <View style={styles.outOfStockBtn}>
                           <Text style={styles.outOfStockText}>OUT OF STOCK</Text>
                         </View>
@@ -225,7 +278,6 @@ export const VendorStoreScreen = ({ route, navigation }) => {
                           style={styles.addBtn}
                           onPress={() => addToCart({ ...product, vendor })}
                           activeOpacity={0.85}
-                          disabled={!isStoreOpen}
                         >
                           <Text style={styles.addBtnText}>ADD</Text>
                           <Text style={styles.addBtnPlus}>+</Text>
@@ -247,14 +299,25 @@ export const VendorStoreScreen = ({ route, navigation }) => {
             <Text style={styles.cartCountText}>{billSummary.totalCount} ITEM(S)</Text>
             <Text style={styles.cartTotalText}>₹{billSummary.grandTotal}</Text>
           </View>
-          <TouchableOpacity
-            style={styles.viewCartBtn}
-            onPress={() => navigation.navigate('Cart')}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.viewCartText}>View Cart</Text>
-            <Ionicons name="arrow-forward" size={18} color="#ffffff" />
-          </TouchableOpacity>
+          {isStoreOpen ? (
+            <TouchableOpacity
+              style={styles.viewCartBtn}
+              onPress={() => navigation.navigate('Cart')}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.viewCartText}>View Cart</Text>
+              <Ionicons name="arrow-forward" size={18} color="#ffffff" />
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={[styles.viewCartBtn, { backgroundColor: '#64748b' }]}
+              onPress={handleClosedStoreTap}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.viewCartText}>Store Closed</Text>
+              <Ionicons name="lock-closed" size={16} color="#ffffff" />
+            </TouchableOpacity>
+          )}
         </View>
       )}
     </View>
@@ -333,21 +396,39 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500'
   },
+  storeStatusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6
+  },
+  storeStatusBadgeText: {
+    color: '#ffffff',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.3
+  },
   closedBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#fee2e2',
     paddingHorizontal: 16,
     paddingVertical: 10,
-    gap: 8,
+    gap: 10,
     borderBottomWidth: 1,
     borderBottomColor: '#fca5a5'
   },
-  closedBannerText: {
+  closedBannerTitle: {
     color: '#991b1b',
-    fontSize: 12.5,
-    fontWeight: '600',
-    flex: 1
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0.4
+  },
+  closedBannerText: {
+    color: '#b91c1c',
+    fontSize: 12,
+    fontWeight: '500',
+    marginTop: 1,
+    lineHeight: 16
   },
   tabContainer: {
     backgroundColor: '#ffffff',
@@ -512,6 +593,22 @@ const styles = StyleSheet.create({
     color: '#16a34a',
     marginLeft: 4
   },
+  storeClosedBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f1f5f9',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#cbd5e1'
+  },
+  storeClosedBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#64748b',
+    letterSpacing: 0.3
+  },
   stepperBox: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -583,11 +680,15 @@ const styles = StyleSheet.create({
   viewCartBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6
+    gap: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 10
   },
   viewCartText: {
     color: '#ffffff',
     fontWeight: '800',
-    fontSize: 15
+    fontSize: 14
   }
 });

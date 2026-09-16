@@ -16,9 +16,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { useCart } from '../../context/CartContext';
 import { useApp } from '../../context/AppContext';
+import { apiService } from '../../services/api';
 
 export const CheckoutScreen = ({ navigation }) => {
-  const { items, vendorName, billSummary, placeOrder } = useCart();
+  const { items, vendorId, vendorName, billSummary, placeOrder } = useCart();
   const { userProfile } = useApp();
 
   const [loading, setLoading] = useState(false);
@@ -45,8 +46,10 @@ export const CheckoutScreen = ({ navigation }) => {
 
   const grandTotal = billSummary.grandTotal;
 
-  // Trigger Payment / Order Flow
-  const handleInitiatePayment = () => {
+  // Trigger Payment / Order Flow with Single-Execution & Closed-Store Guards
+  const handleInitiatePayment = async () => {
+    if (loading || paymentSubmitting) return;
+
     if (items.length === 0) {
       alert('Your cart is empty');
       return;
@@ -57,6 +60,19 @@ export const CheckoutScreen = ({ navigation }) => {
         `Minimum order value for ${vendorName || 'this store'} is ₹${billSummary.minOrder}. Current items total is ₹${billSummary.itemsTotal}. Please add ₹${billSummary.minOrderShortfall} more to place order.`
       );
       return;
+    }
+
+    // Check store open status live before processing payment
+    if (vendorId) {
+      try {
+        const vRes = await apiService.getVendorById(vendorId);
+        if (vRes.success && vRes.vendor && !vRes.vendor.isOpen) {
+          alert(`${vRes.vendor.storeName || 'This store'} is currently closed and not accepting new orders right now. Please wait until the partner comes online.`);
+          return;
+        }
+      } catch (e) {
+        // continue
+      }
     }
 
     if (paymentMethod === 'UPI' || paymentMethod === 'CARD') {
@@ -71,6 +87,7 @@ export const CheckoutScreen = ({ navigation }) => {
 
   // Simulate authentic Payment Gateway verification then place order
   const handleConfirmGatewayPayment = async () => {
+    if (paymentSubmitting || loading) return;
     setPaymentSubmitting(true);
 
     // 1. Simulate 1.2s bank gateway communication
@@ -87,6 +104,7 @@ export const CheckoutScreen = ({ navigation }) => {
   };
 
   const executeOrderPlacement = async (actualPaymentMethod) => {
+    if (loading) return;
     setLoading(true);
     try {
       const order = await placeOrder(deliveryAddress, actualPaymentMethod);

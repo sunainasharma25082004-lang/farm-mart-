@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,16 +7,19 @@ import {
   TouchableOpacity,
   Image,
   StatusBar,
-  Platform
+  Platform,
+  Alert
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Header } from '../../components/Header';
 import { useCart } from '../../context/CartContext';
+import { apiService } from '../../services/api';
 import { colors } from '../../theme/colors';
 
 export const CartScreen = ({ navigation }) => {
   const {
     items,
+    vendorId,
     vendorName,
     vendorStoreType,
     updateQuantity,
@@ -25,8 +28,28 @@ export const CartScreen = ({ navigation }) => {
     billSummary
   } = useCart();
 
+  const [vendorDetails, setVendorDetails] = useState(null);
+
+  useEffect(() => {
+    if (vendorId) {
+      apiService.getVendorById(vendorId).then((res) => {
+        if (res.success && res.vendor) {
+          setVendorDetails(res.vendor);
+        }
+      });
+    }
+  }, [vendorId]);
+
+  const isStoreOpen = vendorDetails ? vendorDetails.isOpen !== false : true;
+
   const handleCheckout = () => {
     if (items.length === 0) return;
+    if (!isStoreOpen) {
+      const msg = `${vendorName || 'This store'} is currently closed and not accepting new orders right now. Please check back when the store comes online.`;
+      if (Platform.OS === 'web') alert(msg);
+      else Alert.alert('Store Closed', msg);
+      return;
+    }
     if (!billSummary.isMinOrderMet) {
       alert(
         `Minimum order value for ${vendorName || 'this store'} is ₹${billSummary.minOrder}. Please add ₹${billSummary.minOrderShortfall} more to proceed.`
@@ -83,6 +106,19 @@ export const CartScreen = ({ navigation }) => {
                 <Text style={styles.clearBtnText}>Clear Cart</Text>
               </TouchableOpacity>
             </View>
+
+            {/* Closed Warning Banner if store is currently offline */}
+            {!isStoreOpen && (
+              <View style={styles.cartClosedBanner}>
+                <Ionicons name="alert-circle" size={20} color="#b91c1c" />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.cartClosedTitle}>STORE CURRENTLY CLOSED</Text>
+                  <Text style={styles.cartClosedSub}>
+                    {vendorName || 'Selected store'} is offline and not accepting orders right now. Checkout is paused until the store goes online.
+                  </Text>
+                </View>
+              </View>
+            )}
 
             {/* Cart Items List */}
             <Text style={styles.sectionTitle}>Cart Items ({billSummary.totalCount})</Text>
@@ -199,12 +235,14 @@ export const CartScreen = ({ navigation }) => {
               <Text style={styles.bottomTotal}>₹{billSummary.grandTotal}</Text>
             </View>
             <TouchableOpacity
-              style={styles.checkoutBtn}
+              style={[styles.checkoutBtn, !isStoreOpen && { backgroundColor: '#64748b' }]}
               onPress={handleCheckout}
               activeOpacity={0.85}
             >
-              <Text style={styles.checkoutText}>Proceed to Checkout</Text>
-              <Ionicons name="arrow-forward" size={18} color="#ffffff" />
+              <Text style={styles.checkoutText}>
+                {isStoreOpen ? 'Proceed to Checkout' : 'Store is Closed'}
+              </Text>
+              <Ionicons name={isStoreOpen ? 'arrow-forward' : 'lock-closed'} size={18} color="#ffffff" />
             </TouchableOpacity>
           </View>
         </>
@@ -502,5 +540,28 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 14.5,
     fontWeight: '700'
+  },
+  cartClosedBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: '#fee2e2',
+    borderWidth: 1,
+    borderColor: '#fca5a5',
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 16
+  },
+  cartClosedTitle: {
+    color: '#991b1b',
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0.4
+  },
+  cartClosedSub: {
+    color: '#b91c1c',
+    fontSize: 12,
+    marginTop: 2,
+    lineHeight: 16
   }
 });

@@ -42,6 +42,8 @@ export const NewOrderModal = ({ order, onAccept, onReject, onClose }) => {
     };
   }, [order]);
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const toggleMute = () => {
     if (isMuted) {
       soundAlert.start();
@@ -52,14 +54,26 @@ export const NewOrderModal = ({ order, onAccept, onReject, onClose }) => {
     }
   };
 
-  const handleAccept = () => {
+  const handleAccept = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     soundAlert.stop();
-    onAccept(order.orderId || order._id);
+    try {
+      await onAccept(order.orderId || order._id);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleReject = () => {
+  const handleReject = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     soundAlert.stop();
-    onReject(order.orderId || order._id, rejectReason);
+    try {
+      await onReject(order.orderId || order._id, rejectReason);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (!order) return null;
@@ -173,16 +187,21 @@ export const NewOrderModal = ({ order, onAccept, onReject, onClose }) => {
             /* Action Buttons: Accept & Reject */
             <View style={styles.actionsRow}>
               <TouchableOpacity
-                style={styles.rejectBtn}
+                style={[styles.rejectBtn, isSubmitting && { opacity: 0.6 }]}
                 onPress={() => setShowRejectReason(true)}
+                disabled={isSubmitting}
               >
                 <Ionicons name="close-circle-outline" size={20} color="#ef4444" />
                 <Text style={styles.rejectBtnText}>Reject</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.acceptBtn} onPress={handleAccept}>
+              <TouchableOpacity
+                style={[styles.acceptBtn, isSubmitting && { opacity: 0.6 }]}
+                onPress={handleAccept}
+                disabled={isSubmitting}
+              >
                 <Ionicons name="checkmark-circle" size={22} color="#ffffff" />
-                <Text style={styles.acceptBtnText}>ACCEPT ORDER</Text>
+                <Text style={styles.acceptBtnText}>{isSubmitting ? 'ACCEPTING...' : 'ACCEPT ORDER'}</Text>
               </TouchableOpacity>
             </View>
           )}

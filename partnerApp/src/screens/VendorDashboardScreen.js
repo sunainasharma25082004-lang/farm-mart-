@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,11 @@ import {
   TouchableOpacity,
   Switch,
   Platform,
-  StatusBar
+  StatusBar,
+  Animated,
+  ActivityIndicator,
+  Modal,
+  TextInput
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { usePartner } from '../context/PartnerContext';
@@ -15,9 +19,9 @@ import { useSocket } from '../context/SocketContext';
 import { colors } from '../theme/colors';
 
 const DEMO_VENDORS = [
-  { name: 'Sunita Sharma (Home Chef)', phone: '9876543211', icon: '🍳' },
-  { name: 'Sukhwinder Singh (Farmer)', phone: '9876543212', icon: '🌾' },
-  { name: 'Gurpreet Kaur (Orchards)', phone: '9876543213', icon: '🍎' }
+  { name: 'Sunita Sharma (Home Chef)', phone: '9876543211', icon: '🍳', storeType: 'HOME_CHEF' },
+  { name: 'Sukhwinder Singh (Farmer)', phone: '9876543212', icon: '🌾', storeType: 'FARMER' },
+  { name: 'Gurpreet Kaur (Orchards)', phone: '9876543213', icon: '🍎', storeType: 'FARMER' }
 ];
 
 export const VendorDashboardScreen = ({ navigation }) => {
@@ -28,12 +32,151 @@ export const VendorDashboardScreen = ({ navigation }) => {
     updateOrderStatus,
     stats,
     loginVendor,
-    fetchOrders
+    logoutVendor,
+    fetchOrders,
+    isTogglingStore
   } = usePartner();
 
   const { connectionMode } = useSocket();
 
+  // Action Idempotency Lock
+  const [processingOrderId, setProcessingOrderId] = useState(null);
+
+  // Partner Login / Switch Modal
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [loginPhoneInput, setLoginPhoneInput] = useState('');
+  const [loginPasswordInput, setLoginPasswordInput] = useState('demo123');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [loginError, setLoginError] = useState('');
+
+  // Classic Zomato-Style Breathing Pulse Animation
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const pulseLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.28,
+          duration: 900,
+          useNativeDriver: Platform.OS !== 'web'
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1.0,
+          duration: 900,
+          useNativeDriver: Platform.OS !== 'web'
+        })
+      ])
+    );
+    pulseLoop.start();
+    return () => pulseLoop.stop();
+  }, [pulseAnim]);
+
   const isStoreOpen = vendor?.isOpen ?? true;
+
+  // Identify in-flight active orders
+  const inFlightOrders = orders.filter((o) =>
+    ['NEW_ORDER', 'ACCEPTED', 'PREPARING', 'READY_FOR_RIDER', 'OUT_FOR_DELIVERY'].includes(o.status)
+  );
+
+  // Single-Execution Action Handler (prevents duplicate clicks in same cycle)
+  const handleUpdateStatus = async (orderId, newStatus, reason = '') => {
+    if (processingOrderId === orderId) return;
+    setProcessingOrderId(orderId);
+    try {
+      await updateOrderStatus(orderId, newStatus, reason);
+    } catch (err) {
+      console.warn('Action failed:', err);
+    } finally {
+      setProcessingOrderId(null);
+    }
+  };
+
+  const handleCustomLogin = async (phone) => {
+    const p = phone || loginPhoneInput.trim();
+    if (!p) {
+      setLoginError('Please enter Partner Phone number or ID');
+      return;
+    }
+    setIsLoggingIn(true);
+    setLoginError('');
+    try {
+      const v = await loginVendor(p, loginPasswordInput);
+      if (v) {
+        setShowLoginModal(false);
+        setLoginPhoneInput('');
+      } else {
+        setLoginError('Vendor not found with this phone. Try demo accounts.');
+      }
+    } catch (err) {
+      setLoginError('Login failed. Please check network.');
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  // If merchant is logged out, show mandatory Partner Login screen
+  if (!vendor) {
+    return (
+      <View style={styles.container}>
+        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+        <View style={styles.unauthCard}>
+          <View style={styles.storeBadgeCircleLarge}>
+            <Ionicons name="storefront" size={38} color="#ffffff" />
+          </View>
+          <Text style={styles.unauthTitle}>Partner Portal Login</Text>
+          <Text style={styles.unauthSub}>
+            Please log in with your Partner ID or Phone number to manage orders and open your store.
+          </Text>
+
+          <View style={styles.loginForm}>
+            <Text style={styles.inputLabel}>Partner Phone / ID</Text>
+            <TextInput
+              style={styles.textInput}
+              placeholder="e.g. 9876543211"
+              value={loginPhoneInput}
+              onChangeText={setLoginPhoneInput}
+              keyboardType="phone-pad"
+            />
+
+            {loginError ? <Text style={styles.errorText}>{loginError}</Text> : null}
+
+            <TouchableOpacity
+              style={[styles.loginSubmitBtn, isLoggingIn && { opacity: 0.7 }]}
+              onPress={() => handleCustomLogin()}
+              disabled={isLoggingIn}
+            >
+              {isLoggingIn ? (
+                <ActivityIndicator size="small" color="#ffffff" />
+              ) : (
+                <>
+                  <Text style={styles.loginSubmitText}>Log In to Store</Text>
+                  <Ionicons name="log-in-outline" size={18} color="#ffffff" />
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.quickAccountsSection}>
+            <Text style={styles.quickAccountsTitle}>OR ONE-TAP DEMO LOGIN:</Text>
+            {DEMO_VENDORS.map((v) => (
+              <TouchableOpacity
+                key={v.phone}
+                style={styles.quickAccountBtn}
+                onPress={() => handleCustomLogin(v.phone)}
+              >
+                <Text style={{ fontSize: 18 }}>{v.icon}</Text>
+                <View style={{ flex: 1, marginLeft: 10 }}>
+                  <Text style={styles.quickAccountName}>{v.name}</Text>
+                  <Text style={styles.quickAccountPhone}>ID: VEN-{v.phone}</Text>
+                </View>
+                <Ionicons name="arrow-forward" size={16} color={colors.primary} />
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -47,21 +190,33 @@ export const VendorDashboardScreen = ({ navigation }) => {
           </View>
           <View style={styles.storeTextContainer}>
             <Text style={styles.storeName} numberOfLines={1}>
-              {vendor?.storeName || 'Sunita Home Restro'}
+              {vendor?.storeName || 'Partner Store'}
             </Text>
             <Text style={styles.ownerText}>
-              👤 {vendor?.ownerName || 'Vendor Portal'} • {vendor?.phone || '9876543211'}
+              👤 {vendor?.ownerName || 'Merchant'} • ID: VEN-{vendor?.phone || '9876543211'}
             </Text>
           </View>
         </View>
 
+        {/* Zomato-Style Status Box with Breathing Glow */}
         <View style={styles.statusBox}>
-          <View
+          <Animated.View
             style={[
-              styles.statusDot,
-              { backgroundColor: isStoreOpen ? '#10b981' : '#ef4444' }
+              styles.statusPulseRing,
+              {
+                transform: [{ scale: isStoreOpen ? pulseAnim : 1 }],
+                backgroundColor: isStoreOpen ? 'rgba(16, 185, 129, 0.25)' : 'transparent'
+              }
             ]}
-          />
+          >
+            <View
+              style={[
+                styles.statusDot,
+                { backgroundColor: isStoreOpen ? '#10b981' : '#ef4444' }
+              ]}
+            />
+          </Animated.View>
+
           <Text
             style={[
               styles.statusText,
@@ -70,9 +225,11 @@ export const VendorDashboardScreen = ({ navigation }) => {
           >
             {isStoreOpen ? 'ONLINE' : 'OFFLINE'}
           </Text>
+
           <Switch
             value={isStoreOpen}
             onValueChange={toggleStoreStatus}
+            disabled={isTogglingStore}
             trackColor={{ false: '#cbd5e1', true: '#bbf7d0' }}
             thumbColor={isStoreOpen ? '#16a34a' : '#94a3b8'}
           />
@@ -80,6 +237,62 @@ export const VendorDashboardScreen = ({ navigation }) => {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* Store Online / Offline State Announcement Banner */}
+        <View
+          style={[
+            styles.storeStateBanner,
+            {
+              backgroundColor: isStoreOpen ? '#f0fdf4' : '#fef2f2',
+              borderColor: isStoreOpen ? '#bbf7d0' : '#fecaca'
+            }
+          ]}
+        >
+          <Ionicons
+            name={isStoreOpen ? 'radio-button-on' : 'alert-circle'}
+            size={18}
+            color={isStoreOpen ? '#16a34a' : '#dc2626'}
+          />
+          <View style={{ flex: 1 }}>
+            <Text
+              style={[
+                styles.storeStateTitle,
+                { color: isStoreOpen ? '#15803d' : '#991b1b' }
+              ]}
+            >
+              {isStoreOpen ? 'STORE IS ONLINE' : 'STORE IS OFFLINE (CLOSED)'}
+            </Text>
+            <Text
+              style={[
+                styles.storeStateSub,
+                { color: isStoreOpen ? '#166534' : '#7f1d1d' }
+              ]}
+            >
+              {isStoreOpen
+                ? 'Your products are live. Customers can order and you will receive orders here.'
+                : 'Customers can browse your catalog, but new orders are paused until you switch ONLINE.'}
+            </Text>
+          </View>
+        </View>
+
+        {/* ⚠️ FULFILLING LAST ORDER BANNER (Triggered when store is offline but active orders exist) */}
+        {!isStoreOpen && inFlightOrders.length > 0 && (
+          <View style={styles.lastOrderBanner}>
+            <View style={styles.lastOrderHeaderRow}>
+              <View style={styles.flameCircle}>
+                <Ionicons name="flame" size={18} color="#ffffff" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.lastOrderTitle}>
+                  FULFILLING LAST ORDER • STORE OFFLINE
+                </Text>
+                <Text style={styles.lastOrderSub}>
+                  Your store is closed to new customer orders. Please complete your active accepted order below as your last order before resting.
+                </Text>
+              </View>
+            </View>
+          </View>
+        )}
+
         {/* Connection Status & Vendor Switcher Bar */}
         <View style={styles.connectionBar}>
           <View style={styles.connIndicator}>
@@ -105,35 +318,23 @@ export const VendorDashboardScreen = ({ navigation }) => {
             </Text>
           </View>
 
-          <TouchableOpacity
-            style={styles.refreshBtn}
-            onPress={() => fetchOrders(vendor?._id)}
-          >
-            <Ionicons name="refresh" size={14} color="#475569" />
-            <Text style={styles.refreshText}>Sync</Text>
-          </TouchableOpacity>
-        </View>
+          <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+            <TouchableOpacity
+              style={styles.switchAccountBtn}
+              onPress={() => setShowLoginModal(true)}
+            >
+              <Ionicons name="person-circle-outline" size={14} color="#475569" />
+              <Text style={styles.switchAccountText}>Switch ID</Text>
+            </TouchableOpacity>
 
-        {/* Demo Vendor Switcher Tabs */}
-        <View style={styles.switcherWrapper}>
-          <Text style={styles.switcherLabel}>SWITCH STORE ACCOUNT:</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.switcherRow}>
-            {DEMO_VENDORS.map((v) => {
-              const isCurrent = vendor?.phone === v.phone;
-              return (
-                <TouchableOpacity
-                  key={v.phone}
-                  style={[styles.switchChip, isCurrent && styles.switchChipActive]}
-                  onPress={() => loginVendor(v.phone)}
-                >
-                  <Text style={styles.switchIcon}>{v.icon}</Text>
-                  <Text style={[styles.switchName, isCurrent && styles.switchNameActive]}>
-                    {v.name.split(' (')[0]}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
+            <TouchableOpacity
+              style={styles.refreshBtn}
+              onPress={() => fetchOrders(vendor?._id)}
+            >
+              <Ionicons name="refresh" size={14} color="#475569" />
+              <Text style={styles.refreshText}>Sync</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Quick Metrics Grid */}
@@ -151,7 +352,7 @@ export const VendorDashboardScreen = ({ navigation }) => {
               <Ionicons name="receipt-outline" size={18} color="#2563eb" />
             </View>
             <Text style={[styles.statVal, { color: '#1d4ed8' }]}>
-              {orders.filter((o) => ['NEW_ORDER', 'ACCEPTED', 'PREPARING', 'READY_FOR_RIDER'].includes(o.status)).length}
+              {inFlightOrders.length}
             </Text>
             <Text style={styles.statLabel}>Active Orders</Text>
           </View>
@@ -191,9 +392,11 @@ export const VendorDashboardScreen = ({ navigation }) => {
             <View style={styles.emptyIconCircle}>
               <Ionicons name="receipt-outline" size={38} color="#94a3b8" />
             </View>
-            <Text style={styles.emptyTitle}>No Orders Yet</Text>
+            <Text style={styles.emptyTitle}>No Orders in Queue</Text>
             <Text style={styles.emptySub}>
-              Incoming orders from customer app will trigger instant audio chime and show up here.
+              {isStoreOpen
+                ? 'Store is ONLINE. Orders placed in customer app will trigger instant audio chime.'
+                : 'Store is OFFLINE. Toggle switch to ONLINE above when ready to receive orders.'}
             </Text>
           </View>
         ) : (
@@ -205,11 +408,29 @@ export const VendorDashboardScreen = ({ navigation }) => {
             const isOut = order.status === 'OUT_FOR_DELIVERY';
             const isDelivered = order.status === 'DELIVERED';
             const isCancelled = ['CANCELLED', 'REJECTED'].includes(order.status);
+            const isInFlight = ['NEW_ORDER', 'ACCEPTED', 'PREPARING', 'READY_FOR_RIDER', 'OUT_FOR_DELIVERY'].includes(order.status);
 
+            const isSubmittingThis = processingOrderId === order._id;
             const cust = order.customer || order.address || {};
 
             return (
-              <View key={order._id || order.orderId} style={styles.orderCard}>
+              <View
+                key={order._id || order.orderId}
+                style={[
+                  styles.orderCard,
+                  !isStoreOpen && isInFlight && styles.inFlightCardHighlight
+                ]}
+              >
+                {/* Highlight banner if this is an in-flight order while store is offline */}
+                {!isStoreOpen && isInFlight && (
+                  <View style={styles.inFlightBadgeRow}>
+                    <Ionicons name="flame" size={13} color="#ea580c" />
+                    <Text style={styles.inFlightBadgeText}>
+                      LAST IN-FLIGHT ORDER • FULFILLMENT REQUIRED
+                    </Text>
+                  </View>
+                )}
+
                 <View style={styles.orderHeader}>
                   <View>
                     <View style={styles.orderIdRow}>
@@ -321,68 +542,104 @@ export const VendorDashboardScreen = ({ navigation }) => {
                     </View>
                   </View>
 
-                  {/* Progressive Action Workflow */}
+                  {/* Progressive Action Workflow with Single-Execution Lock */}
                   <View style={styles.btnRow}>
                     {isNew && (
                       <>
                         <TouchableOpacity
-                          style={styles.rejectSmallBtn}
-                          onPress={() => updateOrderStatus(order._id, 'REJECTED', 'Kitchen is busy')}
+                          style={[styles.rejectSmallBtn, isSubmittingThis && { opacity: 0.5 }]}
+                          onPress={() => handleUpdateStatus(order._id, 'REJECTED', 'Kitchen is busy')}
+                          disabled={isSubmittingThis}
                         >
                           <Text style={styles.rejectSmallText}>Reject</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
-                          style={styles.acceptBtn}
-                          onPress={() => updateOrderStatus(order._id, 'ACCEPTED')}
+                          style={[styles.acceptBtn, isSubmittingThis && { opacity: 0.7 }]}
+                          onPress={() => handleUpdateStatus(order._id, 'ACCEPTED')}
                           activeOpacity={0.85}
+                          disabled={isSubmittingThis}
                         >
-                          <Text style={styles.btnText}>Accept</Text>
-                          <Ionicons name="checkmark-circle" size={16} color="#ffffff" />
+                          {isSubmittingThis ? (
+                            <ActivityIndicator size="small" color="#ffffff" />
+                          ) : (
+                            <>
+                              <Text style={styles.btnText}>Accept</Text>
+                              <Ionicons name="checkmark-circle" size={16} color="#ffffff" />
+                            </>
+                          )}
                         </TouchableOpacity>
                       </>
                     )}
 
                     {isAccepted && (
                       <TouchableOpacity
-                        style={[styles.acceptBtn, { backgroundColor: '#ea580c' }]}
-                        onPress={() => updateOrderStatus(order._id, 'PREPARING')}
+                        style={[styles.acceptBtn, { backgroundColor: '#ea580c' }, isSubmittingThis && { opacity: 0.7 }]}
+                        onPress={() => handleUpdateStatus(order._id, 'PREPARING')}
                         activeOpacity={0.85}
+                        disabled={isSubmittingThis}
                       >
-                        <Text style={styles.btnText}>Start Cooking & Packing</Text>
-                        <Ionicons name="flame" size={16} color="#ffffff" />
+                        {isSubmittingThis ? (
+                          <ActivityIndicator size="small" color="#ffffff" />
+                        ) : (
+                          <>
+                            <Text style={styles.btnText}>Start Cooking & Packing</Text>
+                            <Ionicons name="flame" size={16} color="#ffffff" />
+                          </>
+                        )}
                       </TouchableOpacity>
                     )}
 
                     {isPreparing && (
                       <TouchableOpacity
-                        style={[styles.acceptBtn, { backgroundColor: '#16a34a' }]}
-                        onPress={() => updateOrderStatus(order._id, 'READY_FOR_RIDER')}
+                        style={[styles.acceptBtn, { backgroundColor: '#16a34a' }, isSubmittingThis && { opacity: 0.7 }]}
+                        onPress={() => handleUpdateStatus(order._id, 'READY_FOR_RIDER')}
                         activeOpacity={0.85}
+                        disabled={isSubmittingThis}
                       >
-                        <Text style={styles.btnText}>Order is Packed</Text>
-                        <Ionicons name="cube" size={16} color="#ffffff" />
+                        {isSubmittingThis ? (
+                          <ActivityIndicator size="small" color="#ffffff" />
+                        ) : (
+                          <>
+                            <Text style={styles.btnText}>Order is Packed</Text>
+                            <Ionicons name="cube" size={16} color="#ffffff" />
+                          </>
+                        )}
                       </TouchableOpacity>
                     )}
 
                     {isReady && (
                       <TouchableOpacity
-                        style={[styles.acceptBtn, { backgroundColor: '#0284c7' }]}
-                        onPress={() => updateOrderStatus(order._id, 'OUT_FOR_DELIVERY')}
+                        style={[styles.acceptBtn, { backgroundColor: '#0284c7' }, isSubmittingThis && { opacity: 0.7 }]}
+                        onPress={() => handleUpdateStatus(order._id, 'OUT_FOR_DELIVERY')}
                         activeOpacity={0.85}
+                        disabled={isSubmittingThis}
                       >
-                        <Text style={styles.btnText}>Handover to Rider</Text>
-                        <Ionicons name="paper-plane" size={16} color="#ffffff" />
+                        {isSubmittingThis ? (
+                          <ActivityIndicator size="small" color="#ffffff" />
+                        ) : (
+                          <>
+                            <Text style={styles.btnText}>Handover to Rider</Text>
+                            <Ionicons name="paper-plane" size={16} color="#ffffff" />
+                          </>
+                        )}
                       </TouchableOpacity>
                     )}
 
                     {isOut && (
                       <TouchableOpacity
-                        style={[styles.acceptBtn, { backgroundColor: '#15803d' }]}
-                        onPress={() => updateOrderStatus(order._id, 'DELIVERED')}
+                        style={[styles.acceptBtn, { backgroundColor: '#15803d' }, isSubmittingThis && { opacity: 0.7 }]}
+                        onPress={() => handleUpdateStatus(order._id, 'DELIVERED')}
                         activeOpacity={0.85}
+                        disabled={isSubmittingThis}
                       >
-                        <Text style={styles.btnText}>Mark Delivered</Text>
-                        <Ionicons name="checkmark-done" size={16} color="#ffffff" />
+                        {isSubmittingThis ? (
+                          <ActivityIndicator size="small" color="#ffffff" />
+                        ) : (
+                          <>
+                            <Text style={styles.btnText}>Mark Delivered</Text>
+                            <Ionicons name="checkmark-done" size={16} color="#ffffff" />
+                          </>
+                        )}
                       </TouchableOpacity>
                     )}
 
@@ -408,6 +665,70 @@ export const VendorDashboardScreen = ({ navigation }) => {
           })
         )}
       </ScrollView>
+
+      {/* Switch / Login Partner Modal */}
+      <Modal visible={showLoginModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.switchModalCard}>
+            <View style={styles.switchModalHeader}>
+              <Text style={styles.switchModalTitle}>Switch Partner Account</Text>
+              <TouchableOpacity onPress={() => setShowLoginModal(false)}>
+                <Ionicons name="close" size={22} color="#64748b" />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.switchModalSub}>
+              Select a partner profile or enter another phone number to switch store.
+            </Text>
+
+            <View style={styles.demoAccountsList}>
+              {DEMO_VENDORS.map((v) => {
+                const isCurrent = vendor?.phone === v.phone;
+                return (
+                  <TouchableOpacity
+                    key={v.phone}
+                    style={[
+                      styles.demoAccountRow,
+                      isCurrent && styles.demoAccountRowActive
+                    ]}
+                    onPress={() => {
+                      handleCustomLogin(v.phone);
+                    }}
+                  >
+                    <Text style={{ fontSize: 24 }}>{v.icon}</Text>
+                    <View style={{ flex: 1, marginLeft: 12 }}>
+                      <Text style={[styles.demoName, isCurrent && { color: colors.primaryDark }]}>
+                        {v.name}
+                      </Text>
+                      <Text style={styles.demoPhone}>ID: VEN-{v.phone}</Text>
+                    </View>
+                    {isCurrent ? (
+                      <View style={styles.activePill}>
+                        <Text style={styles.activePillText}>ACTIVE</Text>
+                      </View>
+                    ) : (
+                      <Ionicons name="chevron-forward" size={18} color="#94a3b8" />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.logoutBtn}
+                onPress={() => {
+                  logoutVendor();
+                  setShowLoginModal(false);
+                }}
+              >
+                <Ionicons name="log-out-outline" size={16} color="#ef4444" />
+                <Text style={styles.logoutBtnText}>Log Out</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -450,6 +771,15 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4
   },
+  storeBadgeCircleLarge: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16
+  },
   storeTextContainer: {
     flex: 1
   },
@@ -473,6 +803,13 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     gap: 6
   },
+  statusPulseRing: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
   statusDot: {
     width: 8,
     height: 8,
@@ -486,6 +823,85 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 20,
     paddingBottom: 40
+  },
+  storeStateBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    marginBottom: 14
+  },
+  storeStateTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    letterSpacing: 0.4
+  },
+  storeStateSub: {
+    fontSize: 12,
+    marginTop: 2,
+    lineHeight: 16
+  },
+  lastOrderBanner: {
+    backgroundColor: '#fff7ed',
+    borderWidth: 1.5,
+    borderColor: '#fed7aa',
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 14,
+    shadowColor: '#ea580c',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3
+  },
+  lastOrderHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12
+  },
+  flameCircle: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#ea580c',
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  lastOrderTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#9a3412',
+    letterSpacing: 0.5
+  },
+  lastOrderSub: {
+    fontSize: 12,
+    color: '#c2410c',
+    marginTop: 3,
+    lineHeight: 16
+  },
+  inFlightCardHighlight: {
+    borderColor: '#fed7aa',
+    borderWidth: 2,
+    backgroundColor: '#fffcf9'
+  },
+  inFlightBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#ffedd5',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    marginBottom: 10
+  },
+  inFlightBadgeText: {
+    fontSize: 10.5,
+    fontWeight: '800',
+    color: '#c2410c',
+    letterSpacing: 0.4
   },
   connectionBar: {
     flexDirection: 'row',
@@ -514,12 +930,28 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#334155'
   },
+  switchAccountBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    backgroundColor: '#f1f5f9',
+    borderWidth: 1,
+    borderColor: '#e2e8f0'
+  },
+  switchAccountText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#475569'
+  },
   refreshBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
     paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingVertical: 4,
     borderRadius: 6,
     backgroundColor: '#f1f5f9'
   },
@@ -527,46 +959,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     color: '#475569'
-  },
-  switcherWrapper: {
-    marginBottom: 16
-  },
-  switcherLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#64748b',
-    marginBottom: 6,
-    letterSpacing: 0.5
-  },
-  switcherRow: {
-    gap: 8
-  },
-  switchChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#cbd5e1',
-    gap: 6
-  },
-  switchChipActive: {
-    borderColor: colors.primary,
-    backgroundColor: '#f0fdf4'
-  },
-  switchIcon: {
-    fontSize: 14
-  },
-  switchName: {
-    fontSize: 12.5,
-    fontWeight: '600',
-    color: '#475569'
-  },
-  switchNameActive: {
-    color: '#15803d',
-    fontWeight: '700'
   },
   statsGrid: {
     flexDirection: 'row',
@@ -846,6 +1238,191 @@ const styles = StyleSheet.create({
   },
   cancelledText: {
     fontSize: 12,
+    fontWeight: '700',
+    color: '#ef4444'
+  },
+  // Unauth Login Screen Styles
+  unauthCard: {
+    flex: 1,
+    padding: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#ffffff'
+  },
+  unauthTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#0f172a',
+    marginBottom: 6
+  },
+  unauthSub: {
+    fontSize: 13.5,
+    color: '#64748b',
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 19
+  },
+  loginForm: {
+    width: '100%',
+    maxWidth: 360,
+    marginBottom: 24
+  },
+  inputLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#475569',
+    marginBottom: 6
+  },
+  textInput: {
+    borderWidth: 1.5,
+    borderColor: '#e2e8f0',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: '#0f172a',
+    backgroundColor: '#f8fafc',
+    marginBottom: 12
+  },
+  loginSubmitBtn: {
+    backgroundColor: colors.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderRadius: 12,
+    paddingVertical: 12
+  },
+  loginSubmitText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '700'
+  },
+  errorText: {
+    color: '#ef4444',
+    fontSize: 12,
+    marginBottom: 8,
+    fontWeight: '600'
+  },
+  quickAccountsSection: {
+    width: '100%',
+    maxWidth: 360,
+    borderTopWidth: 1,
+    borderTopColor: '#f1f5f9',
+    paddingTop: 16
+  },
+  quickAccountsTitle: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#94a3b8',
+    letterSpacing: 0.5,
+    marginBottom: 10
+  },
+  quickAccountBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#e2e8f0'
+  },
+  quickAccountName: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1e293b'
+  },
+  quickAccountPhone: {
+    fontSize: 11,
+    color: '#64748b',
+    marginTop: 2
+  },
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20
+  },
+  switchModalCard: {
+    width: '100%',
+    maxWidth: 420,
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    padding: 20
+  },
+  switchModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6
+  },
+  switchModalTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#0f172a'
+  },
+  switchModalSub: {
+    fontSize: 12.5,
+    color: '#64748b',
+    marginBottom: 16,
+    lineHeight: 17
+  },
+  demoAccountsList: {
+    gap: 8,
+    marginBottom: 18
+  },
+  demoAccountRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: '#e2e8f0'
+  },
+  demoAccountRowActive: {
+    borderColor: colors.primary,
+    backgroundColor: '#f0fdf4'
+  },
+  demoName: {
+    fontSize: 13.5,
+    fontWeight: '700',
+    color: '#0f172a'
+  },
+  demoPhone: {
+    fontSize: 11,
+    color: '#64748b',
+    marginTop: 2
+  },
+  activePill: {
+    backgroundColor: '#dcfce7',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8
+  },
+  activePillText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#15803d'
+  },
+  modalActions: {
+    borderTopWidth: 1,
+    borderTopColor: '#f1f5f9',
+    paddingTop: 12,
+    alignItems: 'flex-start'
+  },
+  logoutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 8
+  },
+  logoutBtnText: {
+    fontSize: 13,
     fontWeight: '700',
     color: '#ef4444'
   }
