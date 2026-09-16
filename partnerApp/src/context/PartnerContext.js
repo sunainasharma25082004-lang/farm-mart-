@@ -18,28 +18,6 @@ export const PartnerProvider = ({ children }) => {
   });
   const [isLoading, setIsLoading] = useState(true);
 
-  // Default vendor login (Sunita Home Restro: 9876543211)
-  const loginVendor = useCallback(async (phone = '9876543211', password = 'demo123') => {
-    try {
-      setIsLoading(true);
-      const res = await fetch(`${API_BASE_URL}/auth/vendor/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, password })
-      });
-      const data = await res.json();
-      if (data.success && data.vendor) {
-        setVendor(data.vendor);
-        setToken(data.token);
-        return data.vendor;
-      }
-    } catch (err) {
-      console.warn('Vendor login failed, fallback to local state:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
   // Fetch Categories for product creation
   const fetchCategories = useCallback(async () => {
     try {
@@ -114,6 +92,31 @@ export const PartnerProvider = ({ children }) => {
       console.warn('Failed to fetch stats:', e);
     }
   }, [token]);
+
+  // Vendor login (Sunita: 9876543211, Sukhwinder: 9876543212, Gurpreet: 9876543213)
+  const loginVendor = useCallback(async (phone = '9876543211', password = 'demo123') => {
+    try {
+      setIsLoading(true);
+      const res = await fetch(`${API_BASE_URL}/auth/vendor/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, password })
+      });
+      const data = await res.json();
+      if (data.success && data.vendor) {
+        setVendor(data.vendor);
+        setToken(data.token);
+        fetchInventory(data.vendor._id);
+        fetchOrders(data.vendor._id);
+        if (data.token) fetchStats(data.token);
+        return data.vendor;
+      }
+    } catch (err) {
+      console.warn('Vendor login failed, fallback to local state:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [fetchInventory, fetchOrders, fetchStats]);
 
   // Initial load
   useEffect(() => {

@@ -714,6 +714,33 @@ export const VendorDashboardScreen = ({ navigation }) => {
               })}
             </View>
 
+            {/* Custom Phone / ID Direct Login Section */}
+            <View style={styles.modalCustomLoginSection}>
+              <Text style={styles.modalCustomLabel}>OR ENTER PARTNER PHONE / ID:</Text>
+              <View style={styles.modalInputRow}>
+                <TextInput
+                  style={styles.modalTextInput}
+                  placeholder="e.g. 9876543212"
+                  placeholderTextColor="#94a3b8"
+                  value={loginPhoneInput}
+                  onChangeText={setLoginPhoneInput}
+                  keyboardType="phone-pad"
+                />
+                <TouchableOpacity
+                  style={[styles.modalSubmitBtn, isLoggingIn && { opacity: 0.7 }]}
+                  onPress={() => handleCustomLogin()}
+                  disabled={isLoggingIn}
+                >
+                  {isLoggingIn ? (
+                    <ActivityIndicator size="small" color="#ffffff" />
+                  ) : (
+                    <Text style={styles.modalSubmitBtnText}>Log In</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+              {loginError ? <Text style={styles.errorText}>{loginError}</Text> : null}
+            </View>
+
             <View style={styles.modalActions}>
               <TouchableOpacity
                 style={styles.logoutBtn}
@@ -723,7 +750,7 @@ export const VendorDashboardScreen = ({ navigation }) => {
                 }}
               >
                 <Ionicons name="log-out-outline" size={16} color="#ef4444" />
-                <Text style={styles.logoutBtnText}>Log Out</Text>
+                <Text style={styles.logoutBtnText}>Log Out Completely</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1407,6 +1434,48 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '800',
     color: '#15803d'
+  },
+  modalCustomLoginSection: {
+    borderTopWidth: 1,
+    borderTopColor: '#f1f5f9',
+    paddingTop: 14,
+    marginBottom: 14
+  },
+  modalCustomLabel: {
+    fontSize: 10.5,
+    fontWeight: '800',
+    color: '#64748b',
+    letterSpacing: 0.4,
+    marginBottom: 8
+  },
+  modalInputRow: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center'
+  },
+  modalTextInput: {
+    flex: 1,
+    borderWidth: 1.5,
+    borderColor: '#e2e8f0',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    fontSize: 13.5,
+    color: '#0f172a',
+    backgroundColor: '#f8fafc'
+  },
+  modalSubmitBtn: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  modalSubmitBtnText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '700'
   },
   modalActions: {
     borderTopWidth: 1,
