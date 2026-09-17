@@ -1,176 +1,235 @@
-# 🛒 Farmart Customer App (`userApp`)
+# 🛒 S-farmart 24 Customer App (`userApp`)
 
-The **Farmart Customer App** is the primary consumer-facing storefront of the Farmart hyper-local ecosystem. It connects everyday households with local farmers, certified home chefs (Nari Shakti), community village hubs, and fresh produce marts for fast 30–45 minute doorstep delivery.
-
-Built using **React Native (Expo v57)** with full cross-platform compatibility across **Web (React Native Web)**, **Android**, and **iOS**.
+Official hyper-local customer marketplace application for **S-farmart 24**, built with **React Native (Expo v57)** and **React Native Web**. Connects everyday urban & rural households directly with verified local farmers, certified home chefs (*Nari Shakti*), community village hubs, and daily grocery marts for **lightning-fast 30–45 minute doorstep delivery**.
 
 ---
 
 ## 📑 Table of Contents
-1. [Overview & Value Proposition](#-overview--value-proposition)
-2. [Dummy Customer Account & 1-Tap Login](#-dummy-customer-account--1-tap-login)
-3. [Partner-Uploaded Products Verification](#-partner-uploaded-products-verification)
-4. [Ecosystem Synergy: Similarity with Partner App](#-ecosystem-synergy-similarity-with-partner-app)
-5. [Architecture & Tech Stack](#-architecture--tech-stack)
-6. [Key Features & Screens](#-key-features--screens)
-7. [Complete Product Catalog](#-complete-product-catalog)
+1. [Brand Identity & Official Logo](#-brand-identity--official-logo)
+2. [End-to-End Customer Workflow (User Kaise Use Kr Raha H)](#-end-to-end-customer-workflow-user-kaise-use-kr-raha-h)
+3. [Core Features & Working Architecture](#-core-features--working-architecture)
+4. [ACID Concurrency, Stock Deduction & Safety Guards](#-acid-concurrency-stock-deduction--safety-guards)
+5. [Real-Time Synergy with Partner App (`partnerApp`)](#-real-time-synergy-with-partner-app-partnerapp)
+6. [UI/UX Design Architecture & Customization Guide (Design Ke Liye Kya Kr Sakte Hain)](#-uiux-design-architecture--customization-guide-design-ke-liye-kya-kr-sakte-hain)
+7. [Screen-by-Screen Breakdown](#-screen-by-screen-breakdown)
 8. [Directory Structure](#-directory-structure)
-9. [How to Run Locally](#-how-to-run-locally)
+9. [1-Tap Demo Customer Account](#-1-tap-demo-customer-account)
+10. [How to Run Locally](#-how-to-run-locally)
 
 ---
 
-## 🌟 Overview & Value Proposition
+## 🎨 Brand Identity & Official Logo
 
-* **Direct Farm-to-Kitchen:** Zero synthetic ripening agents; crops harvested daily at dawn from verified smallholders.
-* **Authentic Home Chefs:** Wholesome thalis, regional curries, and desi ghee sweets prepared by local women culinary creators.
-* **Hyperlocal Speed:** Express delivery dispatch within 30 to 45 minutes powered by the rider network (`deliveryApp`).
-* **Flexible Payments:** Integrated Razorpay checkout (UPI, Debit/Credit Cards, NetBanking) and Cash on Delivery (COD).
-
----
-
-## 🔑 Dummy Customer Account & 1-Tap Login
-
-To test the Customer App without needing real SMS OTPs:
-
-* **Phone Number:** `9876543210`
-* **Password:** `demo123`
-* **Name:** `Rajesh Kumar` (Verified Household Customer)
-* **Delivery Address:** `Flat 402, Green Avenue, Model Town`
-* **Village Hub:** `Tarn Taran Village Hub`
-* **Preloaded Wallet:** `₹250`
-* **1-Tap Quick Login:** On the login screen ([http://localhost:8081](http://localhost:8081)), simply tap the green card:
-  **"⚡ 1-Tap Dummy Customer Login"** to bypass login instantly!
+The application reflects the official **S-farmart 24** brand identity:
+* **Official Logo:** Green and orange circular orbit rings with a fresh grocery basket, 24-hour delivery clock, and bold modern typography (`userApp/assets/farmart24_logo.jpg` & `userApp/assets/icon.png`).
+* **Header Alignment:** Displayed crisply at `44x44` (1:1 square ratio) with smooth rounded corners, perfectly aligned next to the GPS location selector and cart badge.
+* **Core Brand Colors:**
+  * Primary Green: `#16a34a` (Farm Fresh & Growth)
+  * Secondary Crimson: `#dc2626` (Express Delivery Badges)
+  * Harvest Orange: `#ea580c` (Kitchen Warmth & Urgency)
+  * Soft Slate Neutral: `#f4f6f8` (High readability mobile canvas)
 
 ---
 
-## 🚀 Partner-Uploaded Products Verification
+## 🚶 End-to-End Customer Workflow (User Kaise Use Kr Raha H)
 
-The following 3 items uploaded by **Chef Sunita Sharma** (`partnerApp`) are now live and directly orderable on this app:
+The following sequence illustrates the complete customer journey from launching the app to receiving doorstep delivery:
 
-1. 🍲 **Special Amritsari Chole Kulche Thali** (`p17`)
-   * **Price:** ₹140 / thali
-   * **Source:** Chef Sunita Sharma (`Sunita Home Restro & Sweets`)
-   * **Where to see:** Go to the **"Home Chef"** tab or search *"Chole"* on the Home tab.
-2. 🍯 **Desi Ghee Moong Dal Halwa** (`p18`)
-   * **Price:** ₹180 / 250g
-   * **Source:** Chef Sunita Sharma (`Sunita Home Restro & Sweets`)
-   * **Where to see:** Go to **"Market" ➔ "Desi Sweets"** or the **"Home Chef"** tab.
-3. 🥗 **Farm Fresh Organic Yellow Capsicum** (`p19`)
-   * **Price:** ₹60 / 500g
-   * **Source:** Chef Sunita Sharma (`Sunita Home Restro & Sweets`)
-   * **Where to see:** Go to **"Market" ➔ "Farm Veggies"** or search *"Capsicum"*.
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Customer as 👤 Customer (User)
+    participant Header as 📍 Header & GPS
+    participant Home as 🏠 Home Screen
+    participant Store as 🏪 Store & Catalog
+    participant Cart as 🛒 Cart Context
+    participant Checkout as 💳 Checkout & Pay
+    participant Backend as ⚡ S-farmart API (MongoDB)
+    participant Socket as 📡 WebSocket Service
+    participant Partner as 👨‍🍳 Partner App
 
----
-
-## 🔄 Ecosystem Synergy: Similarity with Partner App
-
-The Customer App and Partner App are two sides of the same live marketplace:
-
-| Feature / Data Entity | In Partner App (`partnerApp`) | In Customer App (`userApp`) |
-| :--- | :--- | :--- |
-| **Featured Chef / Vendor** | **Chef Sunita Sharma** (`Sunita Home Restro & Sweets`) logs in to manage orders. | Customers see **Chef Sunita Sharma** highlighted with 4.9★ rating on the `Home Restro` tab. |
-| **Product Listings** | Partner lists *Special Punjabi Rajma Thali* (₹130), *A2 Cow Ghee* (₹650), *Besan Ladoo* (₹240). | Customer browses, views photos, and adds these exact items into their cart. |
-| **Stock Management** | If Partner flips toggle to **OUT OF STOCK**, | Item is instantly disabled on the Customer App so customers cannot order it. |
-| **Store Open/Closed** | Partner flips **STORE CLOSED** switch at night. | Customer App displays store as closed; ordering is paused. |
-| **Order Placement** | When customer clicks **Place Order**, it rings in Partner App's **Live Orders Queue**. | Customer receives an order ID (e.g., `#FMT-ORD-9821`) and can track status live. |
-| **Order Preparation** | Partner taps **Ready for Rider**. | Customer's screen status updates in real-time to *"Out for Delivery"*. |
-
----
-
-## 🛠️ Architecture & Tech Stack
-
-* **Framework:** [Expo](https://expo.dev/) (SDK 57) + [React Native](https://reactnative.dev/) (v0.86.2)
-* **Web Engine:** `react-native-web` (running on Vite / Metro Bundler)
-* **Navigation:** `@react-navigation/native` with `@react-navigation/bottom-tabs` & `@react-navigation/native-stack`
-* **Icons:** `@expo/vector-icons` (Ionicons)
-* **HTTP & API Service:** Axios & native fetch
-* **Payment Integration:** Razorpay WebView Gateway (`RazorpayCheckoutWebView.js`)
-* **State Management:** React Context API (`AppContext.js`) managing user profile, active cart, and order states
-
----
-
-## 📱 Key Features & Screens
-
-```
-┌────────────────────────────────────────────────────────────────────────┐
-│                        CUSTOMER APP TABS & FLOW                        │
-├───────────────┬──────────────┬──────────────┬─────────────┬────────────┤
-│     Home      │    Market    │  Home Chef   │   Orders    │  Profile   │
-│  (Discovery)  │  (Catalog)   │ (HomeRestro) │ (Tracking)  │  (Wallet)  │
-└───────┬───────┴──────┬───────┴──────┬───────┴──────┬──────┴─────┬──────┘
-        │              │              │              │            │
-        ▼              ▼              ▼              ▼            ▼
-• Search & Banners • Categorized  • Women Chefs  • Step-by-   • ₹250 Wallet
-• 30-min Delivery  • Unit pricing • Daily Thali  •  step live • Saved addrs
-• Top Categories   • In-stock tag • Desi Sweets  •  tracking  • Past bills
+    Customer->>Header: App open karte hi delivery location automatically detect hoti hai
+    Customer->>Home: Banners, Categories, aur Popular Stores browse karta hai
+    Customer->>Store: Store select karta hai (e.g. "Sunita Home Restro & Sweets")
+    Store->>Customer: Live menu display hota hai (Price, Veg tag, Stock quantity)
+    Customer->>Store: "+ ADD" click karke product cart me daalta hai
+    Store->>Cart: Item cart me add hoti hai (Agar dusre store se item pehle se ho to ClearCartModal warn karta hai)
+    Customer->>Cart: Cart open karta hai, quantity adjust karta hai, bill breakdown check karta hai
+    Customer->>Checkout: "Proceed to Pay" tap karta hai
+    Checkout->>Customer: Address confirm karta hai aur payment mode select karta hai (COD / Wallet / Online)
+    Customer->>Checkout: "Pay & Place Order" click karta hai
+    Checkout->>Backend: Atomic ACID transaction initiate hoti hai (clientOrderId ke sath)
+    Backend->>Backend: Stock verify hota hai aur instantly deduct hota hai (Optimistic Concurrency Lock)
+    Backend->>Socket: order:new event emit hota hai strictly vendor room me
+    Socket->>Partner: Partner App par loud audio chime bajti hai aur Live Order Queue me card flash hota hai
+    Customer->>Checkout: Order place ho jata hai aur user direct OrderTrackingScreen par pahunchta hai
+    Partner->>Socket: Partner status update karta hai (ACCEPTED -> PREPARING -> READY_FOR_RIDER)
+    Socket->>Customer: Customer tracking screen par live status bina refresh kiye update hota hai
 ```
 
-### 1. Home Screen & Daily Showcase (`HomeScreen.js`)
-* **Live Search Bar:** Instant keyword search across veggies, groceries, thalis, and sweets.
-* **Offer Banner Carousel:** Automatic 3-second animated carousel showcasing seasonal discounts and harvest alerts.
-* **Quick Service Strip:** Indicators for *30–45 min delivery*, *Farm fresh daily*, and *Quality checked*.
-* **Service Pills:** Fast filtering between *Farmart Mart*, *Direct Farm Harvest*, *Home Restro*, *Bakery & Sweets*, and *Handmade Care*.
+### Step-by-Step User Actions:
 
-### 2. Fresh Market & Catalog Screen (`CatalogScreen.js`)
-* Multi-category selector chips: `All`, `Farm Veggies`, `Fresh Fruits`, `Dairy & Ghee`, `Farmart Mart`.
-* Two-column product grid with high-resolution imagery, farmer origin details, discount tags, and `Add to Cart` controls.
-
-### 3. Home Restro & Chef Showcase (`HomeRestroScreen.js`)
-* Dedicated hub for hygienic, authentic meals prepared by verified women micro-entrepreneurs.
-* Profile cards for popular community cooks (e.g. *Chef Sunita Sharma*, *Chef Manjeet Kaur*).
-* Direct ordering for freshly prepared lunch & dinner thalis, artisanal whole-wheat bread, and organic jaggery sweets.
-
-### 4. Cart & Dynamic Checkout (`CartScreen.js` & `CheckoutScreen.js`)
-* Incremental item quantity increment/decrement with real-time bill calculations.
-* Breakdown: Item Total, Delivery Fee (Free above ₹199), Platform Fee, Taxes.
-* Address selection (Home, Office, Village Hub).
-* Payment choice: **Instant Online Pay (Razorpay UPI / Cards)** or **Cash on Delivery**.
-
-### 5. Live Order Tracking (`OrderTrackingScreen.js`)
-* Step-by-step visual tracker:
-  1. `Order Placed` (Received by system)
-  2. `Store Packing` (Partner preparing harvest or food)
-  3. `Rider Out for Delivery` (Rider en route with live ETA)
-  4. `Delivered`
-* Call Rider & Call Support direct action buttons.
-
-### 6. Profile & Wallet Balance (`ProfileWalletScreen.js`)
-* Customer digital wallet with referral rewards and cashbacks.
-* Saved address book and order history archive.
-
-### 7. Farmer Direct Sell Access (`FarmerDashboardScreen.js`)
-* An integrated sub-module allowing smallholder farmers to switch modes and publish newly harvested crops directly to the marketplace with expected yield, harvest date, and asking price.
+1. **Location Setup & Header Interaction:**
+   * Customer app open karta hai.
+   * Header automatically device GPS reverse geocoding use karke current city aur street fetch karta hai.
+   * Customer delivery address par tap karke manual delivery address bhi set/edit kar sakta hai.
+2. **Browsing & Discovery:**
+   * **Smart Search:** Customer top search bar me dish ya veggie type karta hai (e.g., *"Rajma"*, *"Dal"*, *"Tomato"*).
+   * **Quick Category Chips:** *Fresh Fruits & Veggies*, *Dairy & Ghee*, *Atta & Dal*, *Home Thali*, *Bakery & Sweets*.
+   * **Popular Stores Near You:** Nearby live stores dikhte hain unke live status (`ONLINE` / `CLOSED`), rating (`4.9★`), aur preparation time ke sath.
+3. **Store Page & Product Selection:**
+   * Store card click karne par store ka banner, address, aur pura categorized menu open hota hai.
+   * Har item par **Pure Veg green square indicator**, strikethrough MRP, actual selling price, aur description hota hai.
+   * Agar product out of stock hai, to button disabled rehta hai aur **"Out of Stock"** red badge show hota hai.
+4. **Single-Store Multi-Cart Protection:**
+   * S-farmart 24 lightning-fast single-route delivery support karta hai. Agar user Store A se item dalne ke baad Store B se item add karta hai, to `ClearCartModal` open hota hai jo user ko clear choice deta hai: *"Do you want to discard your current cart and switch to this store?"*
+5. **Reviewing Cart & Dynamic Bill:**
+   * Customer floating green cart bar ya top header cart icon se cart open karta hai.
+   * Cart me `+` aur `-` buttons se quantity instant update hoti hai.
+   * Bill Summary me Item Total, Delivery Fee (Free above ₹199), Taxes, aur Platform Fee real-time calculate hote hain.
+6. **Checkout & Multi-Channel Payment:**
+   * **S-farmart Wallet:** Customer ke profile me ₹250 preloaded balance hota hai, jisse 1-tap me zero-fee checkout ho sakta hai.
+   * **Cash on Delivery (COD):** Delivery boy ko cash ya arrival QR scan se pay karne ka option.
+   * **Online Gateway Modal:** Bank-grade 256-bit SSL encrypted modal jisme Google Pay, PhonePe, Paytm, aur Credit/Debit card options integrated hain.
+7. **Live Order Tracking:**
+   * Order submit hote hi customer **Order Tracking Screen** par aata hai.
+   * Animated pulse timeline dikhti hai:
+     1. `Order Placed`
+     2. `Store Packing`
+     3. `Rider Out for Delivery`
+     4. `Delivered`
+   * Socket.io ke zariye partner jab bhi dashboard par order accept ya packed mark karta hai, customer screen par status real-time update ho jata hai.
 
 ---
 
-## 📦 Complete Product Catalog
+## ⚡ Core Features & Working Architecture
 
-The Customer App comes pre-configured with authentic product lines across 5 core categories:
+### 1. Unified State Management (`AppContext.js` & `CartContext.js`)
+* `AppContext`: Customer authentication, token, user profile, saved addresses, demo wallet balance, aur multi-role switching handle karta hai.
+* `CartContext`: Cart items array, vendor validation, dynamic item totals, single-route integrity, aur idempotent checkout payloads manage karta hai.
 
-### 🥦 1. Direct Farm Harvest (Veggies & Fruits)
-* **Farm Fresh Organic Red Tomatoes** — ₹38 / kg *(Farmer: Sukhwinder Singh, Tarn Taran)*
-* **Kinnow Mandarin Fresh Fruits** — ₹75 / kg *(Farmer: Gurpreet Orchards, Abohar)*
-* **Crisp Punjab Green Spinach (Palak)** — ₹25 / bunch *(Farmer: Harpreet Organics)*
-* **Royal Shimla Red Apples** — ₹160 / kg *(Himachal Farm Producer Co-Op)*
+### 2. Live WebSocket Connection (`SocketContext.js`)
+* S-farmart backend (`http://localhost:5000`) ke sath auto-reconnecting socket connection banata hai.
+* Mobile backgrounding resilience ke liye `pingInterval: 25000` aur `pingTimeout: 20000` configured hain.
+* Listeners:
+  * `order:status`: Jab merchant order status badalta hai to customer app bina page reload kiye instant reflect karta hai.
+  * `product:stock`: Jab merchant stock add/remove karta hai ya kisi dusre user ke purchase se item sold out hoti hai, to real-time event aata hai.
 
-### 🌾 2. Farmart Mart (Grocery & Daily Staples)
-* **Pure Desi Cow Ghee (A2 Bilona)** — ₹650 / 500g *(Farmart Dairy Cooperative)*
-* **Organic Whole Sharbati Wheat Atta** — ₹290 / 5kg *(Stone-ground Chakki Fresh)*
-* **Cold-Pressed Kachi Ghani Mustard Oil** — ₹195 / 1L *(Wood-pressed, zero chemical)*
-* **Aromatic Aged Royal Basmati Rice** — ₹480 / 5kg *(2-year aged grain)*
+### 3. Smart Location Geocoding (`Header.js`)
+* `expo-location` ke through coordinates ko human-readable address me convert karta hai.
+* Agar permission deny hoti hai ya device offline hoti hai to graceful fallback address set karta hai taaki app kabhi crash na ho.
 
-### 🍱 3. Home Restro Meals (Certified Women Chefs)
-* **Special Punjabi Rajma Rice Thali** — ₹130 / thali *(Chef Sunita Sharma)*
-* **Authentic Sarson Saag & Makki Roti Meal** — ₹160 / meal *(Chef Manjeet Kaur)*
-* **Homemade Paneer Butter Masala Combo** — ₹150 / combo *(Chef Sunita Sharma)*
+---
 
-### 🍬 4. Bakery & Sweets
-* **Handmade Organic Gur Besan Ladoo** — ₹240 / 500g *(No refined sugar)*
-* **Freshly Baked Whole Wheat Bread** — ₹45 / loaf *(Daily baked, no chemicals)*
-* **Pure Kaju Katli Gift Box** — ₹420 / 500g *(Festival diamond cuts)*
+## 🛡️ ACID Concurrency, Stock Deduction & Safety Guards
 
-### 🧼 5. Women Entrepreneur Handmade Care
-* **Artisanal Organic Neem & Turmeric Soap** — ₹90 / bar *(Handmade Cold-Process)*
+Online grocery me sabse bada issue over-selling (ek bachi hui item ko ek hi time par do logon ka khareed lena) hota hai. S-farmart 24 me isko **Database-Level ACID Guarantees** se solve kiya gaya hai:
+
+1. **Atomic Stock Decrement:**
+   * Backend checkout API (`server/controllers/orderController.js`) me MongoDB atomic query use hoti hai:
+     ```javascript
+     { _id: productId, stockQty: { $gte: orderedQty } }
+     ```
+   * Stock deduct hone par hi order create hota hai. Agar do users exact same millisecond par checkout button click karte hain, to database lock sirf ek ko succeed hone deta hai aur dusre user ko gracefully prompt karta hai:
+     *"Insufficient stock for item. Another customer may have just purchased it."*
+2. **Auto Out-of-Stock Broadcast:**
+   * Jaise hi kisi item ka stock `0` hota hai, backend automatically `inStock: false` mark karta hai aur pure network par WebSocket broadcast bhejta hai.
+   * Sabhi active users ki screen par `ADD +` button disable hokar `OUT OF STOCK` me switch ho jata hai.
+3. **Action Idempotency & Duplicate Order Prevention:**
+   * Har checkout request me frontend se unique `clientOrderId` (`ORD_CLI_${Date.now()}_${random}`) bheja jata hai.
+   * Network lag ya rapid double-tapping ki wajah se duplicate transaction kabhi trigger nahi hoti.
+
+---
+
+## 🔄 Real-Time Synergy with Partner App (`partnerApp`)
+
+Customer App aur Partner App aapas me seamlessly synced hain:
+
+| Customer Action (`userApp`) | Real-Time Reflection in Partner App (`partnerApp`) |
+| :--- | :--- |
+| Customer places order for Sunita Home Restro | Partner App par audio alert bajta hai aur order card flash hota hai |
+| Customer adds 2 units of Moong Dal | Partner inventory me stock 2 units kam ho jata hai |
+| Customer changes delivery address | Partner ko print/dispatch slip par updated address dikhta hai |
+| **Partner Action (`partnerApp`)** | **Real-Time Reflection in Customer App (`userApp`)** |
+| Partner toggles store to **OFFLINE** | Store page par `ADD +` buttons lock ho jate hain aur `CLOSED` status banner show hota hai |
+| Partner accepts order & clicks **Start Cooking** | Customer Order Tracking screen par status `PREPARING` ho jata hai |
+| Partner adds a new Dish in **Add Listing** | Customer app ke store menu me new dish instantly live aa jati hai |
+| Partner increases stock (+10 units) | Out of stock badge hat jata hai aur product dubara orderable ho jata hai |
+
+---
+
+## 🎨 UI/UX Design Architecture & Customization Guide
+
+### Design Ke Liye Kya Kr Sakte Hain & Kaise Kar Sakte Hain:
+
+Agar aap S-farmart 24 ka UI design customize karna chahte hain, naye themes add karna chahte hain, ya visual aesthetics ko aur enhance karna chahte hain, to yahan detail guide hai:
+
+### 1. Theme Tokens Customization (`userApp/src/theme/colors.js`)
+Pura application centralized color tokens use karta hai. Aap ek hi file se pure app ka look & feel change kar sakte hain:
+
+```javascript
+// userApp/src/theme/colors.js
+export const colors = {
+  primary: "#16a34a",       // Main Brand Green (Buttons, Active Tabs, Highlights)
+  primaryDark: "#15803d",   // Deep Forest Green (Text headers, Badges)
+  primaryLight: "#dcfce7",  // Mint Green tint (Card backgrounds, Tags)
+  secondary: "#dc2626",     // Alert / Offer Crimson
+  orange: "#ea580c",        // Warm Accent (Thali / Restro highlights)
+  background: "#f4f6f8",    // Clean modern slate canvas (Zero glare)
+  card: "#ffffff",          // Pure white elevated card surfaces
+  textPrimary: "#0f172a",   // Slate 900 for ultra-crisp readable text
+  textSecondary: "#64748b", // Slate 500 for secondary descriptions
+  border: "#e8edf2",        // Subtle card divider lines
+};
+```
+
+#### What You Can Do (Design Ideas):
+* **Dark Mode Theme:** Ek `darkColors` object banakar toggle state ke basis par canvas ko `#0f172a` aur cards ko `#1e293b` me switch kar sakte hain.
+* **Festive Theme (Diwali / Eid / Baisakhi):** `primary` ko `#d97706` (Golden Amber) ya `#b91c1c` (Festival Red) me switch karke festive season ka look de sakte hain.
+
+### 2. Modern Typography & Custom Fonts
+Current app system fonts use karti hai for maximum native speed. Isme Google Fonts (jaise *Outfit*, *Inter*, ya *Poppins*) add karne ke liye:
+1. Terminal me install karein:
+   ```bash
+   npx expo install @expo-google-fonts/outfit expo-font
+   ```
+2. `App.js` me load karein:
+   ```javascript
+   import { useFonts, Outfit_400Regular, Outfit_600SemiBold, Outfit_800ExtraBold } from '@expo-google-fonts/outfit';
+   ```
+3. Stylesheet me font apply karein:
+   ```javascript
+   fontFamily: 'Outfit_600SemiBold'
+   ```
+
+### 3. Micro-Animations & Smooth Feedback
+App ko modern Zomato/Blinkit jaisa dynamic feel dene ke liye:
+* **Pulse Animations:** Jaise Partner App me breathing pulse status pill hai, waise hi User App ke offers banner ya "Live 30-min delivery" tag par React Native `Animated` loop use kar sakte hain.
+* **Skeleton Loaders:** Jab products API se load ho rahe hon, tab shimmer skeleton placeholder cards render kar sakte hain.
+* **Haptic Feedback:** Order place hone ya item add hone par mobile par subtle vibration trigger karne ke liye `expo-haptics` use kar sakte hain.
+
+### 4. Mobile Viewport Guarantee (`412x924`)
+User App ko modern smartphones ke exact viewport space (`412x924`) ke liye optimize kiya gaya hai:
+* **Zero Horizontal Overflow:** Cards me `flexWrap: 'nowrap'` aur `minWidth: 0` use kiya gaya hai taaki text screen se bahar na kate.
+* **Safe Paddings:** Content bottom par `paddingBottom: 90` diya gaya hai taaki floating bottom navigation tabs kisi button ya text ko block na karein.
+* **Touch Targets:** Sabhi interactive buttons (`ADD +`, `Proceed to Pay`, `Filter chips`) minimum 44px height rakhte hain for comfortable thumb navigation.
+
+---
+
+## 📱 Screen-by-Screen Breakdown
+
+```
+userApp/src/screens/Customer/
+├── HomeScreen.js                  # Hero carousel, delivery timer strip, popular stores, service pills
+├── CatalogScreen.js               # Category filter tabs, two-column product cards with quick-add
+├── VendorStoreScreen.js           # Merchant specific catalog, store banner, online/offline check
+├── ProductDetailsScreen.js        # Large product photography, ingredients, origin details, reviews
+├── CartScreen.js                  # Cart items, promo code entry, item breakdown, store validation
+├── CheckoutScreen.js              # Delivery address, COD/Wallet/Online payment selector, S-farmart guarantee
+├── OrderTrackingScreen.js         # Real-time multi-step order timeline, rider contact, ETA counter
+├── ProfileWalletScreen.js         # Digital S-farmart wallet, past orders history, address book
+└── RazorpayCheckoutWebView.js     # Fallback WebView modal for Razorpay checkout integration
+```
 
 ---
 
@@ -178,72 +237,81 @@ The Customer App comes pre-configured with authentic product lines across 5 core
 
 ```text
 userApp/
-├── .expo/                        # Expo development cache
-├── assets/                       # App icons, splash images, and brand assets
+├── assets/
+│   ├── farmart24_logo.jpg         # Official S-farmart 24 logo asset (1:1 square)
+│   ├── farmart_logo.png           # Transparent brand logo PNG
+│   ├── icon.png                   # Mobile app launcher icon
+│   ├── splash-icon.png            # Mobile splash loading screen icon
+│   └── favicon.png                # Web browser tab icon
 ├── src/
 │   ├── components/
-│   │   ├── Header.js             # Top app bar with search & cart counter
-│   │   ├── ProductCard.js        # Reusable product display component
-│   │   └── CategoryChip.js       # Horizontal category selector pill
+│   │   ├── Header.js              # App bar with S-farmart 24 logo, GPS location & cart badge
+│   │   ├── ProductCard.js         # Reusable card with veg badge, price, strike MRP & ADD button
+│   │   ├── CategoryChip.js        # Horizontal selector pills
+│   │   ├── ClearCartModal.js      # Single-store delivery enforcement popup
+│   │   └── RoleSelectorModal.js   # Multi-role switcher for demo exploration
 │   ├── context/
-│   │   └── AppContext.js         # Global store (Cart, Profile, Orders, Roles)
+│   │   ├── AppContext.js          # Authentication, user profile, demo wallet balance
+│   │   ├── CartContext.js         # Cart operations, quantity updates, order calculation
+│   │   └── SocketContext.js       # Real-time WebSocket connection to backend
 │   ├── data/
-│   │   └── mockData.js           # Comprehensive product catalog & chef profiles
+│   │   └── mockData.js            # Catalog data, services, farmer cooperatives & categories
 │   ├── navigation/
-│   │   └── RootNavigator.js      # Bottom tabs & stack routes setup
+│   │   └── RootNavigator.js       # Bottom tab bar and Stack Navigation structure
 │   ├── screens/
-│   │   ├── Auth/                 # Login & Signup screens
-│   │   ├── Customer/
-│   │   │   ├── HomeScreen.js           # Main landing & hero carousel
-│   │   │   ├── CatalogScreen.js        # Market explorer
-│   │   │   ├── HomeRestroScreen.js     # Home chefs & thalis
-│   │   │   ├── CartScreen.js           # Cart basket
-│   │   │   ├── CheckoutScreen.js       # Address & payment selector
-│   │   │   ├── OrderTrackingScreen.js  # Live tracking timeline
-│   │   │   ├── ProfileWalletScreen.js  # Profile & wallet funds
-│   │   │   └── RazorpayCheckoutWebView.js # Payment gateway modal
-│   │   └── Farmer/
-│   │       └── FarmerDashboardScreen.js# Farmer direct crop listing tool
+│   │   ├── Auth/                  # LoginScreen.js & SignupScreen.js
+│   │   ├── Customer/              # All 9 customer shopping & tracking screens
+│   │   ├── Farmer/                # Farmer direct crop listing dashboard
+│   │   ├── GrowthPartner/         # City growth distributor portal
+│   │   └── VillageHub/            # Women entrepreneur and village hub dashboard
 │   ├── services/
-│   │   └── api.js                # REST API endpoints service
+│   │   └── api.js                 # Axios API connector with timeout & offline fallbacks
 │   └── theme/
-│       └── colors.js             # Vibrant green and harvest color tokens
-├── App.js                        # Root entry point with ErrorBoundary
-├── app.json                      # Expo mobile app configuration
-├── package.json                  # Dependencies & scripts
-└── README.md                     # Documentation (this file)
+│       └── colors.js              # Centralized color tokens
+├── App.js                         # Root React Native component with ErrorBoundary
+├── app.json                       # Expo application manifest ("S-farmart 24")
+├── package.json                   # Dependencies & build scripts
+└── README.md                      # Documentation (this file)
 ```
+
+---
+
+## 🔑 1-Tap Demo Customer Account
+
+App ko bina real SMS OTP ke test karne ke liye pre-configured demo credentials:
+
+* **Phone Number:** `9876543210`
+* **Password:** `demo123`
+* **Customer Name:** `Rajesh Kumar`
+* **Demo Email:** `rajesh.customer@sfarmart.in`
+* **Preloaded S-farmart Wallet:** `₹250`
+* **Delivery Address:** `Flat 402, Green Avenue, Model Town, Ludhiana`
+* **1-Tap Quick Login:** Login screen par green card **"⚡ 1-Tap Dummy Customer Login"** par click karein aur direct bina typing ke app me enter ho jayein.
 
 ---
 
 ## 💻 How to Run Locally
 
-### 1. Run on Web Browser (Recommended)
+### 1. Web Browser (Fastest & Easiest)
 ```bash
 cd userApp
 npm run web
 ```
-The app will bundle via Metro and start on **[http://localhost:8081](http://localhost:8081)**.
+App Metro bundler ke zariye start hogi: **[http://localhost:8081](http://localhost:8081)**.
 
-### 2. Run on Android Device / Emulator
-```bash
-cd userApp
-npm run android
-```
+### 2. Smartphone Mobile View (Chrome / Edge DevTools)
+1. Browser me `http://localhost:8081` open karein.
+2. Keyboard par `F12` dabakar DevTools open karein.
+3. `Ctrl + Shift + M` dabakar Device Toolbar toggle karein.
+4. Dimensions me **`412 x 924`** (Pixel 7 / Galaxy S21) select karein for authentic smartphone preview.
 
-### 3. Run on iOS Simulator (macOS required)
-```bash
-cd userApp
-npm run ios
-```
-
-### 4. Run via Expo Go (Physical Smartphone)
+### 3. Physical Phone via Expo Go
 ```bash
 cd userApp
 npm start
 ```
-Scan the QR code in the terminal using **Expo Go** on Android or Camera app on iOS.
+Terminal me aane wale QR code ko apne phone ke **Expo Go** app se scan karein.
 
 ---
 
-© 2026 Farmart. All rights reserved. Empowering Farmers • Building Communities • Growing Bharat.
+© 2026 S-farmart 24. All rights reserved. Empowering Farmers • Supporting Home Chefs • Rapid Doorstep Delivery.
