@@ -36,7 +36,7 @@ export const SocketProvider = ({ children, vendor, token, onOrderReceived }) => 
       socketRef.current = socket;
 
       socket.on('connect', () => {
-        console.log('⚡ Socket connected to Farmart backend:', socket.id);
+        console.log('⚡ Socket connected to S-farmart backend:', socket.id);
         setIsConnected(true);
         setConnectionMode('REALTIME');
 

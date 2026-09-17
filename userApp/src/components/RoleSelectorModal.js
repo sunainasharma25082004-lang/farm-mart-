@@ -153,8 +153,9 @@ const styles = StyleSheet.create({
     gap: 10
   },
   logo: {
-    width: 56,
-    height: 36
+    width: 42,
+    height: 42,
+    borderRadius: 8
   },
   modalTitle: {
     fontSize: 17,

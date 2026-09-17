@@ -263,8 +263,9 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   logoImage: {
-    width: 92,
-    height: 40,
+    width: 44,
+    height: 44,
+    borderRadius: 8,
   },
   backBtn: {
     width: 40,

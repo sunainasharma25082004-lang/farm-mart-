@@ -11,12 +11,15 @@ import {
   Animated,
   ActivityIndicator,
   Modal,
-  TextInput
+  TextInput,
+  Image
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { usePartner } from '../context/PartnerContext';
 import { useSocket } from '../context/SocketContext';
 import { colors } from '../theme/colors';
+
+const LOGO = require('../../assets/farmart_logo.png');
 
 const DEMO_VENDORS = [
   { name: 'Sunita Sharma (Home Chef)', phone: '9876543211', icon: '🍳', storeType: 'HOME_CHEF' },
@@ -121,9 +124,9 @@ export const VendorDashboardScreen = ({ navigation }) => {
         <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
         <View style={styles.unauthCard}>
           <View style={styles.storeBadgeCircleLarge}>
-            <Ionicons name="storefront" size={38} color="#ffffff" />
+            <Image source={LOGO} style={{ width: 68, height: 68 }} resizeMode="contain" />
           </View>
-          <Text style={styles.unauthTitle}>Partner Portal Login</Text>
+          <Text style={styles.unauthTitle}>S-farmart Partner Portal</Text>
           <Text style={styles.unauthSub}>
             Please log in with your Partner ID or Phone number to manage orders and open your store.
           </Text>
@@ -186,7 +189,7 @@ export const VendorDashboardScreen = ({ navigation }) => {
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <View style={styles.storeBadgeCircle}>
-            <Ionicons name="storefront" size={22} color="#ffffff" />
+            <Image source={LOGO} style={{ width: 38, height: 38, borderRadius: 8 }} resizeMode="contain" />
           </View>
           <View style={styles.storeTextContainer}>
             <Text style={styles.storeName} numberOfLines={1}>
@@ -796,24 +799,33 @@ const styles = StyleSheet.create({
   storeBadgeCircle: {
     width: 44,
     height: 44,
-    borderRadius: 14,
-    backgroundColor: colors.primary,
+    borderRadius: 12,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4
+    shadowColor: 'rgba(0,0,0,0.06)',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 1,
+    shadowRadius: 4,
+    elevation: 2
   },
   storeBadgeCircleLarge: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: colors.primary,
+    width: 80,
+    height: 80,
+    borderRadius: 20,
+    backgroundColor: '#ffffff',
+    borderWidth: 1.5,
+    borderColor: '#e2e8f0',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16
+    marginBottom: 16,
+    shadowColor: 'rgba(0,0,0,0.08)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 10,
+    elevation: 4
   },
   storeTextContainer: {
     flex: 1

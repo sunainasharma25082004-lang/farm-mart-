@@ -33,7 +33,7 @@ export const RazorpayCheckoutWebView = ({ route, navigation }) => {
                 "key": "dummy_key", // This should be replaced dynamically or using a test key
                 "amount": "${order.amount}",
                 "currency": "${order.currency}",
-                "name": "Farmart",
+                "name": "S-farmart",
                 "description": "Order Payment",
                 "order_id": "${order.id}",
                 "handler": function (response) {

@@ -93,8 +93,8 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   brandLogo: {
-    width: 140,
-    height: 52,
+    width: 88,
+    height: 88,
   },
   profileCard: {
     flexDirection: "row",

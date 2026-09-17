@@ -26,7 +26,7 @@ export const ClearCartModal = ({
             Your cart already contains items from{' '}
             <Text style={styles.boldText}>{currentVendorName || 'another store'}</Text>.
             {'\n\n'}
-            Farmart only supports ordering from <Text style={styles.boldText}>one store at a time</Text> to guarantee lightning-fast single-route delivery.
+            S-farmart only supports ordering from <Text style={styles.boldText}>one store at a time</Text> to guarantee lightning-fast single-route delivery.
             {'\n\n'}
             Do you want to discard your current cart and add items from{' '}
             <Text style={styles.boldText}>{newVendorName || 'this store'}</Text>?

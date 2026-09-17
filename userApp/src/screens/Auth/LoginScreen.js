@@ -35,7 +35,7 @@ export const LoginScreen = ({ navigation }) => {
       name: "Rajesh Kumar",
       fullName: "Rajesh Kumar",
       phone: "9876543210",
-      email: "rajesh.customer@farmart.in",
+      email: "rajesh.customer@sfarmart.in",
       villageHub: "Tarn Taran Village Hub",
       address: "Flat 402, Green Avenue, Model Town",
       walletBalance: 250
@@ -380,8 +380,8 @@ const styles = StyleSheet.create({
     borderColor: "#bbf7d0",
   },
   logoImage: {
-    width: 68,
-    height: 48,
+    width: 72,
+    height: 72,
   },
   leafIconBadge: {
     position: "absolute",

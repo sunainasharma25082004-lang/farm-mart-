@@ -39,7 +39,7 @@ export const AppProvider = ({ children }) => {
     name: 'Rajesh Kumar',
     fullName: 'Rajesh Kumar',
     phone: '9876543210',
-    email: 'rajesh.customer@farmart.in',
+    email: 'rajesh.customer@sfarmart.in',
     city: 'Ludhiana',
     address: 'Flat 302, Green Avenue, Model Town, Ludhiana',
     walletBalance: 250
@@ -86,7 +86,7 @@ export const AppProvider = ({ children }) => {
       name: 'Rajesh Kumar',
       fullName: 'Rajesh Kumar',
       phone: typeof userOrPhone === 'string' ? userOrPhone : '9876543210',
-      email: 'rajesh.customer@farmart.in',
+      email: 'rajesh.customer@sfarmart.in',
       city: 'Ludhiana',
       address: 'Flat 302, Green Avenue, Model Town, Ludhiana',
       walletBalance: 250

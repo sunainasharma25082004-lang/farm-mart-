@@ -143,7 +143,7 @@ export const AddProductScreen = ({ navigation }) => {
       });
 
       if (res && res.success !== false) {
-        showFeedback('Success! 🎉', `${name.trim()} published live to MongoDB and Farmart store!`, true);
+        showFeedback('Success! 🎉', `${name.trim()} published live to MongoDB and S-farmart store!`, true);
       } else {
         showFeedback('Error', res?.message || 'Could not save listing. Please try again.');
       }

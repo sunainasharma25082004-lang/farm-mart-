@@ -8,11 +8,14 @@ import {
   ActivityIndicator,
   StatusBar,
   ScrollView,
-  Platform
+  Platform,
+  Image
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { usePartner } from '../context/PartnerContext';
 import { colors } from '../theme/colors';
+
+const LOGO = require('../../assets/farmart_logo.png');
 
 const DEMO_ACCOUNTS = [
   {
@@ -89,9 +92,9 @@ export const PartnerLoginScreen = () => {
         {/* Brand Header */}
         <View style={styles.header}>
           <View style={styles.logoCircle}>
-            <Ionicons name="storefront" size={38} color="#ffffff" />
+            <Image source={LOGO} style={styles.logoImage} resizeMode="contain" />
           </View>
-          <Text style={styles.brandTitle}>Farmart Partner Hub</Text>
+          <Text style={styles.brandTitle}>S-farmart Partner Hub</Text>
           <Text style={styles.brandSub}>
             Merchant Portal • Manage live store, incoming orders & inventory
           </Text>
@@ -233,18 +236,24 @@ const styles = StyleSheet.create({
     marginBottom: 24
   },
   logoCircle: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
-    backgroundColor: colors.primary,
+    width: 84,
+    height: 84,
+    borderRadius: 22,
+    backgroundColor: '#ffffff',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
+    shadowColor: 'rgba(15, 23, 42, 0.12)',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 1,
     shadowRadius: 14,
-    elevation: 8,
-    marginBottom: 16
+    elevation: 6,
+    marginBottom: 16,
+    borderWidth: 1.5,
+    borderColor: '#e2e8f0',
+  },
+  logoImage: {
+    width: 72,
+    height: 72,
   },
   brandTitle: {
     fontSize: 24,

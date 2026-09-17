@@ -287,7 +287,7 @@ export const CheckoutScreen = ({ navigation }) => {
               {
                 id: 'WALLET',
                 icon: 'wallet-outline',
-                title: 'Farmart Wallet',
+                title: 'S-farmart Wallet',
                 sub: 'Available Balance: ₹250',
                 tag: 'BALANCE AVAILABLE',
                 tagColor: '#0284c7'
@@ -403,7 +403,7 @@ export const CheckoutScreen = ({ navigation }) => {
         <View style={styles.safetyCard}>
           <Ionicons name="shield-checkmark-outline" size={18} color="#15803d" />
           <Text style={styles.safetyText}>
-            Farmart Guarantee: 100% genuine farm produce & fresh kitchen food, or instant replacement.
+            S-farmart Guarantee: 100% genuine farm produce & fresh kitchen food, or instant replacement.
           </Text>
         </View>
       </ScrollView>
@@ -446,7 +446,7 @@ export const CheckoutScreen = ({ navigation }) => {
               <View>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <Ionicons name="shield-checkmark" size={18} color="#16a34a" />
-                  <Text style={styles.paymentModalTitle}>Farmart Secure Checkout</Text>
+                  <Text style={styles.paymentModalTitle}>S-farmart Secure Checkout</Text>
                 </View>
                 <Text style={styles.paymentModalSub}>256-Bit Bank Grade SSL Encryption</Text>
               </View>
@@ -461,7 +461,7 @@ export const CheckoutScreen = ({ navigation }) => {
 
             {/* Total Amount Badge */}
             <View style={styles.paymentAmountBanner}>
-              <Text style={styles.payBannerLabel}>Paying to {vendorName || 'Farmart'}</Text>
+              <Text style={styles.payBannerLabel}>Paying to {vendorName || 'S-farmart'}</Text>
               <Text style={styles.payBannerAmount}>₹{grandTotal}</Text>
             </View>
 

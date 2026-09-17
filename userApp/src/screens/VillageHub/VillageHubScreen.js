@@ -96,7 +96,7 @@ export const WomenEntrepreneurScreen = ({ navigation }) => {
         <View style={styles.weBanner}>
           <Ionicons name="heart-circle" size={36} color="#ffffff" />
           <View style={{ flex: 1 }}>
-            <Text style={styles.weTitle}>Farmart Women Entrepreneur Program</Text>
+            <Text style={styles.weTitle}>S-farmart Women Entrepreneur Program</Text>
             <Text style={styles.weDesc}>Turn your cooking, baking & craft skills into a thriving brand.</Text>
           </View>
         </View>
