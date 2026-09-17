@@ -174,12 +174,8 @@ export const AppProvider = ({ children }) => {
             setIsAuthenticated(true);
             return;
           }
-        }
-
-        // Seamless Dev Auto-login for demo account if no existing session
-        const demoUser = await loginUser('9876543210', 'demo123');
-        if (demoUser) {
-          setIsAuthenticated(true);
+          // No valid session stored -> Stay unauthenticated for Guest Browsing (FLOW 3)
+          setIsAuthenticated(false);
         }
       } catch (err) {
         console.warn('Session bootstrap error:', err);

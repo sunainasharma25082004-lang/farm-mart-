@@ -36,8 +36,15 @@ const DEMO_ACCOUNTS = [
     name: 'Gurpreet Kaur',
     type: 'Fruit Orchards',
     phone: '9876543213',
-    icon: '🍎',
+    icon: '🍊',
     desc: 'Kinnow, Farm Fresh Apples, Citrus'
+  },
+  {
+    name: 'Manpreet Singh',
+    type: 'Shimla Fresh Orchards',
+    phone: '9876543214',
+    icon: '🍎',
+    desc: 'Himachal Apples, Cherries, Golden Apples'
   }
 ];
 

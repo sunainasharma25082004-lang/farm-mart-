@@ -24,7 +24,8 @@ const LOGO = require('../../assets/farmart_logo.png');
 const DEMO_VENDORS = [
   { name: 'Sunita Sharma (Home Chef)', phone: '9876543211', icon: '🍳', storeType: 'HOME_CHEF' },
   { name: 'Sukhwinder Singh (Farmer)', phone: '9876543212', icon: '🌾', storeType: 'FARMER' },
-  { name: 'Gurpreet Kaur (Orchards)', phone: '9876543213', icon: '🍎', storeType: 'FARMER' }
+  { name: 'Gurpreet Kaur (Orchards)', phone: '9876543213', icon: '🍊', storeType: 'FARMER' },
+  { name: 'Manpreet Singh (Shimla Orchards)', phone: '9876543214', icon: '🍎', storeType: 'FARMER' }
 ];
 
 export const VendorDashboardScreen = ({ navigation }) => {

@@ -14,10 +14,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { Header } from '../../components/Header';
 import { useCart } from '../../context/CartContext';
 import { useCustomerSocket } from '../../context/SocketContext';
+import { useAuthGate } from '../../hooks/useAuthGate';
 import { apiService } from '../../services/api';
 import { colors } from '../../theme/colors';
 
 export const CartScreen = ({ navigation }) => {
+  const { requireLogin } = useAuthGate();
   const {
     items,
     vendorId,
@@ -75,7 +77,11 @@ export const CartScreen = ({ navigation }) => {
       );
       return;
     }
-    navigation.navigate('Checkout');
+
+    // FLOW 3 Contextual Gate: require login before navigating to Checkout
+    requireLogin({ type: 'CHECKOUT' }, () => {
+      navigation.navigate('Checkout');
+    });
   };
 
   return (

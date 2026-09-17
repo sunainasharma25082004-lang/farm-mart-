@@ -93,31 +93,22 @@ export const RootNavigator = () => {
 
   return (
     <Stack.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
-      {!isAuthenticated ? (
-        // Auth Stack
-        <>
-          <Stack.Screen name="Login" component={LoginScreen} />
-          <Stack.Screen name="Signup" component={SignupScreen} />
-        </>
-      ) : (
-        // App Stack
-        <>
-          <Stack.Screen name="MainTabs" component={MainTabs} />
-          <Stack.Screen name="CategoryVendors" component={CategoryVendorsScreen} />
-          <Stack.Screen name="VendorStore" component={VendorStoreScreen} />
-          <Stack.Screen name="Cart" component={CartScreen} />
-          <Stack.Screen name="Checkout" component={CheckoutScreen} />
-          <Stack.Screen name="OrderTracking" component={OrderTrackingScreen} />
-          <Stack.Screen name="ProductDetails" component={ProductDetailsScreen} />
-          <Stack.Screen name="FarmerDashboard" component={FarmerDashboardScreen} />
-          <Stack.Screen name="AddHarvest" component={AddHarvestScreen} />
-          <Stack.Screen
-            name="RazorpayCheckout"
-            component={RazorpayCheckoutWebView}
-            options={{ presentation: 'modal' }}
-          />
-        </>
-      )}
+      <Stack.Screen name="MainTabs" component={MainTabs} />
+      <Stack.Screen name="CategoryVendors" component={CategoryVendorsScreen} />
+      <Stack.Screen name="VendorStore" component={VendorStoreScreen} />
+      <Stack.Screen name="Cart" component={CartScreen} />
+      <Stack.Screen name="Checkout" component={CheckoutScreen} />
+      <Stack.Screen name="OrderTracking" component={OrderTrackingScreen} />
+      <Stack.Screen name="ProductDetails" component={ProductDetailsScreen} />
+      <Stack.Screen name="FarmerDashboard" component={FarmerDashboardScreen} />
+      <Stack.Screen name="AddHarvest" component={AddHarvestScreen} />
+      <Stack.Screen name="Login" component={LoginScreen} />
+      <Stack.Screen name="Signup" component={SignupScreen} />
+      <Stack.Screen
+        name="RazorpayCheckout"
+        component={RazorpayCheckoutWebView}
+        options={{ presentation: 'modal' }}
+      />
     </Stack.Navigator>
   );
 };

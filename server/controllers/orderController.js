@@ -37,21 +37,52 @@ export const createOrder = async (req, res) => {
       });
     }
 
-    // 2. Resolve customer
-    let customerId = req.user?.id;
+    // 2. Resolve customer & Enforce Server Hard Gate (FLOW 3)
+    const customerId = req.user?.id || req.user?._id;
     if (!customerId) {
-      // Find or create customer by phone
-      const phone = customerPhone || address?.phone || '9876543210';
-      let user = await User.findOne({ phone });
-      if (!user) {
-        user = await User.create({
-          name: customerName || address?.name || 'Valued Customer',
-          phone,
-          passwordHash: 'demo_auto',
-          role: 'CUSTOMER'
-        });
-      }
-      customerId = user._id;
+      return res.status(401).json({
+        ok: false,
+        success: false,
+        code: 'UNAUTHORIZED',
+        message: 'Authentication required to place an order.'
+      });
+    }
+
+    const user = await User.findById(customerId);
+    if (!user) {
+      return res.status(404).json({
+        ok: false,
+        success: false,
+        code: 'USER_NOT_FOUND',
+        message: 'User account not found.'
+      });
+    }
+
+    if (user.status === 'BLOCKED' || user.status === 'SUSPENDED') {
+      return res.status(403).json({
+        ok: false,
+        success: false,
+        code: 'USER_BLOCKED',
+        message: 'Your account is blocked. Please contact support.'
+      });
+    }
+
+    // 🔴 SPOOFING GUARD: Prevent submitting an order on behalf of another user
+    if (req.body.userId && req.body.userId.toString() !== customerId.toString()) {
+      return res.status(403).json({
+        ok: false,
+        success: false,
+        code: 'FORBIDDEN',
+        message: 'You cannot place an order on behalf of another user.'
+      });
+    }
+    if (req.body.customerId && req.body.customerId.toString() !== customerId.toString()) {
+      return res.status(403).json({
+        ok: false,
+        success: false,
+        code: 'FORBIDDEN',
+        message: 'You cannot place an order on behalf of another customer.'
+      });
     }
 
     // 3. Fetch all products from DB for single-vendor validation & real price calculation
@@ -284,6 +315,30 @@ export const getOrderById = async (req, res) => {
 
     if (!order) {
       return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    // 🔴 HARD OWNERSHIP CHECK (FLOW 3):
+    // Order can only be viewed by the customer who placed it, the vendor who fulfills it, or an admin/rider.
+    const requesterId = (req.user?.id || req.user?._id)?.toString();
+    const requesterRole = req.user?.role;
+    const requesterVendorId = req.user?.vendorId?.toString();
+
+    const orderCustomerId = (order.customer?._id || order.customer)?.toString();
+    const orderVendorId = (order.vendor?._id || order.vendor)?.toString();
+
+    const isCustomerOwner = requesterId && orderCustomerId === requesterId;
+    const isVendorOwner =
+      (requesterVendorId && orderVendorId === requesterVendorId) ||
+      (requesterId && orderVendorId === requesterId);
+    const isAdminOrRider = requesterRole === 'ADMIN' || requesterRole === 'RIDER';
+
+    if (!isCustomerOwner && !isVendorOwner && !isAdminOrRider) {
+      return res.status(403).json({
+        ok: false,
+        success: false,
+        code: 'FORBIDDEN',
+        message: 'You do not have permission to view this order.'
+      });
     }
 
     res.json({ success: true, order });

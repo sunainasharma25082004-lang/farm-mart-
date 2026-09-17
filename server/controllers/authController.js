@@ -491,6 +491,12 @@ export const vendorLogin = async (req, res) => {
     }
 
     let vendor = await Vendor.findOne({ phone: phone.trim() }).populate('categories');
+    if (!vendor && req.body.storeName) {
+      // Prevent duplicate vendors with the same store name
+      const cleanStore = req.body.storeName.trim();
+      vendor = await Vendor.findOne({ storeName: new RegExp(`^${cleanStore}$`, 'i') }).populate('categories');
+    }
+
     if (!vendor) {
       const Category = (await import('../models/Category.js')).default;
       const defaultCategories = await Category.find().limit(3);

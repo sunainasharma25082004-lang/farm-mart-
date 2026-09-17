@@ -11,11 +11,11 @@ import { optionalAuth, verifyToken } from '../middleware/auth.js';
 
 const router = express.Router();
 
-router.post('/orders', optionalAuth, createOrder);
+router.post('/orders', verifyToken, createOrder);
 router.get('/orders/customer/my', verifyToken, getCustomerOrders);
 router.get('/orders/delivery/pending', getDeliveryOrders);
 router.get('/orders/vendor/:vendorId', optionalAuth, getVendorOrders);
-router.get('/orders/:id', optionalAuth, getOrderById);
+router.get('/orders/:id', verifyToken, getOrderById);
 router.patch('/orders/:id/status', optionalAuth, updateOrderStatus);
 
 export default router;

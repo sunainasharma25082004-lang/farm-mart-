@@ -18,11 +18,13 @@ import { useCart } from '../../context/CartContext';
 import { useCustomerSocket } from '../../context/SocketContext';
 import { colors } from '../../theme/colors';
 import { apiService } from '../../services/api';
+import { useAuthGate } from '../../hooks/useAuthGate';
 
 const LOGO = require('../../../assets/farmart24_logo.jpg');
 
 export const ProfileWalletScreen = ({ navigation }) => {
-  const { userProfile, logoutUser } = useApp();
+  const { userProfile, isAuthenticated, logoutUser } = useApp();
+  const { requireLogin } = useAuthGate();
   const { clearCart } = useCart();
   const socket = useCustomerSocket();
 
@@ -97,47 +99,69 @@ export const ProfileWalletScreen = ({ navigation }) => {
           <Image source={LOGO} style={styles.brandLogo} resizeMode="contain" />
         </View>
 
-        {/* Profile Card */}
-        <View style={styles.profileCard}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>
-              {(userProfile?.name || 'Customer').charAt(0).toUpperCase()}
+        {!isAuthenticated ? (
+          <View style={styles.guestCard}>
+            <View style={styles.guestIconCircle}>
+              <Ionicons name="person-circle-outline" size={54} color={colors.primary} />
+            </View>
+            <Text style={styles.guestTitle}>Welcome, Guest</Text>
+            <Text style={styles.guestSub}>
+              Log in to view your profile, wallet balance, saved addresses, and track live orders.
             </Text>
+            <TouchableOpacity
+              style={styles.guestLoginBtn}
+              onPress={() => requireLogin({ type: 'WALLET' })}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.guestLoginBtnText}>Log In to S-farmart 24</Text>
+              <Ionicons name="arrow-forward" size={16} color="#ffffff" />
+            </TouchableOpacity>
           </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.userName}>{userProfile?.name || 'Customer User'}</Text>
-            <Text style={styles.userPhone}>📱 +91 {userProfile?.phone || '9876543210'}</Text>
-            <View style={styles.hubRow}>
-              <Ionicons name="location" size={12} color={colors.primary} />
-              <Text style={styles.userHub}>
-                {userProfile?.addresses?.[0]?.line1 || userProfile?.city || 'Ludhiana, Punjab'}
+        ) : (
+          <>
+            {/* Profile Card */}
+            <View style={styles.profileCard}>
+              <View style={styles.avatar}>
+                <Text style={styles.avatarText}>
+                  {(userProfile?.name || 'Customer').charAt(0).toUpperCase()}
+                </Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.userName}>{userProfile?.name || 'Customer User'}</Text>
+                <Text style={styles.userPhone}>📱 +91 {userProfile?.phone || '9876543210'}</Text>
+                <View style={styles.hubRow}>
+                  <Ionicons name="location" size={12} color={colors.primary} />
+                  <Text style={styles.userHub}>
+                    {userProfile?.addresses?.[0]?.line1 || userProfile?.city || 'Ludhiana, Punjab'}
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.customerBadge}>
+                <Text style={styles.customerBadgeText}>VERIFIED</Text>
+              </View>
+            </View>
+
+            {/* S-farmart Wallet Balance Card */}
+            <View style={styles.walletCard}>
+              <View style={styles.walletHeader}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <View style={styles.walletIconCircle}>
+                    <Ionicons name="wallet" size={20} color="#0284c7" />
+                  </View>
+                  <View>
+                    <Text style={styles.walletTitle}>S-farmart Wallet</Text>
+                    <Text style={styles.walletSub}>Instant 1-Tap Checkout Balance</Text>
+                  </View>
+                </View>
+                <Text style={styles.walletAmount}>₹{walletDisplay}</Text>
+              </View>
+              <View style={styles.walletDivider} />
+              <Text style={styles.walletHint}>
+                ⚡ Use your preloaded balance on checkout for zero-fee instant orders.
               </Text>
             </View>
-          </View>
-          <View style={styles.customerBadge}>
-            <Text style={styles.customerBadgeText}>VERIFIED</Text>
-          </View>
-        </View>
-
-        {/* S-farmart Wallet Balance Card */}
-        <View style={styles.walletCard}>
-          <View style={styles.walletHeader}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <View style={styles.walletIconCircle}>
-                <Ionicons name="wallet" size={20} color="#0284c7" />
-              </View>
-              <View>
-                <Text style={styles.walletTitle}>S-farmart Wallet</Text>
-                <Text style={styles.walletSub}>Instant 1-Tap Checkout Balance</Text>
-              </View>
-            </View>
-            <Text style={styles.walletAmount}>₹{walletDisplay}</Text>
-          </View>
-          <View style={styles.walletDivider} />
-          <Text style={styles.walletHint}>
-            ⚡ Use your preloaded balance on checkout for zero-fee instant orders.
-          </Text>
-        </View>
+          </>
+        )}
 
         {/* Quick Action Tiles */}
         <View style={styles.quickActions}>
@@ -599,5 +623,61 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: '#ffffff'
+  },
+  guestCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    padding: 24,
+    alignItems: 'center',
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2
+  },
+  guestIconCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: '#ecfdf5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14
+  },
+  guestTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#0f172a',
+    marginBottom: 6
+  },
+  guestSub: {
+    fontSize: 13,
+    color: '#64748b',
+    textAlign: 'center',
+    lineHeight: 18,
+    marginBottom: 18,
+    paddingHorizontal: 12
+  },
+  guestLoginBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: colors.primary,
+    paddingHorizontal: 22,
+    paddingVertical: 12,
+    borderRadius: 14,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 4
+  },
+  guestLoginBtnText: {
+    color: '#ffffff',
+    fontSize: 14.5,
+    fontWeight: '700'
   }
 });

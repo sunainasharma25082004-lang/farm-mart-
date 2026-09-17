@@ -419,27 +419,32 @@ export const mergeCart = async (req, res) => {
       cart = await Cart.create({ user: userId, vendor: null, items: [] });
     }
 
-    // If server cart is not empty and vendors differ, return choice conflict
+    // If server cart is not empty and vendors differ, return choice conflict unless overwrite is explicitly requested
     if (cart.vendor && cart.items.length > 0 && cart.vendor.toString() !== guestVendorId) {
-      const currentVendor = await Vendor.findById(cart.vendor);
-      return res.status(409).json({
-        ok: false,
-        code: 'MERGE_VENDOR_CONFLICT',
-        message: 'A different store cart already exists in your account.',
-        currentVendor: {
-          _id: cart.vendor,
-          name: currentVendor?.storeName || 'Account Store Cart',
-          itemCount: cart.itemCount
-        },
-        guestVendor: {
-          _id: guestVendorId,
-          name: dbProducts[0].vendor?.storeName || 'Guest Store Cart',
-          itemCount: items.length
-        }
-      });
+      if (!req.body.overwrite) {
+        const currentVendor = await Vendor.findById(cart.vendor);
+        return res.status(409).json({
+          ok: false,
+          code: 'MERGE_VENDOR_CONFLICT',
+          message: 'A different store cart already exists in your account.',
+          currentVendor: {
+            _id: cart.vendor,
+            name: currentVendor?.storeName || 'Account Store Cart',
+            itemCount: cart.itemCount
+          },
+          guestVendor: {
+            _id: guestVendorId,
+            name: dbProducts[0].vendor?.storeName || 'Guest Store Cart',
+            itemCount: items.length
+          }
+        });
+      }
+      // Overwrite: User chose 'Keep this cart' -> reset server cart items to accept guest store items
+      cart.items = [];
+      cart.vendor = guestVendorId;
     }
 
-    // Same vendor or empty server cart: Merge items
+    // Same vendor, empty server cart, or overwrite confirmed: Merge items
     cart.vendor = guestVendorId;
     for (const gItem of items) {
       const pId = (gItem.productId || gItem.product || gItem._id).toString();

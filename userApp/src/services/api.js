@@ -351,9 +351,9 @@ export const apiService = {
     }
   },
 
-  mergeCart: async (items) => {
+  mergeCart: async (items, overwrite = false) => {
     try {
-      const response = await apiClient.post('/cart/merge', { items });
+      const response = await apiClient.post('/cart/merge', { items, overwrite });
       return response.data;
     } catch (error) {
       throw error.response?.data || error;

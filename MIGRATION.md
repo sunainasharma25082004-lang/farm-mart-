@@ -66,3 +66,25 @@ On server boot, `server/config/db.js` verifies `hello.setName`. If absent (stand
 - Added `.eslintrc.json` in `userApp` with `no-restricted-imports` rule permanently banning any import of `mockData`.
 - Seed data reference created in `server/scripts/seed.js`.
 
+---
+
+## Flow 3: Guest Browsing, Contextual Auth Gate & Server Ownership Hard Gates
+
+### 1. Client Storage Keys
+- `guestCart`: Stored in AsyncStorage for unauthenticated guests. Includes `{ vendorId, vendorName, vendorStoreType, items, updatedAt }`. 20-item cap with 7-day TTL expiration.
+- `@pending_intent`: Stored in AsyncStorage for resuming user action post-authentication (e.g. `CHECKOUT`, `WALLET`). 15-minute TTL expiration.
+
+### 2. Endpoints & Server Security
+1. **`POST /api/orders`**:
+   - Strictly protected with `verifyToken`.
+   - Requires verified customer account (`user.status === 'ACTIVE'`).
+   - Rejects spoofed `userId` / `customerId` payloads with HTTP 403 `FORBIDDEN`.
+2. **`GET /api/orders/:id`**:
+   - Strictly protected with `verifyToken`.
+   - Strict ownership check: Returns HTTP 403 `FORBIDDEN` if requested by a customer who does not own the order or a vendor who does not fulfill it.
+3. **`POST /api/cart/merge`**:
+   - Accepts `{ items, overwrite: boolean }`.
+   - If server cart and guest cart have different vendors and `overwrite === false`, returns HTTP 409 `MERGE_VENDOR_CONFLICT` with modal metadata `{ currentVendor, guestVendor }`.
+   - If `overwrite === true`, atomically clears the existing server cart items and assigns the new guest vendor items.
+
+
