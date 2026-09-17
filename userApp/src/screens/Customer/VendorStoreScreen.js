@@ -14,6 +14,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { apiService } from '../../services/api';
 import { useCart } from '../../context/CartContext';
+import { useCustomerSocket } from '../../context/SocketContext';
 import { colors } from '../../theme/colors';
 
 export const VendorStoreScreen = ({ route, navigation }) => {
@@ -31,7 +32,28 @@ export const VendorStoreScreen = ({ route, navigation }) => {
     vendorId: currentCartVendorId
   } = useCart();
 
+  const { productStockUpdate } = useCustomerSocket();
+
   const isStoreOpen = vendor?.isOpen !== false;
+
+  // Real-time stock update listener via WebSocket
+  useEffect(() => {
+    if (productStockUpdate && productStockUpdate.productId) {
+      console.log('⚡ Real-time stock reflection in store:', productStockUpdate);
+      setProducts((prev) =>
+        prev.map((p) => {
+          if ((p._id || p.id) === productStockUpdate.productId) {
+            return {
+              ...p,
+              stockQty: productStockUpdate.stockQty,
+              inStock: productStockUpdate.inStock
+            };
+          }
+          return p;
+        })
+      );
+    }
+  }, [productStockUpdate]);
 
   useEffect(() => {
     if (vendor?._id) {
@@ -206,10 +228,12 @@ export const VendorStoreScreen = ({ route, navigation }) => {
           ) : (
             filteredProducts.map((product) => {
               const qty = getItemQuantity(product._id);
-              const isOutOfStock = !product.inStock || product.stockQty <= 0;
+              const isOutOfStock = product.inStock === false || (product.stockQty !== undefined && product.stockQty <= 0);
+              const isLowStock = !isOutOfStock && product.stockQty !== undefined && product.stockQty <= 5 && product.stockQty > 0;
+              const isMaxStockReached = !isOutOfStock && product.stockQty !== undefined && qty >= product.stockQty;
 
               return (
-                <View key={product._id} style={styles.productCard}>
+                <View key={product._id} style={[styles.productCard, isOutOfStock && { opacity: 0.82 }]}>
                   <View style={styles.productMeta}>
                     {/* Veg Indicator */}
                     <View style={styles.vegBox}>
@@ -226,6 +250,18 @@ export const VendorStoreScreen = ({ route, navigation }) => {
                       <Text style={styles.unitText}>/ {product.unit}</Text>
                     </View>
 
+                    {isOutOfStock ? (
+                      <View style={styles.soldOutMetaBadge}>
+                        <Ionicons name="close-circle" size={11} color="#ef4444" />
+                        <Text style={styles.soldOutMetaText}>Out of stock</Text>
+                      </View>
+                    ) : isLowStock ? (
+                      <View style={styles.lowStockRow}>
+                        <Ionicons name="flame" size={12} color="#ea580c" />
+                        <Text style={styles.lowStockText}>Only {product.stockQty} left in stock!</Text>
+                      </View>
+                    ) : null}
+
                     {product.description ? (
                       <Text style={styles.descText} numberOfLines={2}>
                         {product.description}
@@ -234,13 +270,20 @@ export const VendorStoreScreen = ({ route, navigation }) => {
                   </View>
 
                   <View style={styles.productRight}>
-                    {product.image ? (
-                      <Image source={{ uri: product.image }} style={styles.prodImg} />
-                    ) : (
-                      <View style={styles.prodImgPlaceholder}>
-                        <Ionicons name="restaurant-outline" size={28} color="#94a3b8" />
-                      </View>
-                    )}
+                    <View style={styles.prodImgContainer}>
+                      {product.image ? (
+                        <Image source={{ uri: product.image }} style={styles.prodImg} />
+                      ) : (
+                        <View style={styles.prodImgPlaceholder}>
+                          <Ionicons name="restaurant-outline" size={28} color="#94a3b8" />
+                        </View>
+                      )}
+                      {isOutOfStock && (
+                        <View style={styles.soldOutImageOverlay}>
+                          <Text style={styles.soldOutImageBadgeText}>SOLD OUT</Text>
+                        </View>
+                      )}
+                    </View>
 
                     {/* Stepper / Add Button / Store Closed Pill */}
                     <View style={styles.actionWrap}>
@@ -255,7 +298,7 @@ export const VendorStoreScreen = ({ route, navigation }) => {
                         </TouchableOpacity>
                       ) : isOutOfStock ? (
                         <View style={styles.outOfStockBtn}>
-                          <Text style={styles.outOfStockText}>OUT OF STOCK</Text>
+                          <Text style={styles.outOfStockText}>SOLD OUT</Text>
                         </View>
                       ) : qty > 0 ? (
                         <View style={styles.stepperBox}>
@@ -267,8 +310,14 @@ export const VendorStoreScreen = ({ route, navigation }) => {
                           </TouchableOpacity>
                           <Text style={styles.stepperQty}>{qty}</Text>
                           <TouchableOpacity
-                            style={styles.stepperBtn}
-                            onPress={() => updateQuantity(product._id, 1)}
+                            style={[styles.stepperBtn, isMaxStockReached && { opacity: 0.35 }]}
+                            onPress={() => {
+                              if (isMaxStockReached) {
+                                alert(`Only ${product.stockQty} unit(s) available in stock.`);
+                                return;
+                              }
+                              updateQuantity(product._id, 1);
+                            }}
                           >
                             <Text style={styles.stepperBtnText}>+</Text>
                           </TouchableOpacity>
@@ -636,18 +685,78 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '800'
   },
+  soldOutMetaBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#fee2e2',
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+    marginBottom: 6
+  },
+  soldOutMetaText: {
+    color: '#b91c1c',
+    fontSize: 10.5,
+    fontWeight: '700'
+  },
+  lowStockRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#ffedd5',
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+    marginBottom: 6
+  },
+  lowStockText: {
+    color: '#c2410c',
+    fontSize: 10.5,
+    fontWeight: '700'
+  },
+  prodImgContainer: {
+    position: 'relative',
+    borderRadius: 14,
+    overflow: 'hidden'
+  },
+  soldOutImageOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(15, 23, 42, 0.62)',
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  soldOutImageBadgeText: {
+    color: '#ffffff',
+    fontSize: 10,
+    fontWeight: '800',
+    backgroundColor: '#ef4444',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    letterSpacing: 0.5
+  },
   outOfStockBtn: {
-    backgroundColor: '#f1f5f9',
-    paddingHorizontal: 8,
-    paddingVertical: 5,
+    backgroundColor: '#fef2f2',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e2e8f0'
+    borderWidth: 1.2,
+    borderColor: '#fca5a5',
+    alignItems: 'center',
+    shadowColor: '#ef4444',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 1
   },
   outOfStockText: {
     fontSize: 10,
-    fontWeight: '700',
-    color: '#94a3b8'
+    fontWeight: '800',
+    color: '#dc2626',
+    letterSpacing: 0.3
   },
   stickyCartBar: {
     position: 'absolute',

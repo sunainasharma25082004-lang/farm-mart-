@@ -40,6 +40,12 @@ export const CartProvider = ({ children }) => {
   };
 
   const addToCart = (product, qty = 1) => {
+    // 🔴 STRICT STOCK GUARD: Prevent adding Out of Stock items
+    if (product.inStock === false || (product.stockQty !== undefined && product.stockQty <= 0)) {
+      alert(`"${product.name || 'This item'}" is currently out of stock.`);
+      return false;
+    }
+
     const prodVendorId = getItemVendorId(product);
     const prodVendorName = getItemVendorName(product);
     const prodStoreType = product.vendor?.storeType || 'FARMER';
@@ -70,9 +76,14 @@ export const CartProvider = ({ children }) => {
       );
 
       if (existing) {
+        const nextQty = existing.quantity + qty;
+        if (product.stockQty !== undefined && nextQty > product.stockQty) {
+          alert(`Only ${product.stockQty} unit(s) of "${product.name || 'this item'}" available in stock.`);
+          return prevItems;
+        }
         return prevItems.map((it) =>
           (it.product?._id || it.product?.id) === prodId
-            ? { ...it, quantity: it.quantity + qty }
+            ? { ...it, quantity: nextQty }
             : it
         );
       }
@@ -119,6 +130,11 @@ export const CartProvider = ({ children }) => {
           const id = it.product?._id || it.product?.id;
           if (id === productId) {
             const nextQty = it.quantity + delta;
+            const availableStock = it.product?.stockQty;
+            if (delta > 0 && availableStock !== undefined && nextQty > availableStock) {
+              alert(`Only ${availableStock} unit(s) of "${it.product?.name || 'this item'}" in stock.`);
+              return it;
+            }
             return nextQty > 0 ? { ...it, quantity: nextQty } : null;
           }
           return it;

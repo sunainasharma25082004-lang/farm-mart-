@@ -1,6 +1,7 @@
 import Product from '../models/Product.js';
 import Category from '../models/Category.js';
 import Vendor from '../models/Vendor.js';
+import { notifyProductStock } from '../services/notify.js';
 
 // @desc    Get all active products with filters and search
 // @route   GET /api/products
@@ -198,6 +199,10 @@ export const updateProduct = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Product not found' });
     }
 
+    if (updateData.stockQty !== undefined || updateData.inStock !== undefined) {
+      notifyProductStock(product);
+    }
+
     res.json({
       success: true,
       message: 'Product updated successfully',
@@ -241,6 +246,9 @@ export const toggleProductStock = async (req, res) => {
     }
 
     await product.save();
+
+    // Broadcast stock change to all connected customers and vendor apps in real-time
+    notifyProductStock(product);
 
     res.json({
       success: true,

@@ -13,6 +13,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Header } from '../../components/Header';
 import { useCart } from '../../context/CartContext';
+import { useCustomerSocket } from '../../context/SocketContext';
 import { apiService } from '../../services/api';
 import { colors } from '../../theme/colors';
 
@@ -28,6 +29,7 @@ export const CartScreen = ({ navigation }) => {
     billSummary
   } = useCart();
 
+  const { productStockUpdate } = useCustomerSocket();
   const [vendorDetails, setVendorDetails] = useState(null);
 
   useEffect(() => {
@@ -50,6 +52,23 @@ export const CartScreen = ({ navigation }) => {
       else Alert.alert('Store Closed', msg);
       return;
     }
+
+    const outOfStockItems = items.filter(
+      (it) => it.product?.inStock === false || (it.product?.stockQty !== undefined && it.product?.stockQty <= 0)
+    );
+    if (outOfStockItems.length > 0) {
+      alert(`"${outOfStockItems[0].product?.name || 'An item'}" in your cart is out of stock. Please remove it to proceed.`);
+      return;
+    }
+
+    const excessItems = items.filter(
+      (it) => it.product?.stockQty !== undefined && it.quantity > it.product?.stockQty
+    );
+    if (excessItems.length > 0) {
+      alert(`Only ${excessItems[0].product?.stockQty} unit(s) of "${excessItems[0].product?.name}" are available in stock. Please reduce the quantity.`);
+      return;
+    }
+
     if (!billSummary.isMinOrderMet) {
       alert(
         `Minimum order value for ${vendorName || 'this store'} is ₹${billSummary.minOrder}. Please add ₹${billSummary.minOrderShortfall} more to proceed.`
@@ -125,8 +144,11 @@ export const CartScreen = ({ navigation }) => {
             {items.map((item) => {
               const prod = item.product;
               const prodId = prod._id || prod.id;
+              const isProdOutOfStock = prod.inStock === false || (prod.stockQty !== undefined && prod.stockQty <= 0);
+              const isProdExcess = !isProdOutOfStock && prod.stockQty !== undefined && item.quantity > prod.stockQty;
+
               return (
-                <View key={prodId} style={styles.cartCard}>
+                <View key={prodId} style={[styles.cartCard, isProdOutOfStock && { borderColor: '#fca5a5', backgroundColor: '#fff5f5' }]}>
                   {prod.image ? (
                     <Image source={{ uri: prod.image }} style={styles.itemImage} />
                   ) : (
@@ -142,6 +164,12 @@ export const CartScreen = ({ navigation }) => {
                     <Text style={styles.itemPrice}>
                       ₹{prod.price} <Text style={styles.itemUnit}>/ {prod.unit || 'unit'}</Text>
                     </Text>
+                    {isProdOutOfStock && (
+                      <Text style={styles.cartSoldOutText}>🔴 Out of stock • remove to proceed</Text>
+                    )}
+                    {isProdExcess && (
+                      <Text style={styles.cartExcessText}>⚠️ Only {prod.stockQty} left in stock</Text>
+                    )}
                   </View>
 
                   <View style={styles.rightCol}>
@@ -394,6 +422,18 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     color: '#64748b',
     fontWeight: '500'
+  },
+  cartSoldOutText: {
+    fontSize: 10.5,
+    color: '#dc2626',
+    fontWeight: '700',
+    marginTop: 3
+  },
+  cartExcessText: {
+    fontSize: 10.5,
+    color: '#d97706',
+    fontWeight: '700',
+    marginTop: 3
   },
   rightCol: {
     alignItems: 'flex-end',

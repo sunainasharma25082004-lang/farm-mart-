@@ -10,23 +10,33 @@ export const ProductCard = ({ product, onPress, compact = false }) => {
   const cartItem = items?.find((item) => (item.product._id || item.product.id) === prodId);
   const qty = cartItem ? cartItem.quantity : 0;
 
+  const isOutOfStock = product.inStock === false || (product.stockQty !== undefined && product.stockQty <= 0);
+  const isLowStock = !isOutOfStock && product.stockQty !== undefined && product.stockQty <= 5 && product.stockQty > 0;
+  const isMaxStockReached = !isOutOfStock && product.stockQty !== undefined && qty >= product.stockQty;
+
   return (
     <TouchableOpacity
-      style={[styles.card, compact && styles.cardCompact]}
+      style={[styles.card, compact && styles.cardCompact, isOutOfStock && { opacity: 0.85 }]}
       onPress={onPress}
       activeOpacity={0.92}
     >
       <View style={[styles.imageContainer, compact && styles.imageCompact]}>
         <Image source={{ uri: product.image }} style={styles.image} resizeMode="cover" />
-        {product.discount ? (
+        {product.discount && !isOutOfStock ? (
           <View style={styles.discountBadge}>
             <Text style={styles.discountText}>{product.discount}</Text>
           </View>
         ) : null}
         <View style={styles.ratingPill}>
           <Ionicons name="star" size={10} color="#f59e0b" />
-          <Text style={styles.ratingText}>{product.rating}</Text>
+          <Text style={styles.ratingText}>{product.rating || '4.8'}</Text>
         </View>
+
+        {isOutOfStock && (
+          <View style={styles.soldOutOverlay}>
+            <Text style={styles.soldOutPill}>SOLD OUT</Text>
+          </View>
+        )}
       </View>
 
       <View style={styles.details}>
@@ -34,36 +44,54 @@ export const ProductCard = ({ product, onPress, compact = false }) => {
           {product.name}
         </Text>
 
-        <Text style={styles.unit} numberOfLines={1}>
-          {product.unit}
-        </Text>
+        <View style={styles.unitRow}>
+          <Text style={styles.unit} numberOfLines={1}>
+            {product.unit}
+          </Text>
+          {isLowStock && (
+            <Text style={styles.lowStockTag}>🔥 {product.stockQty} left</Text>
+          )}
+          {isOutOfStock && (
+            <Text style={styles.outOfStockTag}>🔴 Out of stock</Text>
+          )}
+        </View>
 
         <View style={styles.farmerRow}>
           <Ionicons name="shield-checkmark" size={11} color={colors.primary} />
           <Text style={styles.farmerText} numberOfLines={1}>
-            {product.farmer}
+            {product.farmer || 'Verified Farm'}
           </Text>
         </View>
 
         <View style={styles.footer}>
           <Text style={styles.price}>₹{product.price}</Text>
 
-          {qty > 0 ? (
+          {isOutOfStock ? (
+            <View style={styles.outOfStockBtn}>
+              <Text style={styles.outOfStockBtnText}>SOLD OUT</Text>
+            </View>
+          ) : qty > 0 ? (
             <View style={styles.qtyControl}>
               <TouchableOpacity
                 style={styles.qtyBtn}
-                onPress={() => updateQuantity(product.id, -1)}
+                onPress={() => updateQuantity(product._id || product.id, -1)}
                 hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
               >
-                <Ionicons name="remove" size={14} color={colors.primary} />
+                <Ionicons name="remove" size={14} color="#ffffff" />
               </TouchableOpacity>
               <Text style={styles.qtyText}>{qty}</Text>
               <TouchableOpacity
-                style={styles.qtyBtn}
-                onPress={() => addToCart(product)}
+                style={[styles.qtyBtn, isMaxStockReached && { opacity: 0.35 }]}
+                onPress={() => {
+                  if (isMaxStockReached) {
+                    alert(`Only ${product.stockQty} unit(s) available in stock.`);
+                    return;
+                  }
+                  addToCart(product);
+                }}
                 hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
               >
-                <Ionicons name="add" size={14} color={colors.primary} />
+                <Ionicons name="add" size={14} color="#ffffff" />
               </TouchableOpacity>
             </View>
           ) : (
@@ -196,6 +224,63 @@ const styles = StyleSheet.create({
     color: colors.primaryDark,
     fontSize: 12,
     fontWeight: '500'
+  },
+  unitRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 2,
+    flexWrap: 'wrap',
+    gap: 4
+  },
+  lowStockTag: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#ea580c',
+    backgroundColor: '#ffedd5',
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 4
+  },
+  outOfStockTag: {
+    fontSize: 9.5,
+    fontWeight: '700',
+    color: '#dc2626',
+    backgroundColor: '#fee2e2',
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 4
+  },
+  soldOutOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  soldOutPill: {
+    color: '#ffffff',
+    fontSize: 9.5,
+    fontWeight: '800',
+    backgroundColor: '#ef4444',
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 5,
+    letterSpacing: 0.5
+  },
+  outOfStockBtn: {
+    backgroundColor: '#fee2e2',
+    borderWidth: 1.2,
+    borderColor: '#fca5a5',
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 8,
+    alignItems: 'center'
+  },
+  outOfStockBtnText: {
+    color: '#dc2626',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.3
   },
   qtyControl: {
     flexDirection: 'row',

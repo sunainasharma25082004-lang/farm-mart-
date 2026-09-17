@@ -2,7 +2,7 @@ import Order from '../models/Order.js';
 import Product from '../models/Product.js';
 import Vendor from '../models/Vendor.js';
 import User from '../models/User.js';
-import { notifyNewOrder, notifyOrderStatus } from '../services/notify.js';
+import { notifyNewOrder, notifyOrderStatus, notifyProductStock } from '../services/notify.js';
 
 // @desc    Create a new order with single-vendor validation and atomic stock locking
 // @route   POST /api/orders
@@ -153,7 +153,12 @@ export const createOrder = async (req, res) => {
       // If stock reached 0, atomically flag out of stock
       if (updatedProduct.stockQty <= 0) {
         await Product.findByIdAndUpdate(it.product, { inStock: false, stockQty: 0 });
+        updatedProduct.inStock = false;
+        updatedProduct.stockQty = 0;
       }
+
+      // Broadcast real-time stock update to all connected customers and partner app
+      notifyProductStock(updatedProduct);
 
       successfullyDeducted.push({ product: it.product, qty: it.qty, name: it.name });
     }
@@ -161,10 +166,12 @@ export const createOrder = async (req, res) => {
     // If any item lacked stock during atomic execution, rollback all previously deducted items
     if (stockFailure) {
       for (const item of successfullyDeducted) {
-        await Product.findByIdAndUpdate(item.product, {
-          $inc: { stockQty: item.qty },
-          inStock: true
-        });
+        const restored = await Product.findByIdAndUpdate(
+          item.product,
+          { $inc: { stockQty: item.qty }, inStock: true },
+          { new: true }
+        );
+        if (restored) notifyProductStock(restored);
       }
       return res.status(400).json({
         success: false,

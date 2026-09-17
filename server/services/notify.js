@@ -152,3 +152,26 @@ export async function notifyOrderStatus(order) {
     console.error('Error notifying order status:', err);
   }
 }
+
+/**
+ * Broadcast real-time stock and availability changes to all connected users & vendors
+ */
+export function notifyProductStock(product) {
+  try {
+    const io = getIO();
+    if (!io) return;
+
+    const payload = {
+      productId: (product._id || product.id).toString(),
+      vendorId: (product.vendor?._id || product.vendor)?.toString(),
+      stockQty: product.stockQty,
+      inStock: product.inStock,
+      updatedAt: new Date()
+    };
+
+    console.log(`📦 Broadcasting 'product:stock' update for ${product.name || payload.productId}: stock=${payload.stockQty}, inStock=${payload.inStock}`);
+    io.emit('product:stock', payload);
+  } catch (err) {
+    console.warn('Failed to broadcast product:stock:', err);
+  }
+}

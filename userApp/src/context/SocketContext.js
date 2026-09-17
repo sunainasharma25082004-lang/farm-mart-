@@ -10,6 +10,7 @@ const SocketContext = createContext();
 export const SocketProvider = ({ children, token, userId }) => {
   const [isConnected, setIsConnected] = useState(false);
   const [activeOrderUpdate, setActiveOrderUpdate] = useState(null);
+  const [productStockUpdate, setProductStockUpdate] = useState(null);
   const socketRef = useRef(null);
 
   useEffect(() => {
@@ -40,6 +41,11 @@ export const SocketProvider = ({ children, token, userId }) => {
         setActiveOrderUpdate(data);
       });
 
+      socket.on('product:stock', (data) => {
+        console.log('⚡ Live product:stock update received:', data);
+        setProductStockUpdate(data);
+      });
+
       return () => {
         socket.disconnect();
       };
@@ -60,6 +66,7 @@ export const SocketProvider = ({ children, token, userId }) => {
       value={{
         isConnected,
         activeOrderUpdate,
+        productStockUpdate,
         trackOrder
       }}
     >
