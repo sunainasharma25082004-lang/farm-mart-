@@ -9,8 +9,9 @@ export function initSocket(httpServer) {
       origin: '*',
       methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE']
     },
-    pingInterval: 10000,
-    pingTimeout: 5000
+    pingInterval: 25000,
+    pingTimeout: 20000,
+    connectTimeout: 45000
   });
 
   io.use((socket, next) => {

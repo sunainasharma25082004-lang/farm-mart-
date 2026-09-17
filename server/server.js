@@ -71,6 +71,14 @@ app.use('/api/admin', adminRoutes);
 // Global Error Handling Middleware
 app.use(errorHandler);
 
+// Global Process Error Traps (Prevents Node.js server crash on unhandled errors)
+process.on('uncaughtException', (err) => {
+  console.error('🚨 Uncaught Exception trapped:', err.message || err);
+});
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('🚨 Unhandled Rejection trapped at:', promise, 'reason:', reason);
+});
+
 // Start Server with Socket.IO
 httpServer.listen(PORT, () => {
   console.log(`🌾 Farmart Real-Time Backend running on http://localhost:${PORT}`);
