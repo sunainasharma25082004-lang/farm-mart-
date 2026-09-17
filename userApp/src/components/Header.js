@@ -26,8 +26,7 @@ export const Header = ({
   const { userProfile, setUserProfile } = useApp();
   const { billSummary } = useCart();
   const cartItemCount = billSummary?.totalCount || 0;
-  const canGoBack =
-    showBack || (navigation && navigation.canGoBack && navigation.canGoBack());
+  const canGoBack = Boolean(showBack);
 
   const [addressModalVisible, setAddressModalVisible] = useState(false);
   const [manualAddress, setManualAddress] = useState("");

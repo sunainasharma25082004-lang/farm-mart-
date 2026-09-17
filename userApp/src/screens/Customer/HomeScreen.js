@@ -57,8 +57,28 @@ export const HomeScreen = ({ navigation }) => {
     }
   };
 
-  const homeChefs = vendors.filter((v) => v.storeType === 'HOME_CHEF');
-  const farmers = vendors.filter((v) => v.storeType === 'FARMER');
+  const isSearching = searchQuery.trim().length > 0;
+
+  const filteredVendors = vendors.filter((v) => {
+    if (!isSearching) return true;
+    const q = searchQuery.toLowerCase().trim();
+    return (
+      v.storeName?.toLowerCase().includes(q) ||
+      v.ownerName?.toLowerCase().includes(q) ||
+      v.description?.toLowerCase().includes(q) ||
+      v.storeType?.toLowerCase().includes(q) ||
+      v.address?.city?.toLowerCase().includes(q)
+    );
+  });
+
+  const filteredCategories = categories.filter((c) => {
+    if (!isSearching) return true;
+    const q = searchQuery.toLowerCase().trim();
+    return c.name?.toLowerCase().includes(q) || c.slug?.toLowerCase().includes(q);
+  });
+
+  const homeChefs = filteredVendors.filter((v) => v.storeType === 'HOME_CHEF');
+  const farmers = filteredVendors.filter((v) => v.storeType === 'FARMER');
 
   return (
     <View style={styles.container}>
@@ -88,94 +108,152 @@ export const HomeScreen = ({ navigation }) => {
           )}
         </View>
 
-        {/* Promo Top Banner */}
-        <View style={styles.bannerWrapper}>
-          <Image
-            source={{
-              uri: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&auto=format&fit=crop&q=80'
-            }}
-            style={styles.bannerImg}
-          />
-          <View style={styles.bannerOverlay}>
-            <View style={styles.pillBadge}>
-              <Ionicons name="sparkles" size={11} color="#ffffff" />
-              <Text style={styles.pillText}>DIRECT FROM LOCAL STORES</Text>
-            </View>
-            <Text style={styles.bannerTitle}>Pesticide-Free & Fresh 🌾</Text>
-            <Text style={styles.bannerSub}>Organic farm produce & home-cooked food delivered in 30 mins</Text>
-          </View>
-        </View>
+        {/* Dynamic Search Results Banner when user is typing */}
+        {isSearching ? (
+          <View style={{ marginBottom: 16 }}>
+            <Text style={{ fontSize: 13, fontWeight: '700', color: colors.textSecondary, marginBottom: 12 }}>
+              SEARCH RESULTS FOR "{searchQuery}" ({filteredVendors.length} Stores, {filteredCategories.length} Categories)
+            </Text>
 
-        {/* 1. Category-First Grid (8 Categories from MongoDB) */}
-        <View style={styles.categorySection}>
-          <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionHeading}>WHAT ARE YOU LOOKING FOR?</Text>
-            <Text style={styles.sectionBadge}>8 Categories</Text>
-          </View>
-
-          <View style={styles.categoryGrid}>
-            {categories.map((cat) => (
-              <TouchableOpacity
-                key={cat._id}
-                style={styles.catCard}
-                onPress={() => navigation.navigate('CategoryVendors', { category: cat })}
-                activeOpacity={0.8}
-              >
-                <View style={styles.catIconWrap}>
-                  <Text style={styles.catIconText}>{cat.icon || '🥦'}</Text>
-                </View>
-                <Text style={styles.catName} numberOfLines={2}>
-                  {cat.name}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        {/* 2. Popular Stores Near You */}
-        <View style={styles.vendorSection}>
-          <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionHeading}>POPULAR STORES NEAR YOU</Text>
-            <Text style={styles.sectionSubText}>Express Delivery</Text>
-          </View>
-
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.vendorRail}>
-            {vendors.map((v) => {
-              const isOpen = v.isOpen !== false;
-              return (
+            {filteredVendors.length === 0 && filteredCategories.length === 0 ? (
+              <View style={{ alignItems: 'center', padding: 32, backgroundColor: '#ffffff', borderRadius: 16 }}>
+                <Ionicons name="search-outline" size={44} color="#94a3b8" />
+                <Text style={{ fontSize: 16, fontWeight: '700', color: '#475569', marginTop: 10 }}>No stores or produce found</Text>
+                <Text style={{ fontSize: 13, color: '#94a3b8', marginTop: 4, textAlign: 'center' }}>Try searching with a different keyword like "Dal", "Fresh", "Thali", or "Farm"</Text>
                 <TouchableOpacity
-                  key={v._id}
-                  style={[styles.vendorRailCard, !isOpen && { opacity: 0.7 }]}
-                  onPress={() => navigation.navigate('VendorStore', { vendor: v })}
-                  activeOpacity={0.85}
+                  style={{ marginTop: 16, backgroundColor: colors.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }}
+                  onPress={() => setSearchQuery('')}
                 >
-                  <Image
-                    source={{
-                      uri: v.banner || 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400'
-                    }}
-                    style={styles.railImg}
-                  />
-                  <View style={styles.railRatingBadge}>
-                    <Ionicons name="star" size={10} color="#ffffff" />
-                    <Text style={styles.railRatingText}>{v.rating || 4.8}</Text>
-                  </View>
-
-                  <View style={styles.railInfo}>
-                    <Text style={styles.railStoreName} numberOfLines={1}>
-                      {v.storeName}
-                    </Text>
-                    <Text style={styles.railPrepTime}>
-                      ⚡ {v.avgPrepTimeMins || 25} mins • {v.address?.city || 'Ludhiana'}
-                    </Text>
-                    <Text style={[styles.railStatus, { color: isOpen ? '#15803d' : '#b91c1c' }]}>
-                      {isOpen ? '🟢 Open Now' : '🔴 Closed'}
-                    </Text>
-                  </View>
+                  <Text style={{ color: '#ffffff', fontWeight: '700', fontSize: 13 }}>Clear Search</Text>
                 </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        </View>
+              </View>
+            ) : (
+              <View style={{ gap: 12 }}>
+                {filteredVendors.map((v) => {
+                  const isOpen = v.isOpen !== false;
+                  return (
+                    <TouchableOpacity
+                      key={v._id}
+                      style={[styles.featuredVendorCard, !isOpen && { opacity: 0.75 }]}
+                      onPress={() => navigation.navigate('VendorStore', { vendor: v })}
+                      activeOpacity={0.9}
+                    >
+                      <Image source={{ uri: v.banner || 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=800' }} style={styles.featuredImg} />
+                      <View style={styles.featuredInfo}>
+                        <View style={styles.featuredHeader}>
+                          <Text style={styles.featuredTitle}>{v.storeName}</Text>
+                          <View style={styles.ratingBadge}>
+                            <Ionicons name="star" size={11} color="#ffffff" />
+                            <Text style={styles.ratingBadgeText}>{v.rating || 4.8}</Text>
+                          </View>
+                        </View>
+                        <Text style={styles.featuredSub}>{v.description}</Text>
+                        <View style={styles.featuredMeta}>
+                          <Text style={[styles.metaTag, { color: isOpen ? '#15803d' : '#b91c1c' }]}>
+                            {isOpen ? '🟢 Open Now' : '🔴 Closed'}
+                          </Text>
+                          <Text style={styles.metaTag}>⚡ {v.avgPrepTimeMins || 25} mins prep</Text>
+                          <Text style={styles.metaTag}>📍 {v.address?.city || 'Ludhiana'}</Text>
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
+          </View>
+        ) : (
+          <>
+            {/* Promo Top Banner */}
+            <View style={styles.bannerWrapper}>
+              <Image
+                source={{
+                  uri: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&auto=format&fit=crop&q=80'
+                }}
+                style={styles.bannerImg}
+              />
+              <View style={styles.bannerOverlay}>
+                <View style={styles.pillBadge}>
+                  <Ionicons name="sparkles" size={11} color="#ffffff" />
+                  <Text style={styles.pillText}>DIRECT FROM LOCAL STORES</Text>
+                </View>
+                <Text style={styles.bannerTitle}>Pesticide-Free & Fresh 🌾</Text>
+                <Text style={styles.bannerSub}>Organic farm produce & home-cooked food delivered in 30 mins</Text>
+              </View>
+            </View>
+
+            {/* 1. Category-First Grid (8 Categories from MongoDB) */}
+            <View style={styles.categorySection}>
+              <View style={styles.sectionHeaderRow}>
+                <Text style={styles.sectionHeading}>WHAT ARE YOU LOOKING FOR?</Text>
+                <Text style={styles.sectionBadge}>8 Categories</Text>
+              </View>
+
+              <View style={styles.categoryGrid}>
+                {categories.map((cat) => (
+                  <TouchableOpacity
+                    key={cat._id}
+                    style={styles.catCard}
+                    onPress={() => navigation.navigate('CategoryVendors', { category: cat })}
+                    activeOpacity={0.8}
+                  >
+                    <View style={styles.catIconWrap}>
+                      <Text style={styles.catIconText}>{cat.icon || '🥦'}</Text>
+                    </View>
+                    <Text style={styles.catName} numberOfLines={2}>
+                      {cat.name}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* 2. Popular Stores Near You */}
+            <View style={styles.vendorSection}>
+              <View style={styles.sectionHeaderRow}>
+                <Text style={styles.sectionHeading}>POPULAR STORES NEAR YOU</Text>
+                <Text style={styles.sectionSubText}>Express Delivery</Text>
+              </View>
+
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.vendorRail}>
+                {vendors.map((v) => {
+                  const isOpen = v.isOpen !== false;
+                  return (
+                    <TouchableOpacity
+                      key={v._id}
+                      style={[styles.vendorRailCard, !isOpen && { opacity: 0.7 }]}
+                      onPress={() => navigation.navigate('VendorStore', { vendor: v })}
+                      activeOpacity={0.85}
+                    >
+                      <Image
+                        source={{
+                          uri: v.banner || 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400'
+                        }}
+                        style={styles.railImg}
+                      />
+                      <View style={styles.railRatingBadge}>
+                        <Ionicons name="star" size={10} color="#ffffff" />
+                        <Text style={styles.railRatingText}>{v.rating || 4.8}</Text>
+                      </View>
+
+                      <View style={styles.railInfo}>
+                        <Text style={styles.railStoreName} numberOfLines={1}>
+                          {v.storeName}
+                        </Text>
+                        <Text style={styles.railPrepTime}>
+                          ⚡ {v.avgPrepTimeMins || 25} mins • {v.address?.city || 'Ludhiana'}
+                        </Text>
+                        <Text style={[styles.railStatus, { color: isOpen ? '#15803d' : '#b91c1c' }]}>
+                          {isOpen ? '🟢 Open Now' : '🔴 Closed'}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          </>
+        )}
 
         {/* 3. Ghar Ka Khana (Home Chefs) Rail */}
         {homeChefs.length > 0 && (
