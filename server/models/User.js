@@ -1,63 +1,93 @@
 import mongoose from 'mongoose';
 
+const addressSchema = new mongoose.Schema(
+  {
+    label: { type: String, default: 'Home' },
+    name: String,
+    phone: String,
+    line1: { type: String, required: true },
+    city: { type: String, default: 'Ludhiana' },
+    state: { type: String, default: 'Punjab' },
+    pincode: { type: String, default: '141001' },
+    isDefault: { type: Boolean, default: false }
+  },
+  { _id: true }
+);
+
 const userSchema = new mongoose.Schema(
   {
-    name: {
-      type: String,
-      required: true,
-      trim: true
-    },
     phone: {
       type: String,
       required: true,
       unique: true,
-      trim: true
+      index: true,
+      match: /^[6-9]\d{9}$/
     },
-    passwordHash: {
+    name: {
       type: String,
-      required: true
+      trim: true,
+      maxlength: 60,
+      default: ''
     },
     email: {
       type: String,
-      default: '',
-      trim: true
+      lowercase: true,
+      trim: true,
+      sparse: true,
+      unique: true
     },
-    addresses: [
-      {
-        label: { type: String, default: 'Home' },
-        name: String,
-        phone: String,
-        line1: { type: String, required: true },
-        city: { type: String, default: 'Ludhiana' },
-        state: { type: String, default: 'Punjab' },
-        pincode: { type: String, default: '141001' },
-        isDefault: { type: Boolean, default: false }
-      }
-    ],
-    defaultAddressIndex: {
-      type: Number,
-      default: 0
+    passwordHash: {
+      type: String,
+      select: false
+    },
+    role: {
+      type: String,
+      enum: ['CUSTOMER', 'VENDOR', 'FARMER', 'VILLAGE_HUB', 'GROWTH_PARTNER', 'ADMIN'],
+      default: 'CUSTOMER',
+      index: true
+    },
+    isPhoneVerified: {
+      type: Boolean,
+      default: false
+    },
+    status: {
+      type: String,
+      enum: ['ACTIVE', 'BLOCKED', 'DELETED'],
+      default: 'ACTIVE',
+      index: true
     },
     walletBalance: {
       type: Number,
-      default: 250
+      default: 0,
+      min: 0
     },
-    expoPushTokens: [
+    addresses: [addressSchema],
+    defaultAddressId: {
+      type: mongoose.Schema.Types.ObjectId
+    },
+    fcmTokens: [
       {
-        type: String
+        token: String,
+        platform: String,
+        updatedAt: { type: Date, default: Date.now }
       }
     ],
-    role: {
-      type: String,
-      enum: ['CUSTOMER', 'VENDOR', 'RIDER', 'ADMIN'],
-      default: 'CUSTOMER'
-    },
-    isActive: {
-      type: Boolean,
-      default: true
-    }
+    lastLoginAt: Date,
+    deletedAt: Date
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true }
+  }
 );
+
+userSchema.virtual('isActive').get(function () {
+  return this.status === 'ACTIVE';
+});
+
+userSchema.methods.toRupees = function () {
+  return Number((this.walletBalance / 100).toFixed(2));
+};
 
 export default mongoose.model('User', userSchema);

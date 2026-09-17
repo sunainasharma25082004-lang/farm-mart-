@@ -1,19 +1,143 @@
 import axios from 'axios';
-
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000/api';
+import { API_BASE_URL } from '../config/env';
+import storage from './storage';
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
+  timeout: 15000,
   headers: {
     'Content-Type': 'application/json'
   }
 });
 
-let authToken = null;
+let forceLogoutHandler = null;
+export const setForceLogoutHandler = (handler) => {
+  forceLogoutHandler = handler;
+};
 
+// Request Interceptor: Attach Access Token
+apiClient.interceptors.request.use(
+  async (config) => {
+    try {
+      const token = await storage.getAccessToken();
+      if (token && !config.headers.Authorization) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    } catch (e) {
+      console.warn('Could not attach access token:', e);
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// Response Interceptor: Single-Flight Refresh Queue & 401 Handling
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error, token = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
+apiClient.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+
+    // Normalize network error
+    if (!error.response) {
+      const normalized = {
+        ok: false,
+        code: 'NETWORK_ERROR',
+        message: 'Network connection error. Please check your internet connection.',
+        isNetworkError: true
+      };
+      return Promise.reject(normalized);
+    }
+
+    const { status, data } = error.response;
+    const isTokenExpired =
+      status === 401 && (data?.code === 'TOKEN_EXPIRED' || data?.code === 'INVALID_TOKEN');
+
+    // Do not attempt refresh on auth endpoints themselves (e.g. login, verify, refresh)
+    const isAuthRoute =
+      originalRequest?.url?.includes('/auth/otp') ||
+      originalRequest?.url?.includes('/auth/refresh') ||
+      originalRequest?.url?.includes('/auth/customer/login');
+
+    if (isTokenExpired && !originalRequest._retry && !isAuthRoute) {
+      if (isRefreshing) {
+        // Queue parallel requests until refresh completes
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        })
+          .then((token) => {
+            originalRequest.headers.Authorization = `Bearer ${token}`;
+            return apiClient(originalRequest);
+          })
+          .catch((err) => Promise.reject(err));
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      try {
+        const storedRefreshToken = await storage.getRefreshToken();
+        const deviceId = await storage.getDeviceId();
+
+        if (!storedRefreshToken) {
+          throw new Error('No refresh token available');
+        }
+
+        // Dedicated unintercepted call to refresh
+        const refreshResponse = await axios.post(
+          `${API_BASE_URL}/auth/refresh`,
+          { refreshToken: storedRefreshToken, deviceId },
+          { timeout: 15000 }
+        );
+
+        const newAccessToken = refreshResponse.data?.accessToken;
+        const newRefreshToken = refreshResponse.data?.refreshToken;
+
+        if (!newAccessToken) {
+          throw new Error('Refresh response missing access token');
+        }
+
+        await storage.setAccessToken(newAccessToken);
+        if (newRefreshToken) {
+          await storage.setRefreshToken(newRefreshToken);
+        }
+
+        apiClient.defaults.headers.common['Authorization'] = `Bearer ${newAccessToken}`;
+        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+
+        processQueue(null, newAccessToken);
+        return apiClient(originalRequest);
+      } catch (refreshErr) {
+        processQueue(refreshErr, null);
+        await storage.clearTokens();
+        if (typeof forceLogoutHandler === 'function') {
+          forceLogoutHandler('Session expired. Please login again.');
+        }
+        return Promise.reject(refreshErr);
+      } finally {
+        isRefreshing = false;
+      }
+    }
+
+    return Promise.reject(error.response?.data || error);
+  }
+);
+
+// Backward-compatibility token helper
 export const setAuthToken = (token) => {
-  authToken = token;
   if (token) {
     apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
   } else {
@@ -22,6 +146,74 @@ export const setAuthToken = (token) => {
 };
 
 export const apiService = {
+  // Auth API
+  requestOtp: async (phone) => {
+    const res = await apiClient.post('/auth/otp/request', { phone });
+    return res.data;
+  },
+
+  verifyOtp: async (phone, otp) => {
+    const deviceId = await storage.getDeviceId();
+    const res = await apiClient.post('/auth/otp/verify', { phone, otp, deviceId });
+    if (res.data?.accessToken) {
+      await storage.setAccessToken(res.data.accessToken);
+    }
+    if (res.data?.refreshToken) {
+      await storage.setRefreshToken(res.data.refreshToken);
+    }
+    return res.data;
+  },
+
+  getMe: async () => {
+    const res = await apiClient.get('/auth/me');
+    return res.data;
+  },
+
+  updateProfile: async (data) => {
+    const res = await apiClient.patch('/auth/me', data);
+    return res.data;
+  },
+
+  logout: async () => {
+    try {
+      const refreshToken = await storage.getRefreshToken();
+      await apiClient.post('/auth/logout', { refreshToken }, { timeout: 3000 });
+    } catch (e) {
+      // fire-and-forget logout
+    } finally {
+      await storage.clearTokens();
+    }
+    return { ok: true, success: true };
+  },
+
+  logoutAll: async () => {
+    try {
+      const res = await apiClient.post('/auth/logout-all', {}, { timeout: 3000 });
+      return res.data;
+    } finally {
+      await storage.clearTokens();
+    }
+  },
+
+  customerLogin: async (phone = '9876543210', password = 'demo123') => {
+    try {
+      const deviceId = await storage.getDeviceId();
+      const response = await apiClient.post('/auth/customer/login', { phone, password, deviceId });
+      if (response.data?.accessToken || response.data?.token) {
+        const tok = response.data.accessToken || response.data.token;
+        await storage.setAccessToken(tok);
+        setAuthToken(tok);
+      }
+      if (response.data?.refreshToken) {
+        await storage.setRefreshToken(response.data.refreshToken);
+      }
+      return response.data;
+    } catch (error) {
+      console.warn('Customer login failed:', error.message);
+      return { success: false, message: error.message || 'Login failed' };
+    }
+  },
+
   // Categories
   getCategories: async (type) => {
     try {
@@ -95,20 +287,6 @@ export const apiService = {
     }
   },
 
-  // Auth
-  customerLogin: async (phone = '9876543210', password = 'demo123') => {
-    try {
-      const response = await apiClient.post('/auth/customer/login', { phone, password });
-      if (response.data?.token) {
-        setAuthToken(response.data.token);
-      }
-      return response.data;
-    } catch (error) {
-      console.warn('Customer login failed:', error.message);
-      return { success: false, message: error.response?.data?.message || error.message };
-    }
-  },
-
   // Orders
   placeOrder: async (orderData) => {
     try {
@@ -138,3 +316,5 @@ export const apiService = {
     }
   }
 };
+
+export default apiClient;

@@ -15,6 +15,7 @@ Official hyper-local customer marketplace application for **S-farmart 24**, buil
 8. [Directory Structure](#-directory-structure)
 9. [1-Tap Demo Customer Account](#-1-tap-demo-customer-account)
 10. [How to Run Locally](#-how-to-run-locally)
+11. [Phase 1: Production Authentication & Session Architecture](#-phase-1-production-authentication--session-architecture)
 
 ---
 
@@ -250,8 +251,10 @@ userApp/
 │   │   ├── CategoryChip.js        # Horizontal selector pills
 │   │   ├── ClearCartModal.js      # Single-store delivery enforcement popup
 │   │   └── RoleSelectorModal.js   # Multi-role switcher for demo exploration
+│   ├── config/
+│   │   └── env.js                 # Universal API configuration (EXPO_PUBLIC_API_URL)
 │   ├── context/
-│   │   ├── AppContext.js          # Authentication, user profile, demo wallet balance
+│   │   ├── AppContext.js          # Authentication, user session bootstrapping, profile, wallet
 │   │   ├── CartContext.js         # Cart operations, quantity updates, order calculation
 │   │   └── SocketContext.js       # Real-time WebSocket connection to backend
 │   ├── data/
@@ -260,12 +263,13 @@ userApp/
 │   │   └── RootNavigator.js       # Bottom tab bar and Stack Navigation structure
 │   ├── screens/
 │   │   ├── Auth/                  # LoginScreen.js & SignupScreen.js
-│   │   ├── Customer/              # All 9 customer shopping & tracking screens
+│   │   ├── Customer/              # All 9 customer shopping, profile & tracking screens
 │   │   ├── Farmer/                # Farmer direct crop listing dashboard
 │   │   ├── GrowthPartner/         # City growth distributor portal
 │   │   └── VillageHub/            # Women entrepreneur and village hub dashboard
 │   ├── services/
-│   │   └── api.js                 # Axios API connector with timeout & offline fallbacks
+│   │   ├── api.js                 # Axios API connector with 15s timeout & single-flight refresh queue
+│   │   └── storage.js             # Platform-aware secure token storage (SecureStore / LocalStorage)
 │   └── theme/
 │       └── colors.js              # Centralized color tokens
 ├── App.js                         # Root React Native component with ErrorBoundary
@@ -284,7 +288,7 @@ App ko bina real SMS OTP ke test karne ke liye pre-configured demo credentials:
 * **Password:** `demo123`
 * **Customer Name:** `Rajesh Kumar`
 * **Demo Email:** `rajesh.customer@sfarmart.in`
-* **Preloaded S-farmart Wallet:** `₹250`
+* **Preloaded S-farmart Wallet:** `₹250` (`25000` paise in ledger)
 * **Delivery Address:** `Flat 402, Green Avenue, Model Town, Ludhiana`
 * **1-Tap Quick Login:** Login screen par green card **"⚡ 1-Tap Dummy Customer Login"** par click karein aur direct bina typing ke app me enter ho jayein.
 
@@ -311,6 +315,45 @@ cd userApp
 npm start
 ```
 Terminal me aane wale QR code ko apne phone ke **Expo Go** app se scan karein.
+
+---
+
+## 🛡️ Phase 1: Production Authentication & Session Architecture
+
+S-farmart 24 features a bank-grade, hardened authentication and session management layer:
+
+### 1. Dual-Token Architecture
+* **Short-Lived Access Token (15 Minutes):** Signed using `JWT_ACCESS_SECRET` containing `{ id, phone, role }`. Attached to all outbound HTTP requests via `Authorization: Bearer <token>`.
+* **Rotating Long-Lived Refresh Token (30 Days):** Cryptographically secure 64-byte hex token stored strictly as a SHA-256 hash in MongoDB (`refreshtokens` collection) with MongoDB TTL indexing.
+* **Token Theft Detection (Replay Protection):** Every time `/api/auth/refresh` is called, the used refresh token is revoked and replaced with a new one. If an attacker attempts to reuse an already-revoked refresh token, the server immediately revokes **all** active tokens for that user account (`TOKEN_THEFT_DETECTED`), protecting the user from session hijacking.
+
+### 2. Universal Cross-Platform Token Storage (`src/services/storage.js`)
+* **Native (iOS / Android):** Uses hardware-backed `expo-secure-store` for encrypted credential storage.
+* **Web (React Native Web):** Uses browser `localStorage` with consistent async wrapper methods:
+  * `getAccessToken()`, `setAccessToken(token)`
+  * `getRefreshToken()`, `setRefreshToken(token)`
+  * `clearTokens()`
+  * `getDeviceId()` (persistent UUID generated per installation)
+
+### 3. Single-Flight Axios Auto-Refresh Queue (`src/services/api.js`)
+* Outbound requests have a strict 15-second timeout.
+* When an access token expires (HTTP 401), concurrent requests do **not** trigger multiple refresh calls. Instead, the first failing request enters a single-flight mutex promise while subsequent requests queue up. Once the refresh completes, all queued requests automatically replay with the fresh access token seamlessly without interrupting user actions.
+* If refresh fails (token revoked/expired), the app clears tokens and dispatches `forceLogout`.
+
+### 4. Money Stored in Integer Paise
+* To avoid floating-point rounding inaccuracies in financial transactions, all money fields in MongoDB (`walletBalance`, order totals) are stored in **integer paise** (e.g. ₹250.00 = `25000` paise).
+* Mongoose schema helper `user.toRupees()` provides human-readable rupee formatting.
+* Database migration script `server/scripts/migrate-money-to-paise.js` ensures safe, idempotent conversion.
+
+### 5. Secure In-App Logout Workflow (`ProfileWalletScreen.js`)
+* **Confirmation Dialog:** Tapping "Log Out" opens an in-app confirmation modal warning the user: *"Kya aap sure hain? Aapka cart clear ho jayega."*
+* **Session Cleanup:**
+  1. Calls `POST /api/auth/logout` to revoke the device's refresh token on the server (fire-and-forget with a 3-second timeout).
+  2. Clears secure local token storage (`clearTokens()`).
+  3. Disconnects live WebSocket connections (`socketService.disconnect()`).
+  4. Resets the local shopping cart and user state.
+  5. Smoothly redirects the navigation stack to `LoginScreen`.
+* **Security & Sessions:** Includes a **"Log out from all devices"** action in the Security section which calls `POST /api/auth/logout-all`, revoking all active sessions across all devices.
 
 ---
 
