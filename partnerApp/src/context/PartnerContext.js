@@ -207,6 +207,7 @@ export const PartnerProvider = ({ children }) => {
   };
 
   // Add Product permanently to MongoDB
+  // Add Product permanently to MongoDB
   const addInventoryItem = async (item) => {
     try {
       const res = await fetch(`${API_BASE_URL}/products`, {
@@ -231,21 +232,23 @@ export const PartnerProvider = ({ children }) => {
       const data = await res.json();
       if (data.success && data.product) {
         console.log('✅ Product saved in MongoDB:', data.product.name);
-        fetchInventory(vendor?._id);
-        return data.product;
+        await fetchInventory(vendor?._id);
+        return { success: true, product: data.product };
       }
+      return { success: false, message: data.message || 'Could not save product' };
     } catch (e) {
       console.warn('Failed to save product in MongoDB:', e);
+      return { success: false, message: e.message || 'Network error' };
     }
   };
 
   // Toggle in-stock / out-of-stock
   const toggleItemAvailability = async (itemId) => {
-    const currentItem = inventory.find((i) => i.id === itemId);
+    const currentItem = inventory.find((i) => i.id === itemId || i._id === itemId || i.productId === itemId);
     const newStatus = currentItem ? !currentItem.isAvailable : true;
 
     setInventory((prev) =>
-      prev.map((i) => (i.id === itemId ? { ...i, isAvailable: newStatus } : i))
+      prev.map((i) => (i.id === itemId || i._id === itemId || i.productId === itemId ? { ...i, isAvailable: newStatus } : i))
     );
 
     try {
@@ -264,7 +267,7 @@ export const PartnerProvider = ({ children }) => {
 
   // Delete product
   const deleteInventoryItem = async (itemId) => {
-    setInventory((prev) => prev.filter((i) => i.id !== itemId));
+    setInventory((prev) => prev.filter((i) => i.id !== itemId && i._id !== itemId && i.productId !== itemId));
     try {
       await fetch(`${API_BASE_URL}/products/${itemId}`, {
         method: 'DELETE',

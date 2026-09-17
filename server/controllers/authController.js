@@ -81,18 +81,43 @@ export const vendorLogin = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Phone number is required' });
     }
 
-    const vendor = await Vendor.findOne({ phone: phone.trim() }).populate('categories');
+    let vendor = await Vendor.findOne({ phone: phone.trim() }).populate('categories');
 
     if (!vendor) {
-      return res.status(404).json({
-        success: false,
-        message: 'Vendor not found with this phone number. Try demo number 9876543211'
+      // Auto-register new vendor in MongoDB so any phone number can login and start working immediately
+      const Category = (await import('../models/Category.js')).default;
+      const defaultCategories = await Category.find().limit(3);
+      const catIds = defaultCategories.length > 0 ? defaultCategories.map(c => c._id) : [];
+      const hash = await bcrypt.hash(password || 'demo123', 10);
+      vendor = await Vendor.create({
+        storeName: req.body.storeName || `Farmart Store (${phone.trim().slice(-4)})`,
+        ownerName: req.body.ownerName || `Partner ${phone.trim().slice(-4)}`,
+        phone: phone.trim(),
+        passwordHash: hash,
+        storeType: req.body.storeType || 'FARMER',
+        categories: catIds,
+        description: 'Fresh direct-from-origin produce & gourmet handcrafted essentials.',
+        logo: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=200&auto=format&fit=crop&q=60',
+        banner: 'https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=800&auto=format&fit=crop&q=80',
+        isOpen: true,
+        isActive: true,
+        isApproved: true,
+        minOrderValue: 79,
+        avgPrepTimeMins: 20,
+        address: {
+          line1: 'Shop #12, Market Complex',
+          city: 'Ludhiana',
+          state: 'Punjab',
+          pincode: '141001'
+        }
       });
-    }
-
-    const isMatch = await bcrypt.compare(password, vendor.passwordHash);
-    if (!isMatch && password !== 'demo123') {
-      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+      await vendor.populate('categories');
+      console.log(`🏪 New Vendor auto-registered and saved to MongoDB: ${vendor.storeName} (${vendor.phone})`);
+    } else {
+      const isMatch = await bcrypt.compare(password, vendor.passwordHash);
+      if (!isMatch && password !== 'demo123') {
+        return res.status(401).json({ success: false, message: 'Invalid credentials' });
+      }
     }
 
     const token = jwt.sign(
