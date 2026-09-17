@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import storage from '../services/storage';
 import { useApp } from '../context/AppContext';
 import { AuthModal } from '../components/AuthModal';
 
@@ -57,13 +57,13 @@ export const AuthGateProvider = ({ children }) => {
   useEffect(() => {
     const loadIntent = async () => {
       try {
-        const raw = await AsyncStorage.getItem(PENDING_INTENT_KEY);
+        const raw = await storage.getItem(PENDING_INTENT_KEY);
         if (raw) {
           const parsed = JSON.parse(raw);
           if (Date.now() - (parsed.at || 0) < PENDING_INTENT_TTL_MS) {
             setPendingIntent(parsed);
           } else {
-            await AsyncStorage.removeItem(PENDING_INTENT_KEY);
+            await storage.removeItem(PENDING_INTENT_KEY);
           }
         }
       } catch (e) {
@@ -78,7 +78,7 @@ export const AuthGateProvider = ({ children }) => {
     try {
       const intentWithTime = { ...intent, at: Date.now() };
       setPendingIntent(intentWithTime);
-      await AsyncStorage.setItem(PENDING_INTENT_KEY, JSON.stringify(intentWithTime));
+      await storage.setItem(PENDING_INTENT_KEY, JSON.stringify(intentWithTime));
     } catch (e) {
       console.warn('Could not save pending intent:', e);
     }
@@ -89,7 +89,7 @@ export const AuthGateProvider = ({ children }) => {
     try {
       setPendingIntent(null);
       setPendingCallback(null);
-      await AsyncStorage.removeItem(PENDING_INTENT_KEY);
+      await storage.removeItem(PENDING_INTENT_KEY);
     } catch (e) {
       console.warn('Could not clear pending intent:', e);
     }

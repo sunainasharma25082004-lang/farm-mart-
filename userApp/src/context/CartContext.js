@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useEffect, useMemo, useCallback, useRef } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import storage from '../services/storage';
 import { apiService } from '../services/api';
 import { useApp } from './AppContext';
 import { ClearCartModal } from '../components/ClearCartModal';
@@ -108,7 +108,7 @@ export const CartProvider = ({ children }) => {
         return;
       }
       try {
-        const raw = await AsyncStorage.getItem(GUEST_CART_KEY);
+        const raw = await storage.getItem(GUEST_CART_KEY);
         if (raw) {
           const parsed = JSON.parse(raw);
           const age = Date.now() - (parsed.updatedAt || 0);
@@ -118,7 +118,7 @@ export const CartProvider = ({ children }) => {
             setVendorStoreType(parsed.vendorStoreType || null);
             setItems(parsed.items.slice(0, MAX_GUEST_ITEMS));
           } else {
-            await AsyncStorage.removeItem(GUEST_CART_KEY);
+            await storage.removeItem(GUEST_CART_KEY);
           }
         }
       } catch (err) {
@@ -144,9 +144,9 @@ export const CartProvider = ({ children }) => {
               items: items.slice(0, MAX_GUEST_ITEMS),
               updatedAt: Date.now()
             };
-            await AsyncStorage.setItem(GUEST_CART_KEY, JSON.stringify(payload));
+            await storage.setItem(GUEST_CART_KEY, JSON.stringify(payload));
           } else {
-            await AsyncStorage.removeItem(GUEST_CART_KEY);
+            await storage.removeItem(GUEST_CART_KEY);
           }
         } catch (err) {
           console.warn('Failed to persist guest cart:', err);
@@ -163,7 +163,7 @@ export const CartProvider = ({ children }) => {
       if (!prevAuthRef.current && isAuthenticated) {
         // Just logged in! Check if we have guestCart to merge
         try {
-          const raw = await AsyncStorage.getItem(GUEST_CART_KEY);
+          const raw = await storage.getItem(GUEST_CART_KEY);
           if (raw) {
             const parsed = JSON.parse(raw);
             if (Array.isArray(parsed.items) && parsed.items.length > 0) {
@@ -175,7 +175,7 @@ export const CartProvider = ({ children }) => {
               try {
                 const mergeRes = await apiService.mergeCart(formattedItems, false);
                 if (mergeRes && mergeRes.ok) {
-                  await AsyncStorage.removeItem(GUEST_CART_KEY);
+                  await storage.removeItem(GUEST_CART_KEY);
                   await syncServerCart();
                   await validateCart();
                   return;
@@ -212,7 +212,7 @@ export const CartProvider = ({ children }) => {
   // Keep Account Cart (discard guest items)
   const handleKeepAccountCart = async () => {
     try {
-      await AsyncStorage.removeItem(GUEST_CART_KEY);
+      await storage.removeItem(GUEST_CART_KEY);
     } catch (e) {}
     setMergeConflictModal({
       visible: false,
@@ -231,7 +231,7 @@ export const CartProvider = ({ children }) => {
     try {
       const res = await apiService.mergeCart(guestItems, true);
       if (res && res.ok) {
-        await AsyncStorage.removeItem(GUEST_CART_KEY);
+        await storage.removeItem(GUEST_CART_KEY);
         await syncServerCart();
         await validateCart();
       }
@@ -451,7 +451,7 @@ export const CartProvider = ({ children }) => {
       }
     } else {
       try {
-        await AsyncStorage.removeItem(GUEST_CART_KEY);
+        await storage.removeItem(GUEST_CART_KEY);
       } catch (e) {}
     }
     setItems([]);
