@@ -71,7 +71,7 @@ export const CartScreen = ({ navigation }) => {
       return;
     }
 
-    if (!billSummary.isMinOrderMet) {
+    if (billSummary.isMinOrderMet === false && (billSummary.minOrder || 0) > 0) {
       alert(
         `Minimum order value for ${vendorName || 'this store'} is ₹${billSummary.minOrder}. Please add ₹${billSummary.minOrderShortfall} more to proceed.`
       );
@@ -211,7 +211,7 @@ export const CartScreen = ({ navigation }) => {
             <View style={styles.billCard}>
               <View style={styles.billRow}>
                 <Text style={styles.billLabel}>Item Total</Text>
-                <Text style={styles.billVal}>₹{billSummary.itemsTotal}</Text>
+                <Text style={styles.billVal}>₹{billSummary.itemsTotal ?? billSummary.subtotal ?? 0}</Text>
               </View>
 
               <View style={styles.billRow}>
@@ -233,13 +233,13 @@ export const CartScreen = ({ navigation }) => {
                 </View>
               )}
 
-              {billSummary.itemsTotal < 200 && (
+              {(billSummary.itemsTotal ?? billSummary.subtotal ?? 0) < 200 && (
                 <Text style={styles.freeHint}>
-                  💡 Add ₹{200 - billSummary.itemsTotal} more for FREE delivery
+                  💡 Add ₹{200 - (billSummary.itemsTotal ?? billSummary.subtotal ?? 0)} more for FREE delivery
                 </Text>
               )}
 
-              {!billSummary.isMinOrderMet && (
+              {!billSummary.isMinOrderMet && (billSummary.minOrder || 0) > 0 && (
                 <View style={styles.minOrderAlert}>
                   <Ionicons name="alert-circle" size={16} color="#b45309" />
                   <Text style={styles.minOrderAlertText}>
@@ -250,7 +250,7 @@ export const CartScreen = ({ navigation }) => {
 
               <View style={[styles.billRow, styles.totalRow]}>
                 <Text style={styles.totalLabel}>Grand Total</Text>
-                <Text style={styles.totalVal}>₹{billSummary.grandTotal}</Text>
+                <Text style={styles.totalVal}>₹{billSummary.grandTotal ?? billSummary.total ?? 0}</Text>
               </View>
             </View>
 
@@ -266,7 +266,7 @@ export const CartScreen = ({ navigation }) => {
           <View style={styles.bottomBar}>
             <View>
               <Text style={styles.bottomLabel}>TO PAY</Text>
-              <Text style={styles.bottomTotal}>₹{billSummary.grandTotal}</Text>
+              <Text style={styles.bottomTotal}>₹{billSummary.grandTotal ?? billSummary.total ?? 0}</Text>
             </View>
             <TouchableOpacity
               style={[styles.checkoutBtn, !isStoreOpen && { backgroundColor: '#64748b' }]}

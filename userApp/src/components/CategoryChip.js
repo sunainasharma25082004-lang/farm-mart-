@@ -40,11 +40,15 @@ export const CategoryChip = ({ categories: propCats, selectedCategory, onSelectC
             activeOpacity={0.8}
           >
             <View style={[styles.iconWrap, isSelected && styles.iconWrapSelected]}>
-              <Ionicons
-                name={cat.icon || 'basket-outline'}
-                size={14}
-                color={isSelected ? colors.primaryDark : colors.textSecondary}
-              />
+              {cat.icon && !/^[a-z0-9-]+$/.test(cat.icon) ? (
+                <Text style={{ fontSize: 13 }}>{cat.icon}</Text>
+              ) : (
+                <Ionicons
+                  name={cat.icon || 'basket-outline'}
+                  size={14}
+                  color={isSelected ? colors.primaryDark : colors.textSecondary}
+                />
+              )}
             </View>
             <Text style={[styles.text, isSelected && styles.selectedText]}>{cat.name}</Text>
           </TouchableOpacity>

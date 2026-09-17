@@ -43,7 +43,7 @@ export const getAllProducts = async (req, res) => {
 
     const products = await Product.find(filter)
       .populate('category', 'name slug icon type')
-      .populate('vendor', 'storeName ownerName phone storeType isOpen rating')
+      .populate('vendor', 'storeName ownerName phone storeType isOpen rating minOrderValue avgPrepTimeMins')
       .sort({ inStock: -1, createdAt: -1 });
 
     res.json({

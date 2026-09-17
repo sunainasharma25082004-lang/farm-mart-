@@ -153,7 +153,7 @@ export const CategoryVendorsScreen = ({ route, navigation }) => {
         <View style={styles.stickyCartBar}>
           <View>
             <Text style={styles.cartCountText}>{billSummary.totalCount} ITEM(S)</Text>
-            <Text style={styles.cartTotalText}>₹{billSummary.grandTotal}</Text>
+            <Text style={styles.cartTotalText}>₹{billSummary.grandTotal ?? billSummary.total ?? 0}</Text>
           </View>
           <TouchableOpacity
             style={styles.viewCartBtn}

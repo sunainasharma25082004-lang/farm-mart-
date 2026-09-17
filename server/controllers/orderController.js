@@ -140,7 +140,7 @@ export const createOrder = async (req, res) => {
     for (const item of items) {
       const prodId = (item.productId || item.product || item._id).toString();
       const dbProd = dbProducts.find((p) => p._id.toString() === prodId);
-      const qty = Math.max(1, parseInt(item.qty || 1, 10));
+      const qty = Math.max(1, parseInt(item.qty ?? item.quantity ?? 1, 10));
 
       if (dbProd.stockQty < qty) {
         return res.status(400).json({

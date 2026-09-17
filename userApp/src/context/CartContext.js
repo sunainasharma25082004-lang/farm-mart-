@@ -18,10 +18,34 @@ export const CartProvider = ({ children }) => {
   const [vendorId, setVendorId] = useState(null);
   const [vendorName, setVendorName] = useState(null);
   const [vendorStoreType, setVendorStoreType] = useState(null);
+  const [vendorMinOrder, setVendorMinOrder] = useState(0);
   const [items, setItems] = useState([]); // [{ product, quantity }]
   const [validationChanges, setValidationChanges] = useState([]);
   const [isValidating, setIsValidating] = useState(false);
   const [isGuestCartLoaded, setIsGuestCartLoaded] = useState(false);
+
+  // Synchronize vendor details (minOrderValue, storeName, storeType) whenever vendorId changes
+  useEffect(() => {
+    if (!vendorId) {
+      setVendorMinOrder(0);
+      return;
+    }
+    let isMounted = true;
+    apiService.getVendorById(vendorId).then((res) => {
+      if (isMounted && res && res.success && res.vendor) {
+        if (res.vendor.minOrderValue !== undefined) {
+          setVendorMinOrder(Number(res.vendor.minOrderValue) || 0);
+        }
+        if (res.vendor.storeName && !vendorName) {
+          setVendorName(res.vendor.storeName);
+        }
+        if (res.vendor.storeType && !vendorStoreType) {
+          setVendorStoreType(res.vendor.storeType);
+        }
+      }
+    }).catch(() => {});
+    return () => { isMounted = false; };
+  }, [vendorId, vendorName, vendorStoreType]);
 
   // Conflict modal state for Single-Vendor Cart Guard (within browsing)
   const [conflictModal, setConflictModal] = useState({
@@ -75,9 +99,15 @@ export const CartProvider = ({ children }) => {
         if (sCart.vendor) {
           setVendorId(sCart.vendor._id || sCart.vendor);
           setVendorName(sCart.vendor.storeName || 'Partner Store');
+          if (sCart.vendor.storeType) setVendorStoreType(sCart.vendor.storeType);
+          if (sCart.vendor.minOrderValue !== undefined) {
+            setVendorMinOrder(Number(sCart.vendor.minOrderValue) || 0);
+          }
         } else {
           setVendorId(null);
           setVendorName(null);
+          setVendorStoreType(null);
+          setVendorMinOrder(0);
         }
 
         if (Array.isArray(sCart.items)) {
@@ -116,6 +146,7 @@ export const CartProvider = ({ children }) => {
             setVendorId(parsed.vendorId || null);
             setVendorName(parsed.vendorName || null);
             setVendorStoreType(parsed.vendorStoreType || null);
+            setVendorMinOrder(Number(parsed.vendorMinOrder) || 0);
             setItems(parsed.items.slice(0, MAX_GUEST_ITEMS));
           } else {
             await storage.removeItem(GUEST_CART_KEY);
@@ -141,6 +172,7 @@ export const CartProvider = ({ children }) => {
               vendorId,
               vendorName,
               vendorStoreType,
+              vendorMinOrder,
               items: items.slice(0, MAX_GUEST_ITEMS),
               updatedAt: Date.now()
             };
@@ -154,7 +186,7 @@ export const CartProvider = ({ children }) => {
       };
       persist();
     }
-  }, [items, vendorId, vendorName, vendorStoreType, isAuthenticated, isGuestCartLoaded]);
+  }, [items, vendorId, vendorName, vendorStoreType, vendorMinOrder, isAuthenticated, isGuestCartLoaded]);
 
   // Attempt merge when user logs in
   const prevAuthRef = useRef(isAuthenticated);
@@ -335,6 +367,10 @@ export const CartProvider = ({ children }) => {
       setVendorId(prodVendorId);
       setVendorName(prodVendorName);
       setVendorStoreType(prodStoreType);
+      const prodMinOrder = product.vendor?.minOrderValue ?? product.minOrderValue;
+      if (prodMinOrder !== undefined) {
+        setVendorMinOrder(Number(prodMinOrder) || 0);
+      }
     }
 
     setItems((prevItems) => {
@@ -367,6 +403,7 @@ export const CartProvider = ({ children }) => {
     const newVId = getItemVendorId(pendingProduct);
     const newVName = getItemVendorName(pendingProduct);
     const newVType = pendingProduct.vendor?.storeType || 'FARMER';
+    const newVMinOrder = pendingProduct.vendor?.minOrderValue ?? pendingProduct.minOrderValue ?? 0;
     const prodId = pendingProduct._id || pendingProduct.id;
 
     if (isAuthenticated && prodId) {
@@ -381,6 +418,7 @@ export const CartProvider = ({ children }) => {
     setVendorId(newVId);
     setVendorName(newVName);
     setVendorStoreType(newVType);
+    setVendorMinOrder(Number(newVMinOrder) || 0);
     setItems([{ product: pendingProduct, quantity: 1 }]);
 
     setConflictModal({
@@ -431,6 +469,7 @@ export const CartProvider = ({ children }) => {
           setVendorId(null);
           setVendorName(null);
           setVendorStoreType(null);
+          setVendorMinOrder(0);
         }
         return remaining;
       }
@@ -439,6 +478,31 @@ export const CartProvider = ({ children }) => {
           ? { ...it, quantity: newQty }
           : it
       );
+    });
+  };
+
+  const removeFromCart = async (productId) => {
+    if (isAuthenticated) {
+      try {
+        await apiService.removeCartItem(productId);
+        await syncServerCart();
+        return;
+      } catch (err) {
+        console.warn('removeCartItem server error:', err);
+      }
+    }
+
+    setItems((prevItems) => {
+      const remaining = prevItems.filter(
+        (it) => (it.product?._id || it.product?.id) !== productId
+      );
+      if (remaining.length === 0) {
+        setVendorId(null);
+        setVendorName(null);
+        setVendorStoreType(null);
+        setVendorMinOrder(0);
+      }
+      return remaining;
     });
   };
 
@@ -458,30 +522,62 @@ export const CartProvider = ({ children }) => {
     setVendorId(null);
     setVendorName(null);
     setVendorStoreType(null);
+    setVendorMinOrder(0);
     setValidationChanges([]);
+  };
+
+  const placeOrder = async (deliveryAddress, paymentMethod = 'COD') => {
+    if (items.length === 0) throw new Error('Cart is empty');
+    const orderPayload = {
+      vendorId,
+      items: items.map((it) => ({
+        productId: it.product?._id || it.product?.id,
+        qty: it.quantity
+      })),
+      address: deliveryAddress,
+      paymentMethod,
+      customerName: deliveryAddress?.name,
+      customerPhone: deliveryAddress?.phone
+    };
+    const res = await apiService.placeOrder(orderPayload);
+    if (res && res.success && res.order) {
+      await clearEntireCart();
+      return res.order;
+    }
+    throw new Error(res?.message || 'Failed to place order');
   };
 
   const billSummary = useMemo(() => {
     const subtotal = items.reduce((acc, it) => {
-      const p = it.product?.price || 0;
-      return acc + p * it.quantity;
+      const p = parseFloat(it.product?.price ?? it.price ?? 0) || 0;
+      const q = parseInt(it.quantity ?? 1, 10) || 1;
+      return acc + p * q;
     }, 0);
 
-    const deliveryFee = subtotal === 0 ? 0 : subtotal >= 199 ? 0 : 25;
+    const deliveryFee = subtotal === 0 ? 0 : subtotal >= 200 ? 0 : 25;
     const taxes = Math.round(subtotal * 0.05);
     const platformFee = subtotal === 0 ? 0 : 5;
     const total = subtotal + deliveryFee + taxes + platformFee;
-    const totalCount = items.reduce((acc, it) => acc + it.quantity, 0);
+    const totalCount = items.reduce((acc, it) => acc + (parseInt(it.quantity ?? 1, 10) || 1), 0);
+
+    const minOrder = Number(vendorMinOrder) || 0;
+    const isMinOrderMet = items.length === 0 || minOrder === 0 || subtotal >= minOrder;
+    const minOrderShortfall = isMinOrderMet ? 0 : Math.max(0, minOrder - subtotal);
 
     return {
       subtotal,
+      itemsTotal: subtotal,
       deliveryFee,
       taxes,
       platformFee,
       total,
-      totalCount
+      grandTotal: total,
+      totalCount,
+      minOrder,
+      isMinOrderMet,
+      minOrderShortfall
     };
-  }, [items]);
+  }, [items, vendorMinOrder]);
 
   return (
     <CartContext.Provider
@@ -489,11 +585,14 @@ export const CartProvider = ({ children }) => {
         vendorId,
         vendorName,
         vendorStoreType,
+        vendorMinOrder,
         items,
         addToCart,
         updateQuantity,
+        removeFromCart,
         clearEntireCart,
         clearCart: clearEntireCart,
+        placeOrder,
         billSummary,
         conflictModal,
         confirmReplaceCart,

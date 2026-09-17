@@ -44,7 +44,7 @@ export const CheckoutScreen = ({ navigation }) => {
   // Post-Order Confirmation Receipt Modal
   const [confirmedOrder, setConfirmedOrder] = useState(null);
 
-  const grandTotal = billSummary.grandTotal;
+  const grandTotal = billSummary?.grandTotal ?? billSummary?.total ?? 0;
 
   // Trigger Payment / Order Flow with Single-Execution & Closed-Store Guards
   const handleInitiatePayment = async () => {
@@ -55,9 +55,9 @@ export const CheckoutScreen = ({ navigation }) => {
       return;
     }
 
-    if (!billSummary.isMinOrderMet) {
+    if (billSummary.isMinOrderMet === false && (billSummary.minOrder || 0) > 0) {
       alert(
-        `Minimum order value for ${vendorName || 'this store'} is ₹${billSummary.minOrder}. Current items total is ₹${billSummary.itemsTotal}. Please add ₹${billSummary.minOrderShortfall} more to place order.`
+        `Minimum order value for ${vendorName || 'this store'} is ₹${billSummary.minOrder}. Current items total is ₹${billSummary.itemsTotal ?? billSummary.subtotal ?? 0}. Please add ₹${billSummary.minOrderShortfall} more to place order.`
       );
       return;
     }
@@ -154,7 +154,7 @@ export const CheckoutScreen = ({ navigation }) => {
           </View>
         </View>
 
-        {!billSummary.isMinOrderMet && (
+        {!billSummary.isMinOrderMet && (billSummary.minOrder || 0) > 0 && (
           <View style={styles.minOrderWarningCard}>
             <Ionicons name="warning" size={20} color="#b45309" />
             <View style={{ flex: 1, marginLeft: 10 }}>
@@ -162,7 +162,7 @@ export const CheckoutScreen = ({ navigation }) => {
                 Minimum Order Value is ₹{billSummary.minOrder}
               </Text>
               <Text style={styles.minOrderWarningSub}>
-                Your items total is ₹{billSummary.itemsTotal}. Please add ₹{billSummary.minOrderShortfall} more items to proceed.
+                Your items total is ₹{billSummary.itemsTotal ?? billSummary.subtotal ?? 0}. Please add ₹{billSummary.minOrderShortfall} more items to proceed.
               </Text>
             </View>
             <TouchableOpacity
@@ -360,7 +360,7 @@ export const CheckoutScreen = ({ navigation }) => {
 
           <View style={styles.billRow}>
             <Text style={styles.billText}>Item Total ({billSummary.totalCount} items)</Text>
-            <Text style={styles.billVal}>₹{billSummary.itemsTotal}</Text>
+            <Text style={styles.billVal}>₹{billSummary.itemsTotal ?? billSummary.subtotal ?? 0}</Text>
           </View>
 
           <View style={styles.billRow}>

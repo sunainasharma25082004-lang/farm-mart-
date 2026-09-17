@@ -5,7 +5,7 @@ import Vendor from '../models/Vendor.js';
 
 // Helper to format cart response
 const formatCartResponse = async (cart) => {
-  await cart.populate('vendor', 'storeName address phone isOpen logo banner');
+  await cart.populate('vendor', 'storeName address phone isOpen logo banner minOrderValue storeType');
   const cartObj = cart.toJSON();
   return {
     ...cartObj,
