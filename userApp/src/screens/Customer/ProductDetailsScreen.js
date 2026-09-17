@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,27 +8,91 @@ import {
   TouchableOpacity,
   Dimensions,
   SafeAreaView,
-  Platform
+  Platform,
+  ActivityIndicator
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { useCart } from '../../context/CartContext';
-import { products } from '../../data/mockData';
+import { apiService } from '../../services/api';
 import { ProductCard } from '../../components/ProductCard';
 
 const { width } = Dimensions.get('window');
 
 export const ProductDetailsScreen = ({ route, navigation }) => {
-  const product = route.params?.product || products[0] || {};
+  const [product, setProduct] = useState(route.params?.product || null);
+  const [similarProducts, setSimilarProducts] = useState([]);
+  const [isLoading, setIsLoading] = useState(!route.params?.product);
   const { addToCart, updateQuantity, items, billSummary } = useCart();
-  
-  const prodId = product._id || product.id || 'p1';
+
+  const passedProductId = route.params?.productId || route.params?.product?._id || route.params?.product?.id;
+
+  useEffect(() => {
+    loadProductDetails();
+  }, [passedProductId]);
+
+  const loadProductDetails = async () => {
+    if (!product && passedProductId) {
+      try {
+        setIsLoading(true);
+        const res = await apiService.getProductById(passedProductId);
+        if (res && res.success && res.product) {
+          setProduct(res.product);
+          loadSimilar(res.product);
+        }
+      } catch (err) {
+        console.warn('Failed to fetch product details:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    } else if (product) {
+      loadSimilar(product);
+    }
+  };
+
+  const loadSimilar = async (currentProd) => {
+    try {
+      const res = await apiService.getProducts();
+      if (res && res.success && Array.isArray(res.products)) {
+        const currentId = currentProd._id || currentProd.id;
+        const currentCat = currentProd.category?._id || currentProd.category;
+        const similar = res.products.filter(
+          (p) => (p._id || p.id) !== currentId && (!currentCat || (p.category?._id || p.category) === currentCat)
+        ).slice(0, 6);
+        setSimilarProducts(similar);
+      }
+    } catch (e) {
+      console.warn('Failed to load similar products:', e);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={{ marginTop: 12, color: colors.textSecondary }}>Loading product details...</Text>
+      </SafeAreaView>
+    );
+  }
+
+  if (!product) {
+    return (
+      <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center', padding: 24 }]}>
+        <Ionicons name="alert-circle-outline" size={54} color={colors.textMuted} />
+        <Text style={{ fontSize: 18, fontWeight: '700', color: colors.textPrimary, marginTop: 12 }}>Product Not Found</Text>
+        <Text style={{ fontSize: 13, color: colors.textSecondary, textAlign: 'center', marginTop: 6, marginBottom: 20 }}>
+          This product might be temporarily unavailable or out of catalog.
+        </Text>
+        <TouchableOpacity style={styles.primaryBtn} onPress={() => navigation.goBack()}>
+          <Text style={styles.primaryBtnText}>Back to Marketplace</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
+
+  const prodId = product._id || product.id;
   const cartItem = items?.find(item => (item.product?._id || item.product?.id) === prodId);
   const qtyInCart = cartItem ? cartItem.quantity : 0;
-
-  const similarProducts = products
-    .filter(p => p.category === product.category && (p._id || p.id) !== prodId)
-    .slice(0, 5);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -157,7 +221,7 @@ export const ProductDetailsScreen = ({ route, navigation }) => {
               contentContainerStyle={styles.suggestionScroll}
             >
               {similarProducts.map((item) => (
-                <View key={item.id} style={styles.suggestionCardWrap}>
+                <View key={item._id || item.id} style={styles.suggestionCardWrap}>
                   <ProductCard 
                     product={item} 
                     compact 
@@ -172,12 +236,12 @@ export const ProductDetailsScreen = ({ route, navigation }) => {
       </ScrollView>
 
       {/* Floating Checkout Bar (Appears only if cart has items) */}
-      {cart.length > 0 && (
+      {(items?.length > 0) && (
         <View style={styles.floatingCart}>
           <View style={styles.floatingCartInner}>
             <View>
-              <Text style={styles.fcItems}>{cart.length} ITEM{cart.length > 1 ? 'S' : ''}</Text>
-              <Text style={styles.fcTotal}>View Cart</Text>
+              <Text style={styles.fcItems}>{billSummary?.totalCount || items.length} ITEM{(billSummary?.totalCount || items.length) > 1 ? 'S' : ''}</Text>
+              <Text style={styles.fcTotal}>View Cart · ₹{billSummary?.total || 0}</Text>
             </View>
             <TouchableOpacity 
               style={styles.fcBtn} 
@@ -438,5 +502,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     justifyContent: 'center',
     alignItems: 'center'
+  },
+  primaryBtn: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12
+  },
+  primaryBtnText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '600'
   }
 });

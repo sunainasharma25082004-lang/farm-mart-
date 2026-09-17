@@ -287,6 +287,79 @@ export const apiService = {
     }
   },
 
+  // Cart API Endpoints
+  getCart: async () => {
+    try {
+      const response = await apiClient.get('/cart');
+      return response.data;
+    } catch (error) {
+      return { ok: false, error: error.response?.data || error };
+    }
+  },
+
+  addCartItem: async (productId, qty = 1) => {
+    try {
+      const response = await apiClient.post('/cart/items', { productId, qty });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+  updateCartItemQty: async (productId, qty) => {
+    try {
+      const response = await apiClient.patch(`/cart/items/${productId}`, { qty });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+  removeCartItem: async (productId) => {
+    try {
+      const response = await apiClient.delete(`/cart/items/${productId}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+  clearCart: async () => {
+    try {
+      const response = await apiClient.delete('/cart');
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+  switchCartVendor: async (productId, qty = 1) => {
+    try {
+      const response = await apiClient.post('/cart/switch-vendor', { productId, qty });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+  validateCart: async () => {
+    try {
+      const response = await apiClient.post('/cart/validate');
+      return response.data;
+    } catch (error) {
+      return { ok: false, isValid: true, changes: [] };
+    }
+  },
+
+  mergeCart: async (items) => {
+    try {
+      const response = await apiClient.post('/cart/merge', { items });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
   // Orders
   placeOrder: async (orderData) => {
     try {

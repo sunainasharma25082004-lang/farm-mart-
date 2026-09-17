@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { apiService } from '../../services/api';
 import { useCart } from '../../context/CartContext';
 import { useCustomerSocket } from '../../context/SocketContext';
+import { ClearCartModal } from '../../components/ClearCartModal';
 import { colors } from '../../theme/colors';
 
 export const VendorStoreScreen = ({ route, navigation }) => {
@@ -29,7 +30,12 @@ export const VendorStoreScreen = ({ route, navigation }) => {
     addToCart,
     updateQuantity,
     billSummary,
-    vendorId: currentCartVendorId
+    vendorId: currentCartVendorId,
+    vendorName: currentCartVendorName,
+    conflictModal,
+    confirmReplaceCart,
+    cancelReplaceCart,
+    clearEntireCart
   } = useCart();
 
   const { productStockUpdate } = useCustomerSocket();
@@ -207,6 +213,28 @@ export const VendorStoreScreen = ({ route, navigation }) => {
       )}
 
       {/* Products List */}
+      {/* Deep-link / Direct-to-store warning banner */}
+      {currentCartVendorId && vendor?._id && currentCartVendorId.toString() !== vendor._id.toString() && items.length > 0 && (
+        <View style={styles.storeMismatchBanner}>
+          <Ionicons name="information-circle" size={20} color="#b45309" />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.storeMismatchTitle}>
+              Aap abhi {currentCartVendorName || 'dusre store'} se shopping kar rahe hain
+            </Text>
+            <Text style={styles.storeMismatchSub}>
+              Is store se add karne par purana cart replace ho jayega.
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={styles.switchStoreBtn}
+            onPress={clearEntireCart}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.switchStoreBtnText}>Switch</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       {isLoading ? (
         <View style={styles.loadingBox}>
           <ActivityIndicator size="large" color={colors.primary} />
@@ -369,6 +397,16 @@ export const VendorStoreScreen = ({ route, navigation }) => {
           )}
         </View>
       )}
+
+      {/* Global Single-Vendor Conflict Modal */}
+      <ClearCartModal
+        visible={conflictModal?.visible}
+        currentVendorName={conflictModal?.currentVendorName}
+        newVendorName={conflictModal?.newVendorName}
+        itemCount={conflictModal?.itemCount || 1}
+        onCancel={cancelReplaceCart}
+        onConfirm={confirmReplaceCart}
+      />
     </View>
   );
 };
@@ -377,6 +415,37 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8fafc'
+  },
+  storeMismatchBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: '#fef3c7',
+    borderBottomWidth: 1,
+    borderBottomColor: '#fde68a',
+    paddingHorizontal: 16,
+    paddingVertical: 10
+  },
+  storeMismatchTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#92400e'
+  },
+  storeMismatchSub: {
+    fontSize: 11,
+    color: '#b45309',
+    marginTop: 2
+  },
+  switchStoreBtn: {
+    backgroundColor: '#d97706',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8
+  },
+  switchStoreBtnText: {
+    color: '#ffffff',
+    fontSize: 11,
+    fontWeight: '700'
   },
   heroBanner: {
     height: 180,

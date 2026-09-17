@@ -5,10 +5,13 @@ import { colors } from '../theme/colors';
 import { useCart } from '../context/CartContext';
 
 export const ProductCard = ({ product, onPress, compact = false }) => {
-  const { addToCart, updateQuantity, items } = useCart();
+  const { addToCart, updateQuantity, items, vendorId: currentCartVendorId } = useCart();
   const prodId = product._id || product.id;
   const cartItem = items?.find((item) => (item.product._id || item.product.id) === prodId);
   const qty = cartItem ? cartItem.quantity : 0;
+
+  const prodVendorId = (product.vendor?._id || product.vendor?.id || (typeof product.vendor === 'string' ? product.vendor : null) || product.vendorId);
+  const isDifferentVendor = Boolean(currentCartVendorId && prodVendorId && currentCartVendorId.toString() !== prodVendorId.toString() && items?.length > 0);
 
   const isOutOfStock = product.inStock === false || (product.stockQty !== undefined && product.stockQty <= 0);
   const isLowStock = !isOutOfStock && product.stockQty !== undefined && product.stockQty <= 5 && product.stockQty > 0;
@@ -96,11 +99,13 @@ export const ProductCard = ({ product, onPress, compact = false }) => {
             </View>
           ) : (
             <TouchableOpacity
-              style={styles.addButton}
+              style={[styles.addButton, isDifferentVendor && styles.addButtonOutline]}
               onPress={() => addToCart(product)}
               activeOpacity={0.85}
             >
-              <Text style={styles.addButtonText}>ADD</Text>
+              <Text style={[styles.addButtonText, isDifferentVendor && styles.addButtonTextOutline]}>
+                {isDifferentVendor ? '+ ADD' : 'ADD'}
+              </Text>
             </TouchableOpacity>
           )}
         </View>
@@ -224,6 +229,15 @@ const styles = StyleSheet.create({
     color: colors.primaryDark,
     fontSize: 12,
     fontWeight: '500'
+  },
+  addButtonOutline: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1.2,
+    borderColor: '#94a3b8'
+  },
+  addButtonTextOutline: {
+    color: '#64748b',
+    fontWeight: '600'
   },
   unitRow: {
     flexDirection: 'row',

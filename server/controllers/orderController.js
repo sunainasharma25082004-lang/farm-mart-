@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import Order from '../models/Order.js';
 import Product from '../models/Product.js';
 import Vendor from '../models/Vendor.js';
@@ -55,6 +56,20 @@ export const createOrder = async (req, res) => {
 
     // 3. Fetch all products from DB for single-vendor validation & real price calculation
     const productIds = items.map((it) => it.productId || it.product || it._id);
+
+    // 🔴 STRICT OBJECTID GUARD: Never let CastError reach the client as a 500
+    for (const pId of productIds) {
+      if (!pId || !mongoose.isValidObjectId(pId)) {
+        return res.status(400).json({
+          ok: false,
+          success: false,
+          code: 'INVALID_PRODUCT_ID',
+          message: `Invalid product ID format: "${pId}". Expected a 24-character hexadecimal ObjectId.`,
+          invalidId: pId
+        });
+      }
+    }
+
     const dbProducts = await Product.find({ _id: { $in: productIds } }).populate('vendor');
 
     if (dbProducts.length !== items.length) {

@@ -2,8 +2,28 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Header } from '../../components/Header';
-import { dreamRewards } from '../../data/mockData';
 import { colors } from '../../theme/colors';
+
+const dreamRewards = [
+  {
+    id: 'reward-1',
+    title: 'Silver Partner Milestone',
+    targetScore: 500,
+    currentScore: 320,
+    reward: 'Premium Smartphone / Tab',
+    description: 'Achieve 500 network orders in your city zone',
+    icon: 'phone-portrait-outline'
+  },
+  {
+    id: 'reward-2',
+    title: 'Gold Partner Milestone',
+    targetScore: 2000,
+    currentScore: 1240,
+    reward: 'Electric Two-Wheeler EV',
+    description: 'Achieve 2,000 network orders across your village hubs',
+    icon: 'bicycle-outline'
+  }
+];
 
 export const GrowthPartnerScreen = ({ navigation }) => {
   return (

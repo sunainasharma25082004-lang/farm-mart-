@@ -23,6 +23,7 @@ import contactRoutes from './routes/contactRoutes.js';
 import jobRoutes from './routes/jobRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
+import cartRoutes from './routes/cartRoutes.js';
 
 const app = express();
 const httpServer = http.createServer(app);
@@ -46,7 +47,11 @@ connectDB().then((isConnected) => {
   }
 });
 
-// Health Check Endpoint
+// Health Check Endpoints
+app.get('/healthz', (req, res) => {
+  res.status(200).json({ status: 'ok', uptime: process.uptime(), timestamp: new Date() });
+});
+
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'OK',
@@ -66,6 +71,7 @@ app.use('/api', applicationRoutes);
 app.use('/api', contactRoutes);
 app.use('/api', jobRoutes);
 app.use('/api', userRoutes);
+app.use('/api', cartRoutes);
 app.use('/api/admin', adminRoutes);
 
 // Global Error Handling Middleware

@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Header } from '../../components/Header';
 import { apiService } from '../../services/api';
 import { useCustomerSocket } from '../../context/SocketContext';
+import { useApp } from '../../context/AppContext';
 import { colors } from '../../theme/colors';
 
 const TRACKING_STEPS = [
@@ -25,18 +26,23 @@ const TRACKING_STEPS = [
 ];
 
 export const OrderTrackingScreen = ({ route, navigation }) => {
+  const { isAuthenticated } = useApp();
   const initialOrder = route.params?.order;
   const [activeOrder, setActiveOrder] = useState(initialOrder || null);
   const [orders, setOrders] = useState(initialOrder ? [initialOrder] : []);
-  const [isLoading, setIsLoading] = useState(!initialOrder);
+  const [isLoading, setIsLoading] = useState(!initialOrder && isAuthenticated);
 
   const { activeOrderUpdate, trackOrder } = useCustomerSocket();
 
   useEffect(() => {
+    if (!isAuthenticated) {
+      setIsLoading(false);
+      return;
+    }
     fetchMyOrders();
     const interval = setInterval(fetchMyOrders, 8000);
     return () => clearInterval(interval);
-  }, []);
+  }, [isAuthenticated]);
 
   useEffect(() => {
     if (activeOrder?._id) {
@@ -175,6 +181,31 @@ export const OrderTrackingScreen = ({ route, navigation }) => {
   };
 
   const statusInfo = getStatusInfo(activeOrder?.status || 'NEW_ORDER');
+
+  if (!isAuthenticated) {
+    return (
+      <View style={styles.container}>
+        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+        <Header navigation={navigation} title="Live Order Tracker" showCart={false} showBack />
+        <View style={styles.loggedOutWrap}>
+          <View style={styles.loggedOutIconBox}>
+            <Ionicons name="lock-closed-outline" size={48} color={colors.primary} />
+          </View>
+          <Text style={styles.loggedOutTitle}>Login to View Live Orders</Text>
+          <Text style={styles.loggedOutSub}>
+            Sign in to track your current delivery, access order receipts, and get live status updates from the kitchen.
+          </Text>
+          <TouchableOpacity
+            style={styles.loggedOutBtn}
+            onPress={() => navigation.navigate('Login')}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.loggedOutBtnText}>Log In to Your Account</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -619,5 +650,47 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontWeight: '700',
     fontSize: 14
+  },
+  loggedOutWrap: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 28,
+    backgroundColor: '#ffffff'
+  },
+  loggedOutIconBox: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    backgroundColor: '#ecfdf5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20
+  },
+  loggedOutTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#0f172a',
+    textAlign: 'center',
+    marginBottom: 8
+  },
+  loggedOutSub: {
+    fontSize: 14,
+    color: '#64748b',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 24
+  },
+  loggedOutBtn: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 14,
+    elevation: 3
+  },
+  loggedOutBtnText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '700'
   }
 });

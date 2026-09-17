@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Header } from '../../components/Header';
+import { ShoppingFromBanner } from '../../components/ShoppingFromBanner';
 import { apiService } from '../../services/api';
 import { useCart } from '../../context/CartContext';
 import { ClearCartModal } from '../../components/ClearCartModal';
@@ -83,6 +84,7 @@ export const HomeScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <Header navigation={navigation} />
+      <ShoppingFromBanner navigation={navigation} />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -348,6 +350,7 @@ export const HomeScreen = ({ navigation }) => {
         visible={conflictModal.visible}
         currentVendorName={conflictModal.currentVendorName}
         newVendorName={conflictModal.newVendorName}
+        itemCount={conflictModal.itemCount || 1}
         onCancel={cancelReplaceCart}
         onConfirm={confirmReplaceCart}
       />

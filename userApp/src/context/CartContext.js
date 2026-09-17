@@ -1,23 +1,30 @@
-import React, { createContext, useState, useContext, useEffect, useMemo } from 'react';
+import React, { createContext, useState, useContext, useEffect, useMemo, useCallback } from 'react';
 import { apiService } from '../services/api';
+import { useApp } from './AppContext';
 
 const CartContext = createContext();
 
 export const CartProvider = ({ children }) => {
+  const { isAuthenticated } = useApp();
+
   // Cart state: strictly 1 vendor at any time
   const [vendorId, setVendorId] = useState(null);
   const [vendorName, setVendorName] = useState(null);
   const [vendorStoreType, setVendorStoreType] = useState(null);
   const [items, setItems] = useState([]); // [{ product, quantity }]
+  const [validationChanges, setValidationChanges] = useState([]);
+  const [isValidating, setIsValidating] = useState(false);
 
   // Conflict modal state for Single-Vendor Cart Guard
   const [conflictModal, setConflictModal] = useState({
     visible: false,
     currentVendorName: '',
     newVendorName: '',
+    itemCount: 1,
     pendingProduct: null
   });
 
+  // Helper to extract vendor id
   const getItemVendorId = (product) => {
     if (!product) return null;
     return (
@@ -29,6 +36,7 @@ export const CartProvider = ({ children }) => {
     );
   };
 
+  // Helper to extract vendor name
   const getItemVendorName = (product) => {
     if (!product) return 'Store';
     return (
@@ -39,7 +47,71 @@ export const CartProvider = ({ children }) => {
     );
   };
 
-  const addToCart = (product, qty = 1) => {
+  // Synchronize with server cart on login or mount
+  const syncServerCart = useCallback(async () => {
+    if (!isAuthenticated) return;
+    try {
+      const res = await apiService.getCart();
+      if (res && res.ok && res.cart) {
+        const sCart = res.cart;
+        if (sCart.vendor) {
+          setVendorId(sCart.vendor._id || sCart.vendor);
+          setVendorName(sCart.vendor.storeName || 'Partner Store');
+        } else {
+          setVendorId(null);
+          setVendorName(null);
+        }
+
+        if (Array.isArray(sCart.items)) {
+          setItems(
+            sCart.items.map((it) => ({
+              product: {
+                _id: it.product,
+                name: it.name,
+                image: it.image,
+                unit: it.unit,
+                price: it.priceAtAdd ? it.priceAtAdd / 100 : 0
+              },
+              quantity: it.qty
+            }))
+          );
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to sync server cart:', err);
+    }
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    syncServerCart();
+  }, [syncServerCart]);
+
+  // Validate cart on cart open or before checkout
+  const validateCart = useCallback(async () => {
+    if (!isAuthenticated || items.length === 0) return { isValid: true, changes: [] };
+    try {
+      setIsValidating(true);
+      const res = await apiService.validateCart();
+      if (res && res.ok) {
+        if (res.changes && res.changes.length > 0) {
+          setValidationChanges(res.changes);
+        }
+        await syncServerCart();
+        return { isValid: res.isValid, changes: res.changes || [] };
+      }
+    } catch (err) {
+      console.warn('Validate cart error:', err);
+    } finally {
+      setIsValidating(false);
+    }
+    return { isValid: true, changes: [] };
+  }, [isAuthenticated, items.length, syncServerCart]);
+
+  const acknowledgeChanges = () => {
+    setValidationChanges([]);
+  };
+
+  const addToCart = async (product, qty = 1) => {
     // 🔴 STRICT STOCK GUARD: Prevent adding Out of Stock items
     if (product.inStock === false || (product.stockQty !== undefined && product.stockQty <= 0)) {
       alert(`"${product.name || 'This item'}" is currently out of stock.`);
@@ -49,20 +121,44 @@ export const CartProvider = ({ children }) => {
     const prodVendorId = getItemVendorId(product);
     const prodVendorName = getItemVendorName(product);
     const prodStoreType = product.vendor?.storeType || 'FARMER';
+    const prodId = product._id || product.id;
 
-    // 🔴 STRICT SINGLE-VENDOR GUARD
-    if (items.length > 0 && vendorId && prodVendorId && vendorId !== prodVendorId) {
-      // Vendor mismatch! Show ClearCartModal
+    // Client-side quick check
+    if (items.length > 0 && vendorId && prodVendorId && vendorId.toString() !== prodVendorId.toString()) {
       setConflictModal({
         visible: true,
         currentVendorName: vendorName || 'Previous Store',
         newVendorName: prodVendorName,
+        itemCount: items.reduce((sum, it) => sum + (it.quantity || 1), 0),
         pendingProduct: product
       });
       return false;
     }
 
-    // Same vendor or empty cart
+    // Call server endpoint if authenticated
+    if (isAuthenticated && prodId) {
+      try {
+        const res = await apiService.addCartItem(prodId, qty);
+        if (res && res.ok) {
+          await syncServerCart();
+          return true;
+        }
+      } catch (err) {
+        if (err?.code === 'VENDOR_CONFLICT') {
+          setConflictModal({
+            visible: true,
+            currentVendorName: err.currentVendor?.name || vendorName || 'Previous Store',
+            newVendorName: err.newVendor?.name || prodVendorName,
+            itemCount: err.currentVendor?.itemCount || items.length,
+            pendingProduct: product
+          });
+          return false;
+        }
+        console.warn('Server addCartItem error:', err);
+      }
+    }
+
+    // Local / Guest fallback
     if (!vendorId && prodVendorId) {
       setVendorId(prodVendorId);
       setVendorName(prodVendorName);
@@ -70,7 +166,6 @@ export const CartProvider = ({ children }) => {
     }
 
     setItems((prevItems) => {
-      const prodId = product._id || product.id;
       const existing = prevItems.find(
         (it) => (it.product?._id || it.product?.id) === prodId
       );
@@ -93,13 +188,23 @@ export const CartProvider = ({ children }) => {
     return true;
   };
 
-  const confirmReplaceCart = () => {
+  const confirmReplaceCart = async () => {
     const { pendingProduct } = conflictModal;
     if (!pendingProduct) return;
 
     const newVId = getItemVendorId(pendingProduct);
     const newVName = getItemVendorName(pendingProduct);
     const newVType = pendingProduct.vendor?.storeType || 'FARMER';
+    const prodId = pendingProduct._id || pendingProduct.id;
+
+    if (isAuthenticated && prodId) {
+      try {
+        await apiService.switchCartVendor(prodId, 1);
+        await syncServerCart();
+      } catch (err) {
+        console.warn('switchCartVendor server error:', err);
+      }
+    }
 
     setVendorId(newVId);
     setVendorName(newVName);
@@ -110,6 +215,7 @@ export const CartProvider = ({ children }) => {
       visible: false,
       currentVendorName: '',
       newVendorName: '',
+      itemCount: 1,
       pendingProduct: null
     });
   };
@@ -119,108 +225,87 @@ export const CartProvider = ({ children }) => {
       visible: false,
       currentVendorName: '',
       newVendorName: '',
+      itemCount: 1,
       pendingProduct: null
     });
   };
 
-  const updateQuantity = (productId, delta) => {
-    setItems((prevItems) => {
-      const updated = prevItems
-        .map((it) => {
-          const id = it.product?._id || it.product?.id;
-          if (id === productId) {
-            const nextQty = it.quantity + delta;
-            const availableStock = it.product?.stockQty;
-            if (delta > 0 && availableStock !== undefined && nextQty > availableStock) {
-              alert(`Only ${availableStock} unit(s) of "${it.product?.name || 'this item'}" in stock.`);
-              return it;
-            }
-            return nextQty > 0 ? { ...it, quantity: nextQty } : null;
-          }
-          return it;
-        })
-        .filter(Boolean);
+  const updateQuantity = async (productId, delta) => {
+    const currentItem = items.find((it) => (it.product?._id || it.product?.id) === productId);
+    if (!currentItem) return;
 
-      if (updated.length === 0) {
-        setVendorId(null);
-        setVendorName(null);
-        setVendorStoreType(null);
+    const newQty = currentItem.quantity + delta;
+
+    if (isAuthenticated) {
+      try {
+        if (newQty <= 0) {
+          await apiService.removeCartItem(productId);
+        } else {
+          await apiService.updateCartItemQty(productId, newQty);
+        }
+        await syncServerCart();
+        return;
+      } catch (err) {
+        console.warn('updateCartItemQty server error:', err);
       }
-      return updated;
-    });
-  };
+    }
 
-  const removeFromCart = (productId) => {
     setItems((prevItems) => {
-      const updated = prevItems.filter(
-        (it) => (it.product?._id || it.product?.id) !== productId
+      if (newQty <= 0) {
+        const remaining = prevItems.filter(
+          (it) => (it.product?._id || it.product?.id) !== productId
+        );
+        if (remaining.length === 0) {
+          setVendorId(null);
+          setVendorName(null);
+          setVendorStoreType(null);
+        }
+        return remaining;
+      }
+      return prevItems.map((it) =>
+        (it.product?._id || it.product?.id) === productId
+          ? { ...it, quantity: newQty }
+          : it
       );
-      if (updated.length === 0) {
-        setVendorId(null);
-        setVendorName(null);
-        setVendorStoreType(null);
-      }
-      return updated;
     });
   };
 
-  const clearCart = () => {
+  const clearEntireCart = async () => {
+    if (isAuthenticated) {
+      try {
+        await apiService.clearCart();
+      } catch (e) {
+        console.warn('Failed to clear cart on server:', e);
+      }
+    }
     setItems([]);
     setVendorId(null);
     setVendorName(null);
     setVendorStoreType(null);
+    setValidationChanges([]);
   };
 
-  // Bill Summary Calculation
   const billSummary = useMemo(() => {
-    const itemsTotal = items.reduce(
-      (sum, it) => sum + (it.product?.price || 0) * it.quantity,
-      0
-    );
-    const deliveryFee = itemsTotal >= 200 || itemsTotal === 0 ? 0 : 25;
-    const taxes = vendorStoreType === 'HOME_CHEF' ? Math.round(itemsTotal * 0.05) : 0;
-    const grandTotal = itemsTotal + deliveryFee + taxes;
-    const totalCount = items.reduce((sum, it) => sum + it.quantity, 0);
+    const subtotal = items.reduce((acc, it) => {
+      const p = it.product?.price || 0;
+      return acc + p * it.quantity;
+    }, 0);
 
-    const minOrder = vendorStoreType === 'HOME_CHEF' ? 99 : 79;
-    const minOrderShortfall = Math.max(0, minOrder - itemsTotal);
-    const isMinOrderMet = itemsTotal >= minOrder;
+    const deliveryFee = subtotal === 0 ? 0 : subtotal >= 199 ? 0 : 25;
+    const taxes = Math.round(subtotal * 0.05);
+    const platformFee = subtotal === 0 ? 0 : 5;
+    const total = subtotal + deliveryFee + taxes + platformFee;
+    const totalCount = items.reduce((acc, it) => acc + it.quantity, 0);
 
     return {
-      itemsTotal,
+      subtotal,
       deliveryFee,
       taxes,
-      grandTotal,
-      totalCount,
-      minOrder,
-      minOrderShortfall,
-      isMinOrderMet
+      platformFee,
+      total,
+      totalCount
     };
-  }, [items, vendorStoreType]);
-
-  const placeOrder = async (deliveryAddress, paymentMethod = 'COD') => {
-    if (!items.length) {
-      throw new Error('Cart is empty');
-    }
-
-    const payload = {
-      clientOrderId: `ORD_CLI_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-      vendorId,
-      items: items.map((it) => ({
-        productId: it.product._id || it.product.id,
-        qty: it.quantity
-      })),
-      address: deliveryAddress,
-      paymentMethod
-    };
-
-    const res = await apiService.placeOrder(payload);
-    if (res.success && res.order) {
-      clearCart();
-      return res.order;
-    }
-    throw new Error(res.message || 'Failed to place order');
-  };
+  }, [items]);
 
   return (
     <CartContext.Provider
@@ -231,13 +316,16 @@ export const CartProvider = ({ children }) => {
         items,
         addToCart,
         updateQuantity,
-        removeFromCart,
-        clearCart,
+        clearEntireCart,
+        clearCart: clearEntireCart,
+        billSummary,
         conflictModal,
         confirmReplaceCart,
         cancelReplaceCart,
-        billSummary,
-        placeOrder
+        validationChanges,
+        isValidating,
+        validateCart,
+        acknowledgeChanges
       }}
     >
       {children}
@@ -245,4 +333,10 @@ export const CartProvider = ({ children }) => {
   );
 };
 
-export const useCart = () => useContext(CartContext);
+export const useCart = () => {
+  const context = useContext(CartContext);
+  if (!context) {
+    throw new Error('useCart must be used within a CartProvider');
+  }
+  return context;
+};

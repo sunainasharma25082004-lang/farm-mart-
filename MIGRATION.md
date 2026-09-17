@@ -36,3 +36,33 @@ Run the idempotent money migration script:
 node server/scripts/migrate-money-to-paise.js
 ```
 *Note*: This script is guarded by the `migrations` collection in MongoDB (`name: 'migrate-money-to-paise'`). It will safely exit without duplicate modifications if run more than once.
+
+---
+
+## Flow 0 & Flow 2: Mock Data Purge, ObjectId Safety & Server-Side Cart
+
+### 1. Database Schema Changes
+**`carts` Collection** (New):
+- `user`: ObjectId reference to User, unique index.
+- `vendor`: ObjectId reference to Vendor (null when cart is empty/unlocked).
+- `items`: Array of:
+  - `product`: ObjectId reference to Product (required).
+  - `name`: String.
+  - `image`: String.
+  - `unit`: String.
+  - `priceAtAdd`: Number (integer paise snapshot).
+  - `qty`: Number (min: 1, max: 20).
+  - `addedAt`: Date.
+- `schemaVersion`: Number (default: 1).
+
+### 2. MongoDB Replica Set Fail-Fast Check
+On server boot, `server/config/db.js` verifies `hello.setName`. If absent (standalone mode), the server halts with exit code 1 to prevent silent fallback to non-transactional writes for `switch-vendor`, `checkout`, and `refunds`.
+
+### 3. Order Controller ObjectId Guard
+`POST /api/orders` strictly validates every incoming `productId` using `mongoose.isValidObjectId()`. If invalid, it immediately returns HTTP 400 `INVALID_PRODUCT_ID` and never throws a 500 CastError.
+
+### 4. Banning Mock Data
+- `userApp/src/data/mockData.js` deleted.
+- Added `.eslintrc.json` in `userApp` with `no-restricted-imports` rule permanently banning any import of `mockData`.
+- Seed data reference created in `server/scripts/seed.js`.
+

@@ -1,48 +1,56 @@
 import React from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Modal, TouchableOpacity, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 
 export const ClearCartModal = ({
   visible,
-  currentVendorName,
-  newVendorName,
+  currentVendorName = 'Store A',
+  newVendorName = 'Store B',
+  itemCount = 1,
   onCancel,
   onConfirm
 }) => {
   if (!visible) return null;
 
   return (
-    <Modal visible={visible} transparent animationType="fade">
-      <View style={styles.overlay}>
-        <View style={styles.modalCard}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onCancel}
+    >
+      <TouchableOpacity
+        style={styles.overlay}
+        activeOpacity={1}
+        onPress={onCancel}
+      >
+        <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
           <View style={styles.iconCircle}>
-            <Ionicons name="repeat-outline" size={32} color="#dc2626" />
+            <Ionicons name="cart-outline" size={32} color="#dc2626" />
           </View>
 
-          <Text style={styles.title}>Replace cart items?</Text>
+          <Text style={styles.title}>Pehle wala cart hata dein?</Text>
 
           <Text style={styles.message}>
-            Your cart already contains items from{' '}
-            <Text style={styles.boldText}>{currentVendorName || 'another store'}</Text>.
+            Aapke cart me <Text style={styles.boldText}>{currentVendorName}</Text> ke{' '}
+            <Text style={styles.boldText}>{itemCount} item{itemCount > 1 ? 's' : ''}</Text> hain.
             {'\n\n'}
-            S-farmart only supports ordering from <Text style={styles.boldText}>one store at a time</Text> to guarantee lightning-fast single-route delivery.
-            {'\n\n'}
-            Do you want to discard your current cart and add items from{' '}
-            <Text style={styles.boldText}>{newVendorName || 'this store'}</Text>?
+            S-farmart 24 ek order me ek hi store se delivery karta hai.{' '}
+            <Text style={styles.boldText}>{newVendorName}</Text> se order karne ke liye purana cart hatana hoga.
           </Text>
 
           <View style={styles.actionRow}>
             <TouchableOpacity style={styles.cancelBtn} onPress={onCancel} activeOpacity={0.7}>
-              <Text style={styles.cancelText}>No, Keep Cart</Text>
+              <Text style={styles.cancelText}>Cancel</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.confirmBtn} onPress={onConfirm} activeOpacity={0.85}>
-              <Text style={styles.confirmText}>Clear Cart & Add</Text>
+              <Text style={styles.confirmText}>Cart hataayein & add karein</Text>
             </TouchableOpacity>
           </View>
-        </View>
-      </View>
+        </Pressable>
+      </TouchableOpacity>
     </Modal>
   );
 };
@@ -50,14 +58,14 @@ export const ClearCartModal = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.7)',
+    backgroundColor: 'rgba(15, 23, 42, 0.75)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20
   },
   modalCard: {
     width: '100%',
-    maxWidth: 420,
+    maxWidth: 380,
     backgroundColor: '#ffffff',
     borderRadius: 24,
     padding: 24,
@@ -88,7 +96,7 @@ const styles = StyleSheet.create({
   },
   message: {
     fontSize: 14,
-    lineHeight: 20,
+    lineHeight: 22,
     color: '#475569',
     textAlign: 'center',
     marginBottom: 24
@@ -104,27 +112,28 @@ const styles = StyleSheet.create({
   },
   cancelBtn: {
     flex: 1,
-    paddingVertical: 14,
+    paddingVertical: 13,
     borderRadius: 14,
-    alignItems: 'center',
-    backgroundColor: '#f1f5f9',
     borderWidth: 1,
-    borderColor: '#e2e8f0'
+    borderColor: '#cbd5e1',
+    alignItems: 'center',
+    backgroundColor: '#f8fafc'
   },
   cancelText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#475569'
   },
   confirmBtn: {
-    flex: 1.2,
-    paddingVertical: 14,
+    flex: 1.4,
+    paddingVertical: 13,
     borderRadius: 14,
+    backgroundColor: colors.primary,
     alignItems: 'center',
-    backgroundColor: '#dc2626'
+    elevation: 2
   },
   confirmText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
     color: '#ffffff'
   }

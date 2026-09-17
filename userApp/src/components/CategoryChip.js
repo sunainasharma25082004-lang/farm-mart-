@@ -1,28 +1,47 @@
 import React from 'react';
 import { ScrollView, TouchableOpacity, Text, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { categories } from '../data/mockData';
 import { colors } from '../theme/colors';
 
-export const CategoryChip = ({ selectedCategory, onSelectCategory }) => {
+const DEFAULT_CATEGORIES = [
+  { id: 'all', name: 'All Services', icon: 'grid-outline' },
+  { id: 'grocery', name: 'S-farmart Mart', icon: 'basket-outline' },
+  { id: 'veggies', name: 'Farm Veggies', icon: 'leaf-outline' },
+  { id: 'fruits', name: 'Fresh Fruits', icon: 'sunny-outline' },
+  { id: 'dairy', name: 'Dairy & Ghee', icon: 'water-outline' },
+  { id: 'homerestro', name: 'Home Food & Thali', icon: 'restaurant-outline' },
+  { id: 'bakery', name: 'Fresh Bakery', icon: 'disc-outline' },
+  { id: 'sweets', name: 'Desi Sweets', icon: 'gift-outline' }
+];
+
+export const CategoryChip = ({ categories: propCats, selectedCategory, onSelectCategory }) => {
+  const displayCategories = (propCats && propCats.length > 0)
+    ? [{ id: 'all', name: 'All Services', icon: 'grid-outline' }, ...propCats.map((c) => ({
+        id: c.slug || c._id || c.id,
+        name: c.name,
+        icon: c.icon || 'basket-outline'
+      }))]
+    : DEFAULT_CATEGORIES;
+
   return (
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={styles.container}
     >
-      {categories.map((cat) => {
-        const isSelected = selectedCategory === cat.id;
+      {displayCategories.map((cat) => {
+        const catKey = cat.id || cat.slug || cat._id;
+        const isSelected = selectedCategory === catKey;
         return (
           <TouchableOpacity
-            key={cat.id}
+            key={catKey}
             style={[styles.chip, isSelected && styles.selectedChip]}
-            onPress={() => onSelectCategory(cat.id)}
+            onPress={() => onSelectCategory(catKey)}
             activeOpacity={0.8}
           >
             <View style={[styles.iconWrap, isSelected && styles.iconWrapSelected]}>
               <Ionicons
-                name={cat.icon}
+                name={cat.icon || 'basket-outline'}
                 size={14}
                 color={isSelected ? colors.primaryDark : colors.textSecondary}
               />

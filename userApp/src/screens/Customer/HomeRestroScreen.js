@@ -1,17 +1,18 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   Image,
-  Dimensions
+  Dimensions,
+  ActivityIndicator,
+  TouchableOpacity
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Header } from '../../components/Header';
 import { ProductCard } from '../../components/ProductCard';
-import { products as defaultProducts } from '../../data/mockData';
-import { useApp } from '../../context/AppContext';
+import { apiService } from '../../services/api';
 import { colors } from '../../theme/colors';
 
 const { width } = Dimensions.get('window');
@@ -43,10 +44,50 @@ const chefs = [
 ];
 
 export const HomeRestroScreen = ({ navigation }) => {
-  const { products = defaultProducts } = useApp();
-  const homeRestroItems = products.filter(
-    (p) => p.category === 'homerestro' || p.category === 'bakery' || p.category === 'sweets'
-  );
+  const [products, setProducts] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    loadDishes();
+  }, []);
+
+  const loadDishes = async () => {
+    try {
+      setIsLoading(true);
+      const res = await apiService.getProducts();
+      if (res && res.success && Array.isArray(res.products)) {
+        setProducts(res.products);
+      } else if (Array.isArray(res)) {
+        setProducts(res);
+      } else {
+        setProducts([]);
+      }
+    } catch (err) {
+      console.warn('Failed to load home restro dishes:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const homeRestroItems = products.filter((p) => {
+    const cat = (p.category?.name || p.category?.slug || p.category || p.subCategory || '').toLowerCase();
+    const tags = (p.tags || []).join(' ').toLowerCase();
+    const name = (p.name || '').toLowerCase();
+    return (
+      cat.includes('thali') ||
+      cat.includes('home') ||
+      cat.includes('restro') ||
+      cat.includes('sweet') ||
+      cat.includes('bakery') ||
+      tags.includes('punjabi') ||
+      tags.includes('paneer') ||
+      tags.includes('paratha') ||
+      name.includes('thali') ||
+      name.includes('paratha') ||
+      name.includes('masala') ||
+      p.vendor?.storeType === 'HOME_CHEF'
+    );
+  });
 
   const rows = [];
   for (let i = 0; i < homeRestroItems.length; i += 2) {
@@ -104,20 +145,33 @@ export const HomeRestroScreen = ({ navigation }) => {
         </ScrollView>
 
         <Text style={styles.sectionTitle}>Homemade dishes & bakery</Text>
-        {rows.map((row, idx) => (
-          <View key={`hr-${idx}`} style={styles.productRow}>
-            {row.map((item) => (
-              <View key={item.id} style={styles.productCell}>
-                <ProductCard
-                  product={item}
-                  compact
-                  onPress={() => navigation.navigate('ProductDetails', { product: item })}
-                />
-              </View>
-            ))}
-            {row.length === 1 && <View style={styles.productCell} />}
+        {isLoading ? (
+          <View style={{ paddingVertical: 40, alignItems: 'center' }}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={{ marginTop: 10, color: colors.textSecondary, fontSize: 13 }}>Loading fresh homemade dishes...</Text>
           </View>
-        ))}
+        ) : rows.length === 0 ? (
+          <View style={{ paddingVertical: 40, alignItems: 'center' }}>
+            <Ionicons name="restaurant-outline" size={44} color={colors.textMuted} />
+            <Text style={{ marginTop: 10, fontSize: 14, fontWeight: '600', color: colors.textPrimary }}>No dishes available right now</Text>
+            <Text style={{ marginTop: 4, fontSize: 12, color: colors.textSecondary }}>Our home chefs are preparing the next batch</Text>
+          </View>
+        ) : (
+          rows.map((row, idx) => (
+            <View key={`hr-${idx}`} style={styles.productRow}>
+              {row.map((item) => (
+                <View key={item._id || item.id} style={styles.productCell}>
+                  <ProductCard
+                    product={item}
+                    compact
+                    onPress={() => navigation.navigate('ProductDetails', { product: item })}
+                  />
+                </View>
+              ))}
+              {row.length === 1 && <View style={styles.productCell} />}
+            </View>
+          ))
+        )}
       </ScrollView>
     </View>
   );
