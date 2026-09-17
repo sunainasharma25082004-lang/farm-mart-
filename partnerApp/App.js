@@ -6,6 +6,7 @@ import { PartnerProvider, usePartner } from './src/context/PartnerContext';
 import { SocketProvider, useSocket } from './src/context/SocketContext';
 import { NewOrderModal } from './src/components/NewOrderModal';
 import { PartnerNavigator } from './src/navigation/PartnerNavigator';
+import { PartnerLoginScreen } from './src/screens/PartnerLoginScreen';
 import { colors } from './src/theme/colors';
 
 class ErrorBoundary extends Component {
@@ -50,7 +51,12 @@ function PartnerMain() {
 }
 
 function PartnerContent() {
+  const { vendor } = usePartner();
   const { pendingOrder, acceptOrder, rejectOrder, dismissPendingOrder, connectionMode } = useSocket();
+
+  if (!vendor) {
+    return <PartnerLoginScreen />;
+  }
 
   return (
     <View style={styles.container}>

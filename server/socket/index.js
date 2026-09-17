@@ -68,11 +68,25 @@ export function initSocket(httpServer) {
       }
     });
 
-    // Vendor explicitly joining vendor room (e.g. if token passed after login)
+    // Vendor explicitly joining vendor room (isolated to one vendor per connection)
     socket.on('join:vendor', (vendorId) => {
       if (vendorId) {
+        // Leave all previous vendor rooms to guarantee strict isolation
+        for (const room of socket.rooms) {
+          if (room.startsWith('vendor:') && room !== `vendor:${vendorId}`) {
+            socket.leave(room);
+            console.log(`🚪 Socket ${socket.id} left previous room: ${room}`);
+          }
+        }
         socket.join(`vendor:${vendorId}`);
         console.log(`🏪 Socket ${socket.id} joined room: vendor:${vendorId}`);
+      }
+    });
+
+    socket.on('leave:vendor', (vendorId) => {
+      if (vendorId) {
+        socket.leave(`vendor:${vendorId}`);
+        console.log(`🚪 Socket ${socket.id} left room: vendor:${vendorId}`);
       }
     });
 

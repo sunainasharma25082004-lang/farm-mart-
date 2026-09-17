@@ -51,6 +51,7 @@ export async function notifyNewOrder(order) {
 
     const payload = {
       orderId: order._id,
+      vendorId: vendorId,
       orderNumber: order.orderNumber,
       clientOrderId: order.clientOrderId,
       customer: {

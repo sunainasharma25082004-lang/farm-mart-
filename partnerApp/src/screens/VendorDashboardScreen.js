@@ -100,12 +100,12 @@ export const VendorDashboardScreen = ({ navigation }) => {
     setIsLoggingIn(true);
     setLoginError('');
     try {
-      const v = await loginVendor(p, loginPasswordInput);
-      if (v) {
+      const res = await loginVendor(p, loginPasswordInput);
+      if (res && res.success) {
         setShowLoginModal(false);
         setLoginPhoneInput('');
       } else {
-        setLoginError('Vendor not found with this phone. Try demo accounts.');
+        setLoginError(res?.message || 'Vendor not found with this phone. Try demo accounts.');
       }
     } catch (err) {
       setLoginError('Login failed. Please check network.');
@@ -323,8 +323,16 @@ export const VendorDashboardScreen = ({ navigation }) => {
               style={styles.switchAccountBtn}
               onPress={() => setShowLoginModal(true)}
             >
-              <Ionicons name="person-circle-outline" size={14} color="#475569" />
+              <Ionicons name="swap-horizontal" size={14} color="#475569" />
               <Text style={styles.switchAccountText}>Switch ID</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.switchAccountBtn, { borderColor: '#fecaca', backgroundColor: '#fef2f2' }]}
+              onPress={() => logoutVendor()}
+            >
+              <Ionicons name="log-out-outline" size={14} color="#ef4444" />
+              <Text style={[styles.switchAccountText, { color: '#ef4444', fontWeight: '700' }]}>Log Out</Text>
             </TouchableOpacity>
 
             <TouchableOpacity

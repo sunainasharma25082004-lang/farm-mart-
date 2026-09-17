@@ -14,9 +14,16 @@ export const SocketProvider = ({ children, vendor, token, onOrderReceived }) => 
   const [pendingOrder, setPendingOrder] = useState(null);
   const socketRef = useRef(null);
 
-  const vendorId = vendor?._id || vendor?.id || '6aaa44d4bba7479a91ad175e';
+  const activeVendorId = vendor?._id || vendor?.id || null;
 
   useEffect(() => {
+    // If not logged in, ensure audio is stopped and no orders shown
+    if (!activeVendorId) {
+      soundAlert.stop();
+      setPendingOrder(null);
+      return;
+    }
+
     // Initialize socket connection
     try {
       const socket = io(SOCKET_SERVER_URL, {
@@ -33,8 +40,9 @@ export const SocketProvider = ({ children, vendor, token, onOrderReceived }) => 
         setIsConnected(true);
         setConnectionMode('REALTIME');
 
-        if (vendorId) {
-          socket.emit('join:vendor', vendorId.toString());
+        if (activeVendorId) {
+          socket.emit('join:vendor', activeVendorId.toString());
+          console.log(`🏪 Subscribed strictly to vendor room: vendor:${activeVendorId}`);
         }
       });
 
@@ -50,9 +58,16 @@ export const SocketProvider = ({ children, vendor, token, onOrderReceived }) => 
         setConnectionMode('POLLING');
       });
 
-      // 🔔 Handle incoming new order event
+      // 🔔 Handle incoming new order event with STRICT VENDOR ISOLATION
       socket.on('order:new', (orderData) => {
         console.log('🔥 NEW ORDER RECEIVED VIA SOCKET:', orderData);
+        // Strict guard: ensure order is strictly meant for THIS logged-in vendor
+        if (!activeVendorId) return;
+        if (orderData.vendorId && String(orderData.vendorId) !== String(activeVendorId)) {
+          console.log(`⛔ Ignored order #${orderData.orderNumber} meant for ${orderData.vendorId} (Active is: ${activeVendorId})`);
+          return;
+        }
+
         setPendingOrder(orderData);
         soundAlert.start();
         if (onOrderReceived) {
@@ -61,13 +76,17 @@ export const SocketProvider = ({ children, vendor, token, onOrderReceived }) => 
       });
 
       return () => {
+        soundAlert.stop();
+        if (socket && activeVendorId) {
+          socket.emit('leave:vendor', activeVendorId.toString());
+        }
         socket.disconnect();
       };
     } catch (err) {
       console.warn('Failed to init socket client:', err);
       setConnectionMode('POLLING');
     }
-  }, [vendorId, token]);
+  }, [activeVendorId, token]);
 
   const acceptOrder = async (orderId) => {
     soundAlert.stop();

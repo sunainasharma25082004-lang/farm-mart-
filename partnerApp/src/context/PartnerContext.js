@@ -93,8 +93,9 @@ export const PartnerProvider = ({ children }) => {
     }
   }, [token]);
 
-  // Vendor login (Sunita: 9876543211, Sukhwinder: 9876543212, Gurpreet: 9876543213)
-  const loginVendor = useCallback(async (phone = '9876543211', password = 'demo123') => {
+
+  // Vendor login (Phone & Password)
+  const loginVendor = useCallback(async (phone, password = 'demo123') => {
     try {
       setIsLoading(true);
       const res = await fetch(`${API_BASE_URL}/auth/vendor/login`, {
@@ -106,28 +107,28 @@ export const PartnerProvider = ({ children }) => {
       if (data.success && data.vendor) {
         setVendor(data.vendor);
         setToken(data.token);
+        // Immediately clear previous vendor's orders and inventory
+        setOrders([]);
+        setInventory([]);
         fetchInventory(data.vendor._id);
         fetchOrders(data.vendor._id);
         if (data.token) fetchStats(data.token);
-        return data.vendor;
+        return { success: true, vendor: data.vendor };
       }
+      return { success: false, message: data.message || 'Login failed' };
     } catch (err) {
-      console.warn('Vendor login failed, fallback to local state:', err);
+      console.warn('Vendor login failed:', err);
+      return { success: false, message: 'Network connection failed' };
     } finally {
       setIsLoading(false);
     }
   }, [fetchInventory, fetchOrders, fetchStats]);
 
-  // Initial load
+  // Initial load: Only fetch categories, no auto-login so user lands on Login Screen
   useEffect(() => {
-    loginVendor('9876543211').then((v) => {
-      fetchCategories();
-      if (v) {
-        fetchInventory(v._id);
-        fetchOrders(v._id);
-      }
-    });
-  }, [loginVendor, fetchCategories, fetchInventory, fetchOrders]);
+    fetchCategories();
+    setIsLoading(false);
+  }, [fetchCategories]);
 
   // Periodic polling fallback (every 10 seconds)
   useEffect(() => {
