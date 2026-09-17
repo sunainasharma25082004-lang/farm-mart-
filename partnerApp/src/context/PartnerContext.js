@@ -280,6 +280,40 @@ export const PartnerProvider = ({ children }) => {
     }
   };
 
+  // Replenish / Add stock to item in MongoDB
+  const addStockToItem = async (itemId, amount = 10) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/products/${itemId}/stock`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { Authorization: `Bearer ${token}` })
+        },
+        body: JSON.stringify({ addStock: amount })
+      });
+      const data = await res.json();
+      if (data.success && data.product) {
+        setInventory((prev) =>
+          prev.map((i) =>
+            i.id === itemId || i._id === itemId || i.productId === itemId
+              ? {
+                  ...i,
+                  stock: data.product.stockQty,
+                  stockQty: data.product.stockQty,
+                  isAvailable: data.product.inStock
+                }
+              : i
+          )
+        );
+        return { success: true, product: data.product };
+      }
+      return { success: false, message: data.message };
+    } catch (e) {
+      console.warn('Failed to replenish stock on server:', e);
+      return { success: false, message: e.message };
+    }
+  };
+
   return (
     <PartnerContext.Provider
       value={{
@@ -296,6 +330,7 @@ export const PartnerProvider = ({ children }) => {
         addInventoryItem,
         toggleItemAvailability,
         deleteInventoryItem,
+        addStockToItem,
         categories,
         stats,
         isLoading,

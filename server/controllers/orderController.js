@@ -133,10 +133,43 @@ export const createOrder = async (req, res) => {
     const discount = 0;
     const grandTotal = itemsTotal + deliveryFee + taxes - discount;
 
-    // 9. Atomic stock deduction
+    // 9. 🔒 ACID-Compliant Atomic Stock Deduction with Conditional Guard & Rollback
+    const successfullyDeducted = [];
+    let stockFailure = null;
+
     for (const it of orderItems) {
-      await Product.findByIdAndUpdate(it.product, {
-        $inc: { stockQty: -it.qty }
+      // Atomic conditional update: only decrement if stockQty >= it.qty
+      const updatedProduct = await Product.findOneAndUpdate(
+        { _id: it.product, stockQty: { $gte: it.qty } },
+        { $inc: { stockQty: -it.qty } },
+        { new: true }
+      );
+
+      if (!updatedProduct) {
+        stockFailure = it;
+        break;
+      }
+
+      // If stock reached 0, atomically flag out of stock
+      if (updatedProduct.stockQty <= 0) {
+        await Product.findByIdAndUpdate(it.product, { inStock: false, stockQty: 0 });
+      }
+
+      successfullyDeducted.push({ product: it.product, qty: it.qty, name: it.name });
+    }
+
+    // If any item lacked stock during atomic execution, rollback all previously deducted items
+    if (stockFailure) {
+      for (const item of successfullyDeducted) {
+        await Product.findByIdAndUpdate(item.product, {
+          $inc: { stockQty: item.qty },
+          inStock: true
+        });
+      }
+      return res.status(400).json({
+        success: false,
+        code: 'INSUFFICIENT_STOCK',
+        message: `Insufficient stock for "${stockFailure.name}". Another customer may have just placed an order. Please update cart.`
       });
     }
 
@@ -179,7 +212,20 @@ export const createOrder = async (req, res) => {
       ]
     });
 
-    const savedOrder = await newOrder.save();
+    let savedOrder;
+    try {
+      savedOrder = await newOrder.save();
+    } catch (saveErr) {
+      // Rollback deducted stock if order creation in DB fails (ACID Consistency)
+      for (const item of successfullyDeducted) {
+        await Product.findByIdAndUpdate(item.product, {
+          $inc: { stockQty: item.qty },
+          inStock: true
+        });
+      }
+      throw saveErr;
+    }
+
     const populatedOrder = await Order.findById(savedOrder._id)
       .populate('vendor', 'storeName phone address isOpen')
       .populate('customer', 'name phone');
@@ -319,7 +365,8 @@ export const updateOrderStatus = async (req, res) => {
     if (['CANCELLED', 'REJECTED'].includes(status) && !['CANCELLED', 'REJECTED'].includes(order.status)) {
       for (const item of order.items) {
         await Product.findByIdAndUpdate(item.product, {
-          $inc: { stockQty: item.qty }
+          $inc: { stockQty: item.qty },
+          inStock: true
         });
       }
     }

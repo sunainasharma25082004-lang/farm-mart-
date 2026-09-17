@@ -624,14 +624,52 @@ export const AddProductScreen = ({ navigation }) => {
 };
 
 export const InventoryScreen = ({ navigation }) => {
-  const { inventory, toggleItemAvailability, deleteInventoryItem, vendor } = usePartner();
+  const {
+    inventory,
+    toggleItemAvailability,
+    deleteInventoryItem,
+    addStockToItem,
+    vendor
+  } = usePartner();
   const [activeTab, setActiveTab] = useState('ALL');
+  const [replenishingId, setReplenishingId] = useState(null);
+  const [stockModalItem, setStockModalItem] = useState(null);
+  const [stockInputVal, setStockInputVal] = useState('25');
 
   const filteredItems = inventory.filter((item) => {
-    if (activeTab === 'IN_STOCK') return item.isAvailable;
-    if (activeTab === 'OUT_OF_STOCK') return !item.isAvailable;
+    if (activeTab === 'IN_STOCK') return item.isAvailable && (item.stock ?? item.stockQty) > 0;
+    if (activeTab === 'OUT_OF_STOCK') return !item.isAvailable || (item.stock ?? item.stockQty) <= 0;
     return true;
   });
+
+  const handleQuickAdd = async (itemId, amt) => {
+    setReplenishingId(itemId);
+    try {
+      await addStockToItem(itemId, amt);
+    } finally {
+      setReplenishingId(null);
+    }
+  };
+
+  const handleSaveModalStock = async () => {
+    if (!stockModalItem) return;
+    const qty = parseInt(stockInputVal, 10);
+    if (isNaN(qty) || qty < 0) return;
+
+    setReplenishingId(stockModalItem.id || stockModalItem._id || stockModalItem.productId);
+    try {
+      // Calculate diff or set stock directly
+      const current = stockModalItem.stock ?? stockModalItem.stockQty ?? 0;
+      const diff = qty - current;
+      await addStockToItem(
+        stockModalItem.id || stockModalItem._id || stockModalItem.productId,
+        diff
+      );
+      setStockModalItem(null);
+    } finally {
+      setReplenishingId(null);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -673,7 +711,7 @@ export const InventoryScreen = ({ navigation }) => {
               activeTab === 'IN_STOCK' && styles.filterTabTextActive
             ]}
           >
-            In Stock ({inventory.filter((i) => i.isAvailable).length})
+            In Stock ({inventory.filter((i) => i.isAvailable && (i.stock ?? i.stockQty) > 0).length})
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -686,7 +724,7 @@ export const InventoryScreen = ({ navigation }) => {
               activeTab === 'OUT_OF_STOCK' && styles.filterTabTextActive
             ]}
           >
-            Out ({inventory.filter((i) => !i.isAvailable).length})
+            Out / Low ({inventory.filter((i) => !i.isAvailable || (i.stock ?? i.stockQty) <= 0).length})
           </Text>
         </TouchableOpacity>
       </View>
@@ -712,63 +750,183 @@ export const InventoryScreen = ({ navigation }) => {
             </TouchableOpacity>
           </View>
         ) : (
-          filteredItems.map((item) => (
-            <View key={item.id || item.productId || item._id} style={styles.itemCard}>
-              <Image
-                source={{
-                  uri:
-                    item.image ||
-                    'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=200&auto=format&fit=crop&q=60'
-                }}
-                style={styles.itemImage}
-              />
+          filteredItems.map((item) => {
+            const currentStock = item.stock ?? item.stockQty ?? 0;
+            const isZeroStock = currentStock <= 0;
+            const itemId = item.id || item.productId || item._id;
+            const isBusy = replenishingId === itemId;
 
-              <View style={{ flex: 1, paddingHorizontal: 12 }}>
-                <Text style={styles.itemTitle} numberOfLines={1}>
-                  {item.name}
-                </Text>
-                <Text style={styles.itemCategory}>
-                  {item.category} •{' '}
-                  <Text style={{ color: '#16a34a', fontWeight: '700' }}>₹{item.price}</Text> /{' '}
-                  {item.unit}
-                </Text>
-                <Text style={styles.itemStock}>
-                  Stock: <Text style={{ fontWeight: '700', color: '#0f172a' }}>{item.stock ?? item.stockQty}</Text>{' '}
-                  units
-                </Text>
-              </View>
-
-              <View style={styles.toggleSection}>
-                <Text
-                  style={[
-                    styles.toggleText,
-                    { color: item.isAvailable ? '#15803d' : '#94a3b8' }
-                  ]}
-                >
-                  {item.isAvailable ? 'IN STOCK' : 'OUT'}
-                </Text>
-                <Switch
-                  value={item.isAvailable}
-                  onValueChange={() => toggleItemAvailability(item.id || item._id || item.productId)}
-                  trackColor={{ false: '#cbd5e1', true: '#bbf7d0' }}
-                  thumbColor={item.isAvailable ? '#16a34a' : '#94a3b8'}
+            return (
+              <View key={itemId} style={styles.itemCard}>
+                <Image
+                  source={{
+                    uri:
+                      item.image ||
+                      'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=200&auto=format&fit=crop&q=60'
+                  }}
+                  style={styles.itemImage}
                 />
 
-                {deleteInventoryItem && (
-                  <TouchableOpacity
-                    onPress={() => deleteInventoryItem(item.id || item._id || item.productId)}
-                    style={styles.deleteBtn}
-                    activeOpacity={0.7}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                <View style={{ flex: 1, paddingHorizontal: 12 }}>
+                  <Text style={styles.itemTitle} numberOfLines={1}>
+                    {item.name}
+                  </Text>
+                  <Text style={styles.itemCategory}>
+                    {item.category} •{' '}
+                    <Text style={{ color: '#16a34a', fontWeight: '700' }}>₹{item.price}</Text> /{' '}
+                    {item.unit}
+                  </Text>
+
+                  {/* Stock Display & Quick Add Chips */}
+                  <View style={{ marginTop: 4 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Text style={styles.itemStock}>
+                        Stock:{' '}
+                        <Text
+                          style={{
+                            fontWeight: '800',
+                            color: isZeroStock ? '#ef4444' : '#0f172a'
+                          }}
+                        >
+                          {currentStock} units
+                        </Text>
+                      </Text>
+                      {isZeroStock && (
+                        <View style={styles.soldOutPill}>
+                          <Text style={styles.soldOutPillText}>SOLD OUT</Text>
+                        </View>
+                      )}
+                    </View>
+
+                    {/* ➕ Quick Add Stock Chips */}
+                    <View style={styles.stockActionRow}>
+                      <TouchableOpacity
+                        style={[styles.addStockMiniBtn, isBusy && { opacity: 0.5 }]}
+                        onPress={() => handleQuickAdd(itemId, 10)}
+                        disabled={isBusy}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={styles.addStockMiniText}>+10</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={[styles.addStockMiniBtn, isBusy && { opacity: 0.5 }]}
+                        onPress={() => handleQuickAdd(itemId, 25)}
+                        disabled={isBusy}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={styles.addStockMiniText}>+25</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={[styles.editStockMiniBtn, isBusy && { opacity: 0.5 }]}
+                        onPress={() => {
+                          setStockModalItem(item);
+                          setStockInputVal(String(currentStock));
+                        }}
+                        disabled={isBusy}
+                        activeOpacity={0.7}
+                      >
+                        <Ionicons name="create-outline" size={12} color="#15803d" />
+                        <Text style={styles.editStockMiniText}>Set Stock</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Right side Toggle Switch & Delete */}
+                <View style={styles.toggleSection}>
+                  <Text
+                    style={[
+                      styles.toggleText,
+                      { color: item.isAvailable && !isZeroStock ? '#15803d' : '#94a3b8' }
+                    ]}
                   >
-                    <Ionicons name="trash-outline" size={16} color="#ef4444" />
-                  </TouchableOpacity>
-                )}
+                    {item.isAvailable && !isZeroStock ? 'IN STOCK' : 'OUT'}
+                  </Text>
+                  <Switch
+                    value={item.isAvailable && !isZeroStock}
+                    onValueChange={() => toggleItemAvailability(itemId)}
+                    trackColor={{ false: '#cbd5e1', true: '#bbf7d0' }}
+                    thumbColor={item.isAvailable && !isZeroStock ? '#16a34a' : '#94a3b8'}
+                  />
+
+                  {deleteInventoryItem && (
+                    <TouchableOpacity
+                      onPress={() => deleteInventoryItem(itemId)}
+                      style={styles.deleteBtn}
+                      activeOpacity={0.7}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Ionicons name="trash-outline" size={16} color="#ef4444" />
+                    </TouchableOpacity>
+                  )}
+                </View>
               </View>
-            </View>
-          ))
+            );
+          })
         )}
       </ScrollView>
+
+      {/* Stock Replenish Modal */}
+      {stockModalItem && (
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.modalTitle}>Update Product Stock</Text>
+                <Text style={styles.modalSub} numberOfLines={1}>
+                  {stockModalItem.name}
+                </Text>
+              </View>
+              <TouchableOpacity onPress={() => setStockModalItem(null)}>
+                <Ionicons name="close" size={22} color="#64748b" />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.modalLabel}>Current Stock in MongoDB:</Text>
+            <View style={styles.modalInputWrap}>
+              <Ionicons name="layers-outline" size={20} color={colors.primary} style={{ marginRight: 8 }} />
+              <TextInput
+                style={styles.modalInput}
+                keyboardType="numeric"
+                value={stockInputVal}
+                onChangeText={setStockInputVal}
+                autoFocus
+              />
+              <Text style={styles.modalInputUnit}>units</Text>
+            </View>
+
+            {/* Quick Increment Buttons */}
+            <Text style={[styles.modalLabel, { marginTop: 12 }]}>Or Add More Quantity:</Text>
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 6, marginBottom: 16 }}>
+              {[10, 25, 50, 100].map((amt) => (
+                <TouchableOpacity
+                  key={amt}
+                  style={styles.modalQuickChip}
+                  onPress={() => {
+                    const cur = parseInt(stockInputVal, 10) || 0;
+                    setStockInputVal(String(cur + amt));
+                  }}
+                >
+                  <Text style={styles.modalQuickChipText}>+{amt}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <TouchableOpacity
+              style={styles.modalSaveBtn}
+              onPress={handleSaveModalStock}
+              disabled={replenishingId !== null}
+            >
+              <Ionicons name="checkmark-circle-outline" size={18} color="#ffffff" />
+              <Text style={styles.modalSaveBtnText}>
+                {replenishingId ? 'Saving in MongoDB...' : 'Save Stock Quantity'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
     </View>
   );
 };
@@ -1372,6 +1530,147 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     color: '#94a3b8',
     marginTop: 1
+  },
+  soldOutPill: {
+    backgroundColor: '#fee2e2',
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 6
+  },
+  soldOutPillText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#b91c1c'
+  },
+  stockActionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 6
+  },
+  addStockMiniBtn: {
+    backgroundColor: '#f0fdf4',
+    borderWidth: 1,
+    borderColor: '#bbf7d0',
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 8
+  },
+  addStockMiniText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#15803d'
+  },
+  editStockMiniBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f1f5f9',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    gap: 3
+  },
+  editStockMiniText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#334155'
+  },
+  modalBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(15, 23, 42, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+    zIndex: 999
+  },
+  modalCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    padding: 20,
+    width: '100%',
+    maxWidth: 380,
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 8
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 14
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0f172a'
+  },
+  modalSub: {
+    fontSize: 12.5,
+    color: '#64748b',
+    marginTop: 2
+  },
+  modalLabel: {
+    fontSize: 12.5,
+    fontWeight: '600',
+    color: '#334155',
+    marginBottom: 6
+  },
+  modalInputWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 48
+  },
+  modalInput: {
+    flex: 1,
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#0f172a'
+  },
+  modalInputUnit: {
+    fontSize: 13,
+    color: '#64748b',
+    fontWeight: '600'
+  },
+  modalQuickChip: {
+    flex: 1,
+    backgroundColor: '#f0fdf4',
+    borderWidth: 1,
+    borderColor: '#bbf7d0',
+    paddingVertical: 8,
+    borderRadius: 10,
+    alignItems: 'center'
+  },
+  modalQuickChipText: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: '#15803d'
+  },
+  modalSaveBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary,
+    borderRadius: 14,
+    height: 48,
+    gap: 6
+  },
+  modalSaveBtnText: {
+    color: '#ffffff',
+    fontSize: 14.5,
+    fontWeight: '700'
   },
   toggleSection: {
     alignItems: 'center',

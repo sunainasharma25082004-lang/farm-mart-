@@ -209,7 +209,7 @@ export const updateProduct = async (req, res) => {
   }
 };
 
-// @desc    Toggle product in-stock availability
+// @desc    Toggle product in-stock availability or replenish stock
 // @route   PATCH /api/products/:id/stock
 export const toggleProductStock = async (req, res) => {
   try {
@@ -220,15 +220,31 @@ export const toggleProductStock = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Product not found' });
     }
 
-    product.inStock = typeof req.body.inStock === 'boolean' ? req.body.inStock : !product.inStock;
-    if (req.body.stockQty !== undefined) product.stockQty = Number(req.body.stockQty);
-    if (req.body.stock !== undefined) product.stockQty = Number(req.body.stock);
+    if (req.body.addStock !== undefined) {
+      const addAmt = Number(req.body.addStock);
+      product.stockQty = Math.max(0, (product.stockQty || 0) + addAmt);
+      if (product.stockQty > 0) product.inStock = true;
+    } else if (req.body.stockQty !== undefined || req.body.stock !== undefined) {
+      const newStock = Number(req.body.stockQty !== undefined ? req.body.stockQty : req.body.stock);
+      product.stockQty = Math.max(0, newStock);
+      product.inStock = product.stockQty > 0;
+    } else if (typeof req.body.inStock === 'boolean') {
+      product.inStock = req.body.inStock;
+      if (product.inStock && product.stockQty <= 0) {
+        product.stockQty = 25; // Default replenish on re-enabling
+      }
+    } else {
+      product.inStock = !product.inStock;
+      if (product.inStock && product.stockQty <= 0) {
+        product.stockQty = 25;
+      }
+    }
 
     await product.save();
 
     res.json({
       success: true,
-      message: `Product is now ${product.inStock ? 'In Stock' : 'Out of Stock'}`,
+      message: `Product stock updated to ${product.stockQty} units (${product.inStock ? 'In Stock' : 'Out of Stock'})`,
       product
     });
   } catch (error) {
