@@ -179,54 +179,7 @@ export const createOrder = async (req, res) => {
     const discount = 0;
     const grandTotal = itemsTotal + deliveryFee + taxes - discount;
 
-    // 9. 🔒 ACID-Compliant Atomic Stock Deduction with Conditional Guard & Rollback
-    const successfullyDeducted = [];
-    let stockFailure = null;
-
-    for (const it of orderItems) {
-      // Atomic conditional update: only decrement if stockQty >= it.qty
-      const updatedProduct = await Product.findOneAndUpdate(
-        { _id: it.product, stockQty: { $gte: it.qty } },
-        { $inc: { stockQty: -it.qty } },
-        { new: true }
-      );
-
-      if (!updatedProduct) {
-        stockFailure = it;
-        break;
-      }
-
-      // If stock reached 0, atomically flag out of stock
-      if (updatedProduct.stockQty <= 0) {
-        await Product.findByIdAndUpdate(it.product, { inStock: false, stockQty: 0 });
-        updatedProduct.inStock = false;
-        updatedProduct.stockQty = 0;
-      }
-
-      // Broadcast real-time stock update to all connected customers and partner app
-      notifyProductStock(updatedProduct);
-
-      successfullyDeducted.push({ product: it.product, qty: it.qty, name: it.name });
-    }
-
-    // If any item lacked stock during atomic execution, rollback all previously deducted items
-    if (stockFailure) {
-      for (const item of successfullyDeducted) {
-        const restored = await Product.findByIdAndUpdate(
-          item.product,
-          { $inc: { stockQty: item.qty }, inStock: true },
-          { new: true }
-        );
-        if (restored) notifyProductStock(restored);
-      }
-      return res.status(400).json({
-        success: false,
-        code: 'INSUFFICIENT_STOCK',
-        message: `Insufficient stock for "${stockFailure.name}". Another customer may have just placed an order. Please update cart.`
-      });
-    }
-
-    // 10. Generate order number
+    // 10. Generate order number & delivery address
     const orderNumber = `ORD-${Date.now().toString().slice(-6)}-${Math.floor(100 + Math.random() * 900)}`;
 
     const deliveryAddress = {
@@ -237,57 +190,172 @@ export const createOrder = async (req, res) => {
       pincode: address?.pincode || '141001'
     };
 
-    const newOrder = new Order({
-      orderNumber,
-      clientOrderId: clientOrderId || `client-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      customer: customerId,
-      vendor: singleVendorId,
-      items: orderItems,
-      pricing: {
-        itemsTotal,
-        deliveryFee,
-        taxes,
-        discount,
-        grandTotal
-      },
-      payment: {
-        method: paymentMethod.toUpperCase(),
-        status: paymentMethod.toUpperCase() === 'COD' ? 'PENDING' : 'PAID'
-      },
-      address: deliveryAddress,
-      status: 'NEW_ORDER',
-      statusHistory: [
-        {
-          status: 'NEW_ORDER',
-          at: new Date(),
-          by: 'CUSTOMER'
-        }
-      ]
-    });
-
+    // 11. 🔒 ACID-Compliant Multi-Document Atomic Transaction
     let savedOrder;
+    const productsToNotify = [];
+    let session = null;
+
     try {
-      savedOrder = await newOrder.save();
-    } catch (saveErr) {
-      // Rollback deducted stock if order creation in DB fails (ACID Consistency)
-      for (const item of successfullyDeducted) {
-        await Product.findByIdAndUpdate(item.product, {
-          $inc: { stockQty: item.qty },
-          inStock: true
+      session = await mongoose.startSession();
+      await session.withTransaction(async () => {
+        // Atomic stock deduction inside transaction
+        for (const it of orderItems) {
+          const updatedProduct = await Product.findOneAndUpdate(
+            { _id: it.product, stockQty: { $gte: it.qty } },
+            { $inc: { stockQty: -it.qty } },
+            { new: true, session }
+          );
+
+          if (!updatedProduct) {
+            const err = new Error(`Insufficient stock for "${it.name}". Another customer may have just placed an order. Please update cart.`);
+            err.code = 'INSUFFICIENT_STOCK';
+            throw err;
+          }
+
+          if (updatedProduct.stockQty <= 0) {
+            await Product.findByIdAndUpdate(it.product, { inStock: false, stockQty: 0 }, { session });
+            updatedProduct.inStock = false;
+            updatedProduct.stockQty = 0;
+          }
+
+          productsToNotify.push(updatedProduct);
+        }
+
+        const newOrder = new Order({
+          orderNumber,
+          clientOrderId: clientOrderId || `client-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          customer: customerId,
+          vendor: singleVendorId,
+          items: orderItems,
+          pricing: {
+            itemsTotal,
+            deliveryFee,
+            taxes,
+            discount,
+            grandTotal
+          },
+          payment: {
+            method: paymentMethod.toUpperCase(),
+            status: paymentMethod.toUpperCase() === 'COD' ? 'PENDING' : 'PAID'
+          },
+          address: deliveryAddress,
+          status: 'NEW_ORDER',
+          statusHistory: [
+            {
+              status: 'NEW_ORDER',
+              at: new Date(),
+              by: 'CUSTOMER'
+            }
+          ]
+        });
+
+        savedOrder = await newOrder.save({ session });
+
+        // Update vendor total order count
+        await Vendor.findByIdAndUpdate(singleVendorId, { $inc: { totalOrders: 1 } }, { session });
+      });
+      await session.endSession();
+    } catch (txErr) {
+      if (session) {
+        try { await session.endSession(); } catch (e) {}
+      }
+      if (txErr.code === 'INSUFFICIENT_STOCK') {
+        return res.status(400).json({
+          success: false,
+          code: 'INSUFFICIENT_STOCK',
+          message: txErr.message
         });
       }
-      throw saveErr;
+      // If transactions are not supported on non-replica set, fall back to conditional atomic updates
+      if (txErr.message?.includes('Transaction numbers are only allowed')) {
+        console.warn('Standalone MongoDB detected; falling back to conditional atomic decrement with compensation rollback.');
+        const successfullyDeducted = [];
+        let stockFailure = null;
+
+        for (const it of orderItems) {
+          const updatedProduct = await Product.findOneAndUpdate(
+            { _id: it.product, stockQty: { $gte: it.qty } },
+            { $inc: { stockQty: -it.qty } },
+            { new: true }
+          );
+          if (!updatedProduct) {
+            stockFailure = it;
+            break;
+          }
+          if (updatedProduct.stockQty <= 0) {
+            await Product.findByIdAndUpdate(it.product, { inStock: false, stockQty: 0 });
+            updatedProduct.inStock = false;
+            updatedProduct.stockQty = 0;
+          }
+          productsToNotify.push(updatedProduct);
+          successfullyDeducted.push({ product: it.product, qty: it.qty, name: it.name });
+        }
+
+        if (stockFailure) {
+          for (const item of successfullyDeducted) {
+            const restored = await Product.findByIdAndUpdate(
+              item.product,
+              { $inc: { stockQty: item.qty }, inStock: true },
+              { new: true }
+            );
+            if (restored) notifyProductStock(restored);
+          }
+          return res.status(400).json({
+            success: false,
+            code: 'INSUFFICIENT_STOCK',
+            message: `Insufficient stock for "${stockFailure.name}". Another customer may have just placed an order. Please update cart.`
+          });
+        }
+
+        const newOrder = new Order({
+          orderNumber,
+          clientOrderId: clientOrderId || `client-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          customer: customerId,
+          vendor: singleVendorId,
+          items: orderItems,
+          pricing: { itemsTotal, deliveryFee, taxes, discount, grandTotal },
+          payment: {
+            method: paymentMethod.toUpperCase(),
+            status: paymentMethod.toUpperCase() === 'COD' ? 'PENDING' : 'PAID'
+          },
+          address: deliveryAddress,
+          status: 'NEW_ORDER',
+          statusHistory: [{ status: 'NEW_ORDER', at: new Date(), by: 'CUSTOMER' }]
+        });
+
+        try {
+          savedOrder = await newOrder.save();
+          await Vendor.findByIdAndUpdate(singleVendorId, { $inc: { totalOrders: 1 } });
+        } catch (saveErr) {
+          for (const item of successfullyDeducted) {
+            await Product.findByIdAndUpdate(item.product, { $inc: { stockQty: item.qty }, inStock: true });
+          }
+          throw saveErr;
+        }
+      } else {
+        throw txErr;
+      }
+    }
+
+    // Broadcast stock updates now that transaction is durable
+    for (const p of productsToNotify) {
+      notifyProductStock(p);
+    }
+
+    // Reset customer cart after successful order placement
+    try {
+      const Cart = (await import('../models/Cart.js')).default;
+      await Cart.findOneAndUpdate({ user: customerId }, { items: [], vendor: null });
+    } catch (cErr) {
+      console.warn('Failed to clear cart after order:', cErr);
     }
 
     const populatedOrder = await Order.findById(savedOrder._id)
       .populate('vendor', 'storeName phone address isOpen')
       .populate('customer', 'name phone');
 
-    // 11. 🔴 Real-time Notification Trigger: notify vendor instantly
+    // 12. 🔴 Real-time Notification Trigger: notify vendor instantly
     notifyNewOrder(populatedOrder);
-
-    // Update vendor total order count
-    await Vendor.findByIdAndUpdate(singleVendorId, { $inc: { totalOrders: 1 } });
 
     res.status(201).json({
       success: true,
@@ -441,10 +509,15 @@ export const updateOrderStatus = async (req, res) => {
     // Rollback stock if cancelled or rejected
     if (['CANCELLED', 'REJECTED'].includes(status) && !['CANCELLED', 'REJECTED'].includes(order.status)) {
       for (const item of order.items) {
-        await Product.findByIdAndUpdate(item.product, {
-          $inc: { stockQty: item.qty },
-          inStock: true
-        });
+        const restored = await Product.findByIdAndUpdate(
+          item.product,
+          {
+            $inc: { stockQty: item.qty },
+            inStock: true
+          },
+          { new: true }
+        );
+        if (restored) notifyProductStock(restored);
       }
     }
 
