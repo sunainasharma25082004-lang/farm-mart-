@@ -17,6 +17,7 @@ import { colors } from '../../theme/colors';
 import { useCart } from '../../context/CartContext';
 import { useApp } from '../../context/AppContext';
 import { apiService } from '../../services/api';
+import { showAlert } from '../../utils/alert';
 
 export const CheckoutScreen = ({ navigation }) => {
   const { items, vendorId, vendorName, billSummary, placeOrder } = useCart();
@@ -51,12 +52,13 @@ export const CheckoutScreen = ({ navigation }) => {
     if (loading || paymentSubmitting) return;
 
     if (items.length === 0) {
-      alert('Your cart is empty');
+      showAlert('Cart Empty', 'Your cart is empty');
       return;
     }
 
     if (billSummary.isMinOrderMet === false && (billSummary.minOrder || 0) > 0) {
-      alert(
+      showAlert(
+        'Minimum Order Required',
         `Minimum order value for ${vendorName || 'this store'} is ₹${billSummary.minOrder}. Current items total is ₹${billSummary.itemsTotal ?? billSummary.subtotal ?? 0}. Please add ₹${billSummary.minOrderShortfall} more to place order.`
       );
       return;
@@ -67,7 +69,7 @@ export const CheckoutScreen = ({ navigation }) => {
       try {
         const vRes = await apiService.getVendorById(vendorId);
         if (vRes.success && vRes.vendor && !vRes.vendor.isOpen) {
-          alert(`${vRes.vendor.storeName || 'This store'} is currently closed and not accepting new orders right now. Please wait until the partner comes online.`);
+          showAlert('Store Closed', `${vRes.vendor.storeName || 'This store'} is currently closed and not accepting new orders right now. Please wait until the partner comes online.`);
           return;
         }
       } catch (e) {
@@ -115,7 +117,7 @@ export const CheckoutScreen = ({ navigation }) => {
     } catch (err) {
       setLoading(false);
       const msg = err.message || 'Failed to place order. Please try again.';
-      alert(msg);
+      showAlert('Order Error', msg);
     }
   };
 
@@ -189,10 +191,11 @@ export const CheckoutScreen = ({ navigation }) => {
 
           <View style={styles.itemsList}>
             {items.map((it, idx) => {
-              const p = it.product;
-              const lineTotal = (p.price || 0) * it.quantity;
+              const p = it.product || {};
+              const qty = it.quantity || 1;
+              const lineTotal = (p.price || 0) * qty;
               return (
-                <View key={p._id || p.id || idx} style={styles.itemVerifyRow}>
+                <View key={p._id || p.id || it.productId || idx} style={styles.itemVerifyRow}>
                   {p.image ? (
                     <Image source={{ uri: p.image }} style={styles.itemVerifyImg} />
                   ) : (
@@ -203,7 +206,7 @@ export const CheckoutScreen = ({ navigation }) => {
 
                   <View style={{ flex: 1, marginLeft: 12 }}>
                     <Text style={styles.itemVerifyName} numberOfLines={1}>
-                      {p.name}
+                      {p.name || 'Produce Item'}
                     </Text>
                     <View style={styles.itemVerifyMeta}>
                       <View style={styles.qtyPill}>
@@ -665,7 +668,7 @@ export const CheckoutScreen = ({ navigation }) => {
               <View style={styles.receiptRow}>
                 <Text style={styles.receiptLabel}>Delivering To</Text>
                 <Text style={styles.receiptValue} numberOfLines={1}>
-                  {deliveryAddress.name}, {deliveryAddress.line1}
+                  {deliveryAddress?.name || 'Customer'}, {deliveryAddress?.line1 || ''}
                 </Text>
               </View>
 
@@ -673,7 +676,7 @@ export const CheckoutScreen = ({ navigation }) => {
                 <Text style={styles.receiptItemsTitle}>VERIFIED ITEMS COMING:</Text>
                 {confirmedOrder?.items?.map((it, i) => (
                   <Text key={i} style={styles.receiptItemLine}>
-                    • {it.qty}x {it.name} ({it.unit || '1 unit'}) — ₹{it.lineTotal}
+                    • {it.qty ?? it.quantity ?? 1}x {it.name || 'Produce Item'} ({it.unit || '1 unit'}) — ₹{it.lineTotal || (it.price || 0) * (it.qty ?? it.quantity ?? 1)}
                   </Text>
                 ))}
               </View>

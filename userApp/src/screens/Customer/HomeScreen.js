@@ -314,7 +314,12 @@ export const HomeScreen = ({ navigation }) => {
                   onPress={() => navigation.navigate('VendorStore', { vendor: v })}
                   activeOpacity={0.9}
                 >
-                  <Image source={{ uri: v.banner }} style={styles.farmerImg} />
+                  <Image
+                    source={{
+                      uri: v.banner || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800'
+                    }}
+                    style={styles.farmerImg}
+                  />
                   <View style={styles.farmerInfo}>
                     <Text style={styles.farmerStoreName} numberOfLines={1}>{v.storeName}</Text>
                     <Text style={styles.farmerOwner}>👨‍🌾 {v.ownerName}</Text>

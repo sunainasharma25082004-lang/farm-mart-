@@ -8,6 +8,26 @@ import { SocketProvider } from './src/context/SocketContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { colors } from './src/theme/colors';
 
+// Prevent unhandled promise rejections or native errors from crashing the mobile process
+if (typeof global !== 'undefined' && global.ErrorUtils) {
+  try {
+    const originalHandler = global.ErrorUtils.getGlobalHandler();
+    global.ErrorUtils.setGlobalHandler((error, isFatal) => {
+      console.warn('⚡ Suppressed global runtime error:', error?.message || error);
+      if (originalHandler) {
+        originalHandler(error, false);
+      }
+    });
+  } catch (e) {}
+}
+
+if (Platform.OS === 'web' && typeof window !== 'undefined') {
+  window.addEventListener('unhandledrejection', (event) => {
+    console.warn('⚡ Suppressed unhandled Promise rejection:', event.reason);
+    event.preventDefault();
+  });
+}
+
 class ErrorBoundary extends Component {
   constructor(props) {
     super(props);

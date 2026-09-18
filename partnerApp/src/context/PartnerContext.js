@@ -1,6 +1,5 @@
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
-
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000/api';
+import { API_BASE_URL } from '../config/env';
 
 const PartnerContext = createContext();
 

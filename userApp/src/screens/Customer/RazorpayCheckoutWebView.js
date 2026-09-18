@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 
 export const RazorpayCheckoutWebView = ({ route, navigation }) => {
-  const { order, onSuccess, onFailure } = route.params;
+  const { order = {}, onSuccess, onFailure } = route?.params || {};
 
   // This HTML will load Razorpay checkout in the WebView.
   // It simulates what normally happens on a web frontend.

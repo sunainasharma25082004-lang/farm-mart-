@@ -17,6 +17,7 @@ import { useCustomerSocket } from '../../context/SocketContext';
 import { useAuthGate } from '../../hooks/useAuthGate';
 import { apiService } from '../../services/api';
 import { colors } from '../../theme/colors';
+import { showAlert } from '../../utils/alert';
 
 export const CartScreen = ({ navigation }) => {
   const { requireLogin } = useAuthGate();
@@ -50,8 +51,7 @@ export const CartScreen = ({ navigation }) => {
     if (items.length === 0) return;
     if (!isStoreOpen) {
       const msg = `${vendorName || 'This store'} is currently closed and not accepting new orders right now. Please check back when the store comes online.`;
-      if (Platform.OS === 'web') alert(msg);
-      else Alert.alert('Store Closed', msg);
+      showAlert('Store Closed', msg);
       return;
     }
 
@@ -59,7 +59,7 @@ export const CartScreen = ({ navigation }) => {
       (it) => it.product?.inStock === false || (it.product?.stockQty !== undefined && it.product?.stockQty <= 0)
     );
     if (outOfStockItems.length > 0) {
-      alert(`"${outOfStockItems[0].product?.name || 'An item'}" in your cart is out of stock. Please remove it to proceed.`);
+      showAlert('Out of Stock', `"${outOfStockItems[0].product?.name || 'An item'}" in your cart is out of stock. Please remove it to proceed.`);
       return;
     }
 
@@ -67,12 +67,13 @@ export const CartScreen = ({ navigation }) => {
       (it) => it.product?.stockQty !== undefined && it.quantity > it.product?.stockQty
     );
     if (excessItems.length > 0) {
-      alert(`Only ${excessItems[0].product?.stockQty} unit(s) of "${excessItems[0].product?.name}" are available in stock. Please reduce the quantity.`);
+      showAlert('Limited Stock', `Only ${excessItems[0].product?.stockQty} unit(s) of "${excessItems[0].product?.name}" are available in stock. Please reduce the quantity.`);
       return;
     }
 
     if (billSummary.isMinOrderMet === false && (billSummary.minOrder || 0) > 0) {
-      alert(
+      showAlert(
+        'Minimum Order Required',
         `Minimum order value for ${vendorName || 'this store'} is ₹${billSummary.minOrder}. Please add ₹${billSummary.minOrderShortfall} more to proceed.`
       );
       return;
@@ -148,8 +149,8 @@ export const CartScreen = ({ navigation }) => {
             {/* Cart Items List */}
             <Text style={styles.sectionTitle}>Cart Items ({billSummary.totalCount})</Text>
             {items.map((item) => {
-              const prod = item.product;
-              const prodId = prod._id || prod.id;
+              const prod = item.product || {};
+              const prodId = prod._id || prod.id || item.productId || 'item';
               const isProdOutOfStock = prod.inStock === false || (prod.stockQty !== undefined && prod.stockQty <= 0);
               const isProdExcess = !isProdOutOfStock && prod.stockQty !== undefined && item.quantity > prod.stockQty;
 
@@ -165,10 +166,10 @@ export const CartScreen = ({ navigation }) => {
 
                   <View style={styles.itemInfo}>
                     <Text style={styles.itemTitle} numberOfLines={1}>
-                      {prod.name}
+                      {prod.name || 'Produce Item'}
                     </Text>
                     <Text style={styles.itemPrice}>
-                      ₹{prod.price} <Text style={styles.itemUnit}>/ {prod.unit || 'unit'}</Text>
+                      ₹{prod.price || 0} <Text style={styles.itemUnit}>/ {prod.unit || 'unit'}</Text>
                     </Text>
                     {isProdOutOfStock && (
                       <Text style={styles.cartSoldOutText}>🔴 Out of stock • remove to proceed</Text>

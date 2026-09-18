@@ -3,11 +3,13 @@ import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { useCart } from '../context/CartContext';
+import { showAlert } from '../utils/alert';
 
 export const ProductCard = ({ product, onPress, compact = false }) => {
+  if (!product) return null;
   const { addToCart, updateQuantity, items, vendorId: currentCartVendorId } = useCart();
   const prodId = product._id || product.id;
-  const cartItem = items?.find((item) => (item.product._id || item.product.id) === prodId);
+  const cartItem = items?.find((item) => (item.product?._id || item.product?.id || item.productId) === prodId);
   const qty = cartItem ? cartItem.quantity : 0;
 
   const prodVendorId = (product.vendor?._id || product.vendor?.id || (typeof product.vendor === 'string' ? product.vendor : null) || product.vendorId);
@@ -87,7 +89,7 @@ export const ProductCard = ({ product, onPress, compact = false }) => {
                 style={[styles.qtyBtn, isMaxStockReached && { opacity: 0.35 }]}
                 onPress={() => {
                   if (isMaxStockReached) {
-                    alert(`Only ${product.stockQty} unit(s) available in stock.`);
+                    showAlert('Stock Limit', `Only ${product.stockQty} unit(s) available in stock.`);
                     return;
                   }
                   addToCart(product);

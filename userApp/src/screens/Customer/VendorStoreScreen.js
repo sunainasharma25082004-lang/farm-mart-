@@ -17,9 +17,11 @@ import { useCart } from '../../context/CartContext';
 import { useCustomerSocket } from '../../context/SocketContext';
 import { ClearCartModal } from '../../components/ClearCartModal';
 import { colors } from '../../theme/colors';
+import { showAlert } from '../../utils/alert';
 
 export const VendorStoreScreen = ({ route, navigation }) => {
   const initialVendor = route.params?.vendor || {};
+  const targetVendorId = route.params?.vendor?._id || route.params?.vendorId || route.params?.vendor?.id || initialVendor._id;
   const [vendor, setVendor] = useState(initialVendor);
   const [products, setProducts] = useState([]);
   const [selectedSubCat, setSelectedSubCat] = useState('ALL');
@@ -62,17 +64,18 @@ export const VendorStoreScreen = ({ route, navigation }) => {
   }, [productStockUpdate]);
 
   useEffect(() => {
-    if (vendor?._id) {
-      fetchProducts(vendor._id);
-      fetchVendorDetails(vendor._id);
+    const vId = targetVendorId || vendor?._id;
+    if (vId) {
+      fetchProducts(vId);
+      fetchVendorDetails(vId);
 
       // Periodic polling to stay updated with live Partner Online/Offline status
       const interval = setInterval(() => {
-        fetchVendorDetails(vendor._id);
+        fetchVendorDetails(vId);
       }, 6000);
       return () => clearInterval(interval);
     }
-  }, [vendor?._id]);
+  }, [targetVendorId, vendor?._id]);
 
   const fetchVendorDetails = async (vId) => {
     try {
@@ -115,11 +118,7 @@ export const VendorStoreScreen = ({ route, navigation }) => {
 
   const handleClosedStoreTap = () => {
     const msg = `${vendor?.storeName || 'This store'} is currently closed and not accepting new orders right now. You can browse the menu; ordering will reopen as soon as the partner comes online.`;
-    if (Platform.OS === 'web') {
-      alert(msg);
-    } else {
-      Alert.alert('Store Currently Closed', msg);
-    }
+    showAlert('Store Currently Closed', msg);
   };
 
   return (
@@ -341,7 +340,7 @@ export const VendorStoreScreen = ({ route, navigation }) => {
                             style={[styles.stepperBtn, isMaxStockReached && { opacity: 0.35 }]}
                             onPress={() => {
                               if (isMaxStockReached) {
-                                alert(`Only ${product.stockQty} unit(s) available in stock.`);
+                                showAlert('Stock Limit', `Only ${product.stockQty} unit(s) available in stock.`);
                                 return;
                               }
                               updateQuantity(product._id, 1);

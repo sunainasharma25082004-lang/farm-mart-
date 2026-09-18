@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { useApp } from '../context/AppContext';
 import { apiService } from '../services/api';
+import { showAlert } from '../utils/alert';
 
 const LOGO = require('../../assets/farmart24_logo.jpg');
 
@@ -38,7 +39,7 @@ export const AuthModal = ({
   const handleSendOtp = async () => {
     const cleanPhone = phone.trim();
     if (!cleanPhone || !/^[6-9]\d{9}$/.test(cleanPhone)) {
-      alert('Kripya ek valid 10-digit Indian mobile number enter karein.');
+      showAlert('Invalid Mobile', 'Kripya ek valid 10-digit Indian mobile number enter karein.');
       return;
     }
 
@@ -50,7 +51,7 @@ export const AuthModal = ({
         if (res.devOtp) setDevOtpHint(res.devOtp);
         setStep('OTP');
       } else {
-        alert(res?.message || 'OTP bhejne me problem aayi. Kripya punah prayas karein.');
+        showAlert('OTP Error', res?.message || 'OTP bhejne me problem aayi. Kripya punah prayas karein.');
       }
     } catch (err) {
       setLoading(false);
@@ -63,7 +64,7 @@ export const AuthModal = ({
   const handleVerifyOtp = async () => {
     const cleanOtp = otp.trim();
     if (!cleanOtp || cleanOtp.length < 4) {
-      alert('Kripya 6-digit OTP enter karein.');
+      showAlert('Invalid OTP', 'Kripya 6-digit OTP enter karein.');
       return;
     }
 
@@ -75,7 +76,7 @@ export const AuthModal = ({
         await loginUser(res.user);
         if (onSuccess) onSuccess(res.user);
       } else {
-        alert(res?.message || 'Galat OTP. Kripya dobara dekhein.');
+        showAlert('Verification Failed', res?.message || 'Galat OTP. Kripya dobara dekhein.');
       }
     } catch (err) {
       setLoading(false);
@@ -84,7 +85,7 @@ export const AuthModal = ({
         const u = await loginUser('9876543210', 'demo123');
         if (onSuccess) onSuccess(u);
       } else {
-        alert(err?.message || 'OTP verification fail hua.');
+        showAlert('Verification Error', err?.message || 'OTP verification fail hua.');
       }
     }
   };

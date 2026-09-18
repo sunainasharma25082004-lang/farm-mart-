@@ -4,6 +4,7 @@ import { apiService } from '../services/api';
 import { useApp } from './AppContext';
 import { ClearCartModal } from '../components/ClearCartModal';
 import { CartMergeModal } from '../components/CartMergeModal';
+import { showAlert } from '../utils/alert';
 
 const CartContext = createContext();
 
@@ -309,7 +310,7 @@ export const CartProvider = ({ children }) => {
   const addToCart = async (product, qty = 1) => {
     // 🔴 STRICT STOCK GUARD: Prevent adding Out of Stock items
     if (product.inStock === false || (product.stockQty !== undefined && product.stockQty <= 0)) {
-      alert(`"${product.name || 'This item'}" is currently out of stock.`);
+      showAlert('Out of Stock', `"${product.name || 'This item'}" is currently out of stock.`);
       return false;
     }
 
@@ -322,7 +323,7 @@ export const CartProvider = ({ children }) => {
     if (!isAuthenticated) {
       const existing = items.find((it) => (it.product?._id || it.product?.id) === prodId);
       if (!existing && items.length >= MAX_GUEST_ITEMS) {
-        alert('Guest cart is limited to 20 items. Please login to add more.');
+        showAlert('Cart Limit', 'Guest cart is limited to 20 items. Please login to add more.');
         return false;
       }
     }
@@ -381,7 +382,7 @@ export const CartProvider = ({ children }) => {
       if (existing) {
         const nextQty = existing.quantity + qty;
         if (product.stockQty !== undefined && nextQty > product.stockQty) {
-          alert(`Only ${product.stockQty} unit(s) of "${product.name || 'this item'}" available in stock.`);
+          showAlert('Stock Limit', `Only ${product.stockQty} unit(s) of "${product.name || 'this item'}" available in stock.`);
           return prevItems;
         }
         return prevItems.map((it) =>

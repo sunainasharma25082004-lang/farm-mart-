@@ -106,7 +106,9 @@ export const OrderTrackingScreen = ({ route, navigation }) => {
 
   const callStore = (phone) => {
     if (phone) {
-      Linking.openURL(`tel:${phone}`);
+      Linking.openURL(`tel:${phone}`).catch((err) => {
+        console.warn('Dialer not supported or failed to open:', err);
+      });
     }
   };
 
@@ -323,14 +325,18 @@ export const OrderTrackingScreen = ({ route, navigation }) => {
             {/* Ordered Items Summary */}
             <View style={styles.itemsSummary}>
               <Text style={styles.itemsTitle}>ORDER DETAILS</Text>
-              {activeOrder.items?.map((item, idx) => (
-                <View key={idx} style={styles.itemRow}>
-                  <Text style={styles.itemName}>
-                    {item.qty}x {item.name}
-                  </Text>
-                  <Text style={styles.itemPrice}>₹{item.lineTotal || item.price * item.qty}</Text>
-                </View>
-              ))}
+              {activeOrder.items?.map((item, idx) => {
+                const qty = item.qty ?? item.quantity ?? 1;
+                const price = item.price || 0;
+                return (
+                  <View key={idx} style={styles.itemRow}>
+                    <Text style={styles.itemName}>
+                      {qty}x {item.name || 'Produce Item'}
+                    </Text>
+                    <Text style={styles.itemPrice}>₹{item.lineTotal || price * qty}</Text>
+                  </View>
+                );
+              })}
 
               <View style={styles.totalDivider} />
               <View style={styles.itemRow}>
