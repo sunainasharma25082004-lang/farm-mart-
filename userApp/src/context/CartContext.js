@@ -508,17 +508,17 @@ export const CartProvider = ({ children }) => {
   };
 
   const clearEntireCart = async () => {
-    if (isAuthenticated) {
-      try {
+    try {
+      const token = await storage.getAccessToken();
+      if (isAuthenticated && token) {
         await apiService.clearCart();
-      } catch (e) {
-        console.warn('Failed to clear cart on server:', e);
       }
-    } else {
-      try {
-        await storage.removeItem(GUEST_CART_KEY);
-      } catch (e) {}
+    } catch (e) {
+      // silent fallback
     }
+    try {
+      await storage.removeItem(GUEST_CART_KEY);
+    } catch (e) {}
     setItems([]);
     setVendorId(null);
     setVendorName(null);

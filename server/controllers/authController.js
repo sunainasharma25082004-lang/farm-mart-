@@ -10,7 +10,7 @@ const JWT_ACCESS_SECRET =
 const OTP_DEV_MODE = process.env.OTP_DEV_MODE === 'true';
 
 // Helper: generate 15-minute access token
-const generateAccessToken = (user) => {
+export const generateAccessToken = (user) => {
   return jwt.sign(
     {
       sub: user._id || user.id,
@@ -25,7 +25,7 @@ const generateAccessToken = (user) => {
 };
 
 // Helper: generate 30-day rotating refresh token & store hash
-const generateRefreshToken = async (user, deviceId = 'default', userAgent = '') => {
+export const generateRefreshToken = async (user, deviceId = 'default', userAgent = '') => {
   const rawToken = crypto.randomBytes(64).toString('hex');
   const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
   const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
@@ -42,7 +42,7 @@ const generateRefreshToken = async (user, deviceId = 'default', userAgent = '') 
 };
 
 // Format safe user payload for client
-const formatUserResponse = (user) => {
+export const formatUserResponse = (user) => {
   return {
     _id: user._id,
     id: user._id,
