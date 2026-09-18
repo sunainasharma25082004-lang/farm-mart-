@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,7 +6,8 @@ import {
   Modal,
   TouchableOpacity,
   ScrollView,
-  Platform
+  Platform,
+  ActivityIndicator
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
@@ -17,11 +18,34 @@ export const NewOrderModal = ({ order, onAccept, onReject, onClose }) => {
   const [isMuted, setIsMuted] = useState(false);
   const [showRejectReason, setShowRejectReason] = useState(false);
   const [rejectReason, setRejectReason] = useState('Item out of stock');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const hasAutoAcceptedRef = useRef(false);
+  const orderRef = useRef(order);
+  orderRef.current = order;
+
+  const handleAccept = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    soundAlert.stop();
+    try {
+      const targetOrder = orderRef.current || order;
+      if (targetOrder) {
+        await onAccept(targetOrder.orderId || targetOrder._id);
+      }
+    } catch (err) {
+      console.warn('Accept order error:', err);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleAcceptRef = useRef(handleAccept);
+  handleAcceptRef.current = handleAccept;
 
   useEffect(() => {
     if (!order) return;
 
-    // Start sound alert
+    hasAutoAcceptedRef.current = false;
     soundAlert.start();
     setTimeLeft(60);
 
@@ -30,6 +54,11 @@ export const NewOrderModal = ({ order, onAccept, onReject, onClose }) => {
         if (prev <= 1) {
           clearInterval(timer);
           soundAlert.stop();
+          if (!hasAutoAcceptedRef.current) {
+            hasAutoAcceptedRef.current = true;
+            console.log('⏰ 60 seconds expired: Auto-accepting order for preparation:', order.orderNumber || order._id);
+            handleAcceptRef.current();
+          }
           return 0;
         }
         return prev - 1;
@@ -42,8 +71,6 @@ export const NewOrderModal = ({ order, onAccept, onReject, onClose }) => {
     };
   }, [order]);
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
   const toggleMute = () => {
     if (isMuted) {
       soundAlert.start();
@@ -51,17 +78,6 @@ export const NewOrderModal = ({ order, onAccept, onReject, onClose }) => {
     } else {
       soundAlert.stop();
       setIsMuted(true);
-    }
-  };
-
-  const handleAccept = async () => {
-    if (isSubmitting) return;
-    setIsSubmitting(true);
-    soundAlert.stop();
-    try {
-      await onAccept(order.orderId || order._id);
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -103,13 +119,23 @@ export const NewOrderModal = ({ order, onAccept, onReject, onClose }) => {
             <View
               style={[
                 styles.timerBarFill,
-                { width: `${(timeLeft / 60) * 100}%` }
+                { width: `${(timeLeft / 60) * 100}%` },
+                timeLeft <= 15 && { backgroundColor: '#ea580c' }
               ]}
             />
           </View>
           <View style={styles.timerInfo}>
-            <Text style={styles.timerLabel}>Auto-cancels if no response in:</Text>
-            <Text style={styles.timerSeconds}>{timeLeft}s</Text>
+            <Ionicons name="time-outline" size={15} color="#ea580c" />
+            <Text style={styles.timerLabel}>
+              {timeLeft > 0
+                ? 'Auto-accepts for preparation in:'
+                : isSubmitting
+                ? 'Auto-accepting for preparation...'
+                : 'Auto-accepted for preparation!'}
+            </Text>
+            <Text style={[styles.timerSeconds, timeLeft <= 10 && { color: '#dc2626' }]}>
+              {timeLeft}s
+            </Text>
           </View>
 
           {/* Order Details Header */}

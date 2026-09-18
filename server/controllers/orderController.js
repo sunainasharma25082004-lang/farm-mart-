@@ -357,6 +357,30 @@ export const createOrder = async (req, res) => {
     // 12. 🔴 Real-time Notification Trigger: notify vendor instantly
     notifyNewOrder(populatedOrder);
 
+    // 13. 🔴 60-Second Auto-Accept Guarantee: Automatically accept for kitchen/farm preparation if unhandled
+    const orderToAutoAcceptId = savedOrder._id;
+    setTimeout(async () => {
+      try {
+        const checkOrder = await Order.findById(orderToAutoAcceptId);
+        if (checkOrder && checkOrder.status === 'NEW_ORDER') {
+          console.log(`⏰ [Server Auto-Accept] 60s reached: Automatically accepting order #${checkOrder.orderNumber} for preparation`);
+          checkOrder.status = 'ACCEPTED';
+          checkOrder.statusHistory.push({
+            status: 'ACCEPTED',
+            at: new Date(),
+            by: 'SYSTEM_AUTO_ACCEPT'
+          });
+          await checkOrder.save();
+          const pop = await Order.findById(checkOrder._id)
+            .populate('vendor', 'storeName phone address isOpen')
+            .populate('customer', 'name phone');
+          notifyOrderStatus(pop);
+        }
+      } catch (autoErr) {
+        console.warn('Server auto-accept failed:', autoErr);
+      }
+    }, 60000);
+
     res.status(201).json({
       success: true,
       message: 'Order placed successfully!',
