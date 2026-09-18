@@ -1,7 +1,7 @@
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
-import { Alert } from 'react-native';
 import { apiService, setAuthToken, setForceLogoutHandler } from '../services/api';
 import storage from '../services/storage';
+import { showAlert } from '../utils/alert';
 
 const AppContext = createContext();
 
@@ -66,7 +66,7 @@ export const AppProvider = ({ children }) => {
     setIsAuthenticated(false);
     if (reason) {
       setTimeout(() => {
-        Alert.alert('Logged Out', reason);
+        showAlert('Logged Out', reason);
       }, 100);
     }
   }, []);

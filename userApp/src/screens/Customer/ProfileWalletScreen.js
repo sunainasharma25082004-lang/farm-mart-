@@ -19,6 +19,7 @@ import { useCustomerSocket } from '../../context/SocketContext';
 import { colors } from '../../theme/colors';
 import { apiService } from '../../services/api';
 import { useAuthGate } from '../../hooks/useAuthGate';
+import { showAlert } from '../../utils/alert';
 
 const LOGO = require('../../../assets/farmart24_logo.jpg');
 
@@ -81,7 +82,7 @@ export const ProfileWalletScreen = ({ navigation }) => {
         });
       }
     } catch (err) {
-      Alert.alert('Error', 'Could not log out from all devices. Please try again.');
+      showAlert('Error', 'Could not log out from all devices. Please try again.');
     } finally {
       setIsLoggingOut(false);
     }

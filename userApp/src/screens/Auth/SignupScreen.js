@@ -16,6 +16,8 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "../../theme/colors";
 import { useApp } from "../../context/AppContext";
+import { API_BASE_URL } from "../../config/env";
+import { showAlert } from "../../utils/alert";
 
 export const SignupScreen = ({ navigation }) => {
   const [name, setName] = useState("");
@@ -35,14 +37,14 @@ export const SignupScreen = ({ navigation }) => {
 
   const handleSignup = async () => {
     if (!name || !phone || !password) {
-      Alert.alert("Error", "Name, Phone, and Password are required.");
+      showAlert("Error", "Name, Phone, and Password are required.");
       return;
     }
 
     setLoading(true);
     try {
       const response = await fetch(
-        "https://farm-mart-api.onrender.com/api/register",
+        `${API_BASE_URL}/register`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -59,20 +61,20 @@ export const SignupScreen = ({ navigation }) => {
       setLoading(false);
 
       if (data.success) {
-        Alert.alert(
+        showAlert(
           "Success 🎉",
-          "Account created successfully! Please log in.",
-          [{ text: "Log In Now", onPress: () => navigation.navigate("Login") }],
+          "Account created successfully! Please log in."
         );
+        navigation.navigate("Login");
       } else {
-        Alert.alert(
+        showAlert(
           "Registration Failed",
-          data.message || "Something went wrong",
+          data.message || "Something went wrong"
         );
       }
     } catch (error) {
       setLoading(false);
-      Alert.alert("Error", "Could not connect to server.");
+      showAlert("Error", "Could not connect to server. Please check your network.");
       console.error(error);
     }
   };

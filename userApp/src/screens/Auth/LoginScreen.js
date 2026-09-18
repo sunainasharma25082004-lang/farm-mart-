@@ -17,6 +17,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "../../theme/colors";
 import { useApp } from "../../context/AppContext";
+import { showAlert } from "../../utils/alert";
 
 const LOGO = require("../../../assets/farmart24_logo.jpg");
 
@@ -44,7 +45,7 @@ export const LoginScreen = ({ navigation }) => {
 
   const handleLogin = async () => {
     if (!phone || !password) {
-      Alert.alert("Error", "Please enter phone and password.");
+      showAlert("Error", "Please enter phone and password.");
       return;
     }
 
@@ -56,26 +57,13 @@ export const LoginScreen = ({ navigation }) => {
 
     setLoading(true);
     try {
-      const response = await fetch(
-        "https://farm-mart-api.onrender.com/api/login",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ phone, password }),
-        },
-      );
-      const data = await response.json();
+      const loggedIn = await loginUser(phone, password);
       setLoading(false);
-
-      if (data.success) {
-        loginUser(data.user);
-      } else {
-        // Fallback for seamless demo
-        handleDemoLogin();
+      if (loggedIn) {
+        navigation.goBack();
       }
     } catch (error) {
       setLoading(false);
-      // Seamless fallback so testing is never blocked
       handleDemoLogin();
     }
   };

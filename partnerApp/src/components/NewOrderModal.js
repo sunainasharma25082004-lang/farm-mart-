@@ -117,7 +117,7 @@ export const NewOrderModal = ({ order, onAccept, onReject, onClose }) => {
             <View>
               <Text style={styles.orderNum}>#{order.orderNumber || 'ORD-NEW'}</Text>
               <Text style={styles.custName}>
-                👤 {order.customer?.name || 'Customer'} ({order.customer?.phone || 'N/A'})
+                👤 {order.customer?.fullName || order.customer?.name || order.address?.name || 'Customer'} ({order.customer?.phone || order.address?.phone || 'N/A'})
               </Text>
             </View>
             <View style={styles.amountBox}>
@@ -129,18 +129,22 @@ export const NewOrderModal = ({ order, onAccept, onReject, onClose }) => {
           {/* Item Breakdown List */}
           <Text style={styles.sectionTitle}>ITEMS TO PREPARE ({order.items?.length || 0})</Text>
           <ScrollView style={styles.itemsList} showsVerticalScrollIndicator={false}>
-            {order.items?.map((item, idx) => (
-              <View key={idx} style={styles.itemRow}>
-                <View style={styles.itemQtyBadge}>
-                  <Text style={styles.itemQtyText}>{item.qty}x</Text>
+            {order.items?.map((item, idx) => {
+              const qty = item.qty ?? item.quantity ?? 1;
+              const price = item.price || 0;
+              return (
+                <View key={idx} style={styles.itemRow}>
+                  <View style={styles.itemQtyBadge}>
+                    <Text style={styles.itemQtyText}>{qty}x</Text>
+                  </View>
+                  <View style={styles.itemMeta}>
+                    <Text style={styles.itemName}>{item.name || 'Item'}</Text>
+                    <Text style={styles.itemUnit}>{item.unit || 'unit'}</Text>
+                  </View>
+                  <Text style={styles.itemPrice}>₹{item.lineTotal || (price * qty)}</Text>
                 </View>
-                <View style={styles.itemMeta}>
-                  <Text style={styles.itemName}>{item.name}</Text>
-                  <Text style={styles.itemUnit}>{item.unit || 'unit'}</Text>
-                </View>
-                <Text style={styles.itemPrice}>₹{item.lineTotal || (item.price * item.qty)}</Text>
-              </View>
-            ))}
+              );
+            })}
           </ScrollView>
 
           {/* Reject Reason Selector (if triggered) */}
