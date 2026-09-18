@@ -107,6 +107,40 @@ export const PartnerLoginScreen = () => {
           </Text>
         </View>
 
+        {/* Switch / Select Active Store on Login Screen */}
+        <View style={styles.storeSwitcherContainer}>
+          <Text style={styles.storeSwitcherLabel}>SWITCH ACTIVE STORE</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.storeSwitcherScroll}
+          >
+            {DEMO_ACCOUNTS.map((v) => {
+              const isSelected = phone === v.phone;
+              return (
+                <TouchableOpacity
+                  key={v.phone}
+                  style={[
+                    styles.storeSwitchChip,
+                    isSelected ? styles.storeSwitchChipActive : styles.storeSwitchChipInactive
+                  ]}
+                  onPress={() => handleQuickLogin(v)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={{ fontSize: 18 }}>{v.icon}</Text>
+                  <View style={{ marginLeft: 6 }}>
+                    <Text style={[styles.storeSwitchName, isSelected && styles.storeSwitchNameActive]} numberOfLines={1}>
+                      {v.name.split(' ')[0]}
+                    </Text>
+                    <Text style={styles.storeSwitchPhone}>VEN-{v.phone.slice(-4)}</Text>
+                  </View>
+                  {isSelected && <View style={styles.storeSwitchDot} />}
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+
         {/* Login Form Box */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Partner Login</Text>
@@ -465,5 +499,72 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#15803d',
     letterSpacing: 0.4
+  },
+  storeSwitcherContainer: {
+    width: '100%',
+    maxWidth: 440,
+    backgroundColor: '#ffffff',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 18,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2
+  },
+  storeSwitcherLabel: {
+    fontSize: 10.5,
+    fontWeight: '800',
+    color: '#64748b',
+    letterSpacing: 0.8,
+    marginBottom: 10
+  },
+  storeSwitcherScroll: {
+    gap: 8,
+    paddingRight: 8
+  },
+  storeSwitchChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    minWidth: 105
+  },
+  storeSwitchChipActive: {
+    backgroundColor: '#fff7ed',
+    borderColor: '#ea580c',
+    opacity: 1
+  },
+  storeSwitchChipInactive: {
+    backgroundColor: '#f8fafc',
+    borderColor: '#e2e8f0',
+    opacity: 0.85
+  },
+  storeSwitchName: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: '#475569'
+  },
+  storeSwitchNameActive: {
+    color: '#c2410c',
+    fontWeight: '800'
+  },
+  storeSwitchPhone: {
+    fontSize: 10,
+    color: '#94a3b8',
+    marginTop: 1
+  },
+  storeSwitchDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#ea580c',
+    marginLeft: 6
   }
 });

@@ -374,42 +374,6 @@ export const VendorDashboardScreen = ({ navigation }) => {
           </View>
         </View>
 
-        {/* Smooth Horizontal Store Switcher Bar with scale/opacity emphasis */}
-        <View style={styles.storeSwitcherContainer}>
-          <Text style={styles.storeSwitcherLabel}>SWITCH ACTIVE STORE</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.storeSwitcherScroll}
-          >
-            {DEMO_VENDORS.map((v) => {
-              const isCurrent = vendor?.phone === v.phone;
-              return (
-                <TouchableOpacity
-                  key={v.phone}
-                  style={[
-                    styles.storeSwitchChip,
-                    isCurrent ? styles.storeSwitchChipActive : styles.storeSwitchChipInactive
-                  ]}
-                  onPress={() => !isCurrent && handleCustomLogin(v.phone)}
-                  activeOpacity={0.8}
-                >
-                  <Text style={{ fontSize: 16 }}>{v.icon}</Text>
-                  <View style={{ marginLeft: 6 }}>
-                    <Text style={[styles.storeSwitchName, isCurrent && styles.storeSwitchNameActive]} numberOfLines={1}>
-                      {v.name.split(' ')[0]}
-                    </Text>
-                    <Text style={styles.storeSwitchPhone}>VEN-{v.phone.slice(-4)}</Text>
-                  </View>
-                  {isCurrent && (
-                    <View style={styles.storeSwitchDot} />
-                  )}
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        </View>
-
         {/* Quick Metrics Grid */}
         <View style={styles.statsGrid}>
           <View style={[styles.statCard, { backgroundColor: '#f0fdf4', borderColor: '#bbf7d0' }]}>
