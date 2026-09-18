@@ -92,12 +92,78 @@ export const NewOrderModal = ({ order, onAccept, onReject, onClose }) => {
     }
   };
 
-  if (!order) return null;
+  const entranceScale = useRef(new Animated.Value(0.88)).current;
+  const pulseBorderAnim = useRef(new Animated.Value(0)).current;
+  const tickAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (!order) return;
+
+    // Entrance spring animation
+    Animated.spring(entranceScale, {
+      toValue: 1,
+      friction: 5,
+      tension: 180,
+      useNativeDriver: Platform.OS !== 'web'
+    }).start();
+
+    // Pulsing border glow animation in sync with alert
+    const pulseLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseBorderAnim, {
+          toValue: 1,
+          duration: 700,
+          useNativeDriver: false
+        }),
+        Animated.timing(pulseBorderAnim, {
+          toValue: 0,
+          duration: 700,
+          useNativeDriver: false
+        })
+      ])
+    );
+    pulseLoop.start();
+
+    return () => pulseLoop.stop();
+  }, [order]);
+
+  // Tick animation on every second
+  useEffect(() => {
+    Animated.sequence([
+      Animated.timing(tickAnim, {
+        toValue: 1.25,
+        duration: 90,
+        useNativeDriver: Platform.OS !== 'web'
+      }),
+      Animated.spring(tickAnim, {
+        toValue: 1,
+        friction: 4,
+        tension: 200,
+        useNativeDriver: Platform.OS !== 'web'
+      })
+    ]).start();
+  }, [timeLeft]);
+
+  const timerColor = timeLeft > 30 ? '#16a34a' : timeLeft > 15 ? '#ea580c' : '#dc2626';
+
+  const pulseBorderColor = pulseBorderAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['rgba(220, 38, 38, 0.4)', 'rgba(234, 88, 12, 0.95)']
+  });
 
   return (
-    <Modal visible={!!order} transparent animationType="slide">
+    <Modal visible={!!order} transparent animationType="fade">
       <View style={styles.overlay}>
-        <View style={styles.modalCard}>
+        <Animated.View
+          style={[
+            styles.modalCard,
+            {
+              transform: [{ scale: entranceScale }],
+              borderColor: pulseBorderColor,
+              borderWidth: 2
+            }
+          ]}
+        >
           {/* Header Banner */}
           <View style={styles.header}>
             <View style={styles.headerLeft}>
@@ -119,23 +185,30 @@ export const NewOrderModal = ({ order, onAccept, onReject, onClose }) => {
             <View
               style={[
                 styles.timerBarFill,
-                { width: `${(timeLeft / 60) * 100}%` },
-                timeLeft <= 15 && { backgroundColor: '#ea580c' }
+                {
+                  width: `${(timeLeft / 60) * 100}%`,
+                  backgroundColor: timerColor
+                }
               ]}
             />
           </View>
           <View style={styles.timerInfo}>
-            <Ionicons name="time-outline" size={15} color="#ea580c" />
-            <Text style={styles.timerLabel}>
+            <Ionicons name="time-outline" size={15} color={timerColor} />
+            <Text style={[styles.timerLabel, { color: timerColor }]}>
               {timeLeft > 0
                 ? 'Auto-accepts for preparation in:'
                 : isSubmitting
                 ? 'Auto-accepting for preparation...'
                 : 'Auto-accepted for preparation!'}
             </Text>
-            <Text style={[styles.timerSeconds, timeLeft <= 10 && { color: '#dc2626' }]}>
+            <Animated.Text
+              style={[
+                styles.timerSeconds,
+                { color: timerColor, transform: [{ scale: tickAnim }] }
+              ]}
+            >
               {timeLeft}s
-            </Text>
+            </Animated.Text>
           </View>
 
           {/* Order Details Header */}
@@ -220,6 +293,7 @@ export const NewOrderModal = ({ order, onAccept, onReject, onClose }) => {
                 style={[styles.rejectBtn, isSubmitting && { opacity: 0.6 }]}
                 onPress={() => setShowRejectReason(true)}
                 disabled={isSubmitting}
+                activeOpacity={0.8}
               >
                 <Ionicons name="close-circle-outline" size={20} color="#ef4444" />
                 <Text style={styles.rejectBtnText}>Reject</Text>
@@ -229,13 +303,14 @@ export const NewOrderModal = ({ order, onAccept, onReject, onClose }) => {
                 style={[styles.acceptBtn, isSubmitting && { opacity: 0.6 }]}
                 onPress={handleAccept}
                 disabled={isSubmitting}
+                activeOpacity={0.85}
               >
                 <Ionicons name="checkmark-circle" size={22} color="#ffffff" />
                 <Text style={styles.acceptBtnText}>{isSubmitting ? 'ACCEPTING...' : 'ACCEPT ORDER'}</Text>
               </TouchableOpacity>
             </View>
           )}
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );

@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, StyleSheet, Platform } from 'react-native';
+import React, { useRef, useEffect } from 'react';
+import { View, StyleSheet, Platform, Animated } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
@@ -32,6 +32,34 @@ const tabIcons = {
   ProfileWallet: { active: 'person', inactive: 'person-outline' }
 };
 
+const AnimatedTabIcon = ({ focused, icons, color }) => {
+  const scaleAnim = useRef(new Animated.Value(focused ? 1.05 : 1.0)).current;
+
+  useEffect(() => {
+    if (focused) {
+      Animated.sequence([
+        Animated.timing(scaleAnim, {
+          toValue: 1.2,
+          duration: 120,
+          useNativeDriver: Platform.OS !== 'web'
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 1.0,
+          friction: 3.5,
+          tension: 200,
+          useNativeDriver: Platform.OS !== 'web'
+        })
+      ]).start();
+    }
+  }, [focused]);
+
+  return (
+    <Animated.View style={[{ transform: [{ scale: scaleAnim }] }, focused ? styles.activeIconWrap : null]}>
+      <Ionicons name={focused ? icons.active : icons.inactive} size={22} color={color} />
+    </Animated.View>
+  );
+};
+
 const MainTabs = () => {
   return (
     <Tab.Navigator
@@ -59,11 +87,7 @@ const MainTabs = () => {
         },
         tabBarIcon: ({ color, focused }) => {
           const icons = tabIcons[route.name] || tabIcons.Home;
-          return (
-            <View style={focused ? styles.activeIconWrap : null}>
-              <Ionicons name={focused ? icons.active : icons.inactive} size={22} color={color} />
-            </View>
-          );
+          return <AnimatedTabIcon focused={focused} icons={icons} color={color} />;
         }
       })}
     >
@@ -92,7 +116,15 @@ export const RootNavigator = () => {
   const { isAuthenticated } = useApp();
 
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
+    <Stack.Navigator
+      screenOptions={{
+        headerShown: false,
+        animation: 'slide_from_right',
+        animationDuration: 250,
+        gestureEnabled: true,
+        fullScreenGestureEnabled: true
+      }}
+    >
       <Stack.Screen name="MainTabs" component={MainTabs} />
       <Stack.Screen name="CategoryVendors" component={CategoryVendorsScreen} />
       <Stack.Screen name="VendorStore" component={VendorStoreScreen} />

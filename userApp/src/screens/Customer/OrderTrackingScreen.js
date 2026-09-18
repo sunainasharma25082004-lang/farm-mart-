@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,8 @@ import {
   TouchableOpacity,
   Linking,
   StatusBar,
-  Platform
+  Platform,
+  Animated
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Header } from '../../components/Header';
@@ -24,6 +25,94 @@ const TRACKING_STEPS = [
   { key: 'OUT_FOR_DELIVERY', title: 'On Way', icon: 'bicycle-outline' },
   { key: 'DELIVERED', title: 'Delivered', icon: 'home-outline' }
 ];
+
+const AnimatedLiveStepper = ({ steps, currentStepIdx }) => {
+  const progressAnim = useRef(new Animated.Value(currentStepIdx)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    Animated.timing(progressAnim, {
+      toValue: currentStepIdx,
+      duration: 650,
+      useNativeDriver: false
+    }).start();
+  }, [currentStepIdx]);
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.15,
+          duration: 850,
+          useNativeDriver: Platform.OS !== 'web'
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1.0,
+          duration: 850,
+          useNativeDriver: Platform.OS !== 'web'
+        })
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, []);
+
+  const totalSteps = steps.length;
+  const lineWidthPercent = progressAnim.interpolate({
+    inputRange: [0, Math.max(1, totalSteps - 1)],
+    outputRange: ['0%', '100%'],
+    extrapolate: 'clamp'
+  });
+
+  return (
+    <View style={styles.stepperContainer}>
+      {/* Background Track Line */}
+      <View style={styles.trackLineBackground} />
+      {/* Animated Filled Progress Line */}
+      <Animated.View style={[styles.trackLineFilled, { width: lineWidthPercent }]} />
+
+      <View style={styles.stepperBar}>
+        {steps.map((step, idx) => {
+          const isDone = idx <= currentStepIdx;
+          const isCurrent = idx === currentStepIdx;
+
+          return (
+            <View key={step.key} style={styles.stepItem}>
+              {isCurrent ? (
+                <Animated.View
+                  style={[
+                    styles.stepCircle,
+                    styles.stepCircleDone,
+                    styles.stepCircleCurrent,
+                    { transform: [{ scale: pulseAnim }] }
+                  ]}
+                >
+                  <Ionicons name={step.icon} size={14} color="#ffffff" />
+                </Animated.View>
+              ) : (
+                <View
+                  style={[
+                    styles.stepCircle,
+                    isDone && styles.stepCircleDone
+                  ]}
+                >
+                  <Ionicons
+                    name={step.icon}
+                    size={14}
+                    color={isDone ? '#ffffff' : '#94a3b8'}
+                  />
+                </View>
+              )}
+              <Text style={[styles.stepLabel, isDone && styles.stepLabelActive]}>
+                {step.title}
+              </Text>
+            </View>
+          );
+        })}
+      </View>
+    </View>
+  );
+};
 
 export const OrderTrackingScreen = ({ route, navigation }) => {
   const { isAuthenticated } = useApp();
@@ -285,34 +374,7 @@ export const OrderTrackingScreen = ({ route, navigation }) => {
 
             {/* Live Stepper */}
             {activeOrder.status !== 'REJECTED' ? (
-              <View style={styles.stepperContainer}>
-                <View style={styles.stepperBar}>
-                  {TRACKING_STEPS.map((step, idx) => {
-                    const isDone = idx <= currentStepIdx;
-                    const isCurrent = idx === currentStepIdx;
-                    return (
-                      <View key={step.key} style={styles.stepItem}>
-                        <View
-                          style={[
-                            styles.stepCircle,
-                            isDone && styles.stepCircleDone,
-                            isCurrent && styles.stepCircleCurrent
-                          ]}
-                        >
-                          <Ionicons
-                            name={step.icon}
-                            size={14}
-                            color={isDone ? '#ffffff' : '#94a3b8'}
-                          />
-                        </View>
-                        <Text style={[styles.stepLabel, isDone && styles.stepLabelActive]}>
-                          {step.title}
-                        </Text>
-                      </View>
-                    );
-                  })}
-                </View>
-              </View>
+              <AnimatedLiveStepper steps={TRACKING_STEPS} currentStepIdx={currentStepIdx} />
             ) : (
               <View style={styles.rejectionNotice}>
                 <Ionicons name="close-circle" size={22} color="#ef4444" />
@@ -498,14 +560,35 @@ const styles = StyleSheet.create({
   stepperContainer: {
     backgroundColor: '#f8fafc',
     paddingVertical: 14,
-    paddingHorizontal: 6,
+    paddingHorizontal: 10,
     borderRadius: 14,
-    marginBottom: 18
+    marginBottom: 18,
+    position: 'relative'
+  },
+  trackLineBackground: {
+    position: 'absolute',
+    top: 27,
+    left: 28,
+    right: 28,
+    height: 3,
+    backgroundColor: '#e2e8f0',
+    zIndex: 1
+  },
+  trackLineFilled: {
+    position: 'absolute',
+    top: 27,
+    left: 28,
+    maxWidth: '85%',
+    height: 3,
+    backgroundColor: '#16a34a',
+    zIndex: 2,
+    borderRadius: 2
   },
   stepperBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center'
+    alignItems: 'flex-start',
+    zIndex: 3
   },
   stepItem: {
     alignItems: 'center',

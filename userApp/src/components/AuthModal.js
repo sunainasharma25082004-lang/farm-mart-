@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,15 +8,16 @@ import {
   TouchableOpacity,
   TouchableWithoutFeedback,
   ActivityIndicator,
-  Alert,
   Platform,
-  Image
+  Image,
+  Animated
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { useApp } from '../context/AppContext';
 import { apiService } from '../services/api';
 import { showAlert } from '../utils/alert';
+import { TactileButton } from './common/TactileButton';
 
 const LOGO = require('../../assets/farmart24_logo.jpg');
 
@@ -33,6 +34,29 @@ export const AuthModal = ({
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
   const [devOtpHint, setDevOtpHint] = useState(null);
+
+  const slideAnim = useRef(new Animated.Value(260)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (visible) {
+      slideAnim.setValue(260);
+      fadeAnim.setValue(0);
+      Animated.parallel([
+        Animated.spring(slideAnim, {
+          toValue: 0,
+          friction: 6,
+          tension: 180,
+          useNativeDriver: Platform.OS !== 'web'
+        }),
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 220,
+          useNativeDriver: Platform.OS !== 'web'
+        })
+      ]).start();
+    }
+  }, [visible]);
 
   if (!visible) return null;
 
@@ -114,143 +138,148 @@ export const AuthModal = ({
     <Modal
       transparent
       visible={visible}
-      animationType="slide"
+      animationType="none"
       onRequestClose={handleDismiss}
     >
-      <TouchableWithoutFeedback onPress={handleDismiss}>
-        <View style={styles.overlay}>
-          <TouchableWithoutFeedback>
-            <View style={styles.sheet}>
-              {/* Top Handle & Close */}
-              <View style={styles.sheetHeader}>
-                <View style={styles.dragPill} />
-                <TouchableOpacity
-                  onPress={handleDismiss}
-                  style={styles.closeBtn}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                  <Ionicons name="close" size={22} color="#64748b" />
+      <Animated.View style={[styles.overlay, { opacity: fadeAnim }]}>
+        <TouchableWithoutFeedback onPress={handleDismiss}>
+          <View style={StyleSheet.absoluteFill} />
+        </TouchableWithoutFeedback>
+
+        <Animated.View
+          style={[
+            styles.sheet,
+            { transform: [{ translateY: slideAnim }] }
+          ]}
+        >
+          {/* Top Handle & Close */}
+          <View style={styles.sheetHeader}>
+            <View style={styles.dragPill} />
+            <TouchableOpacity
+              onPress={handleDismiss}
+              style={styles.closeBtn}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons name="close" size={22} color="#64748b" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Branding and Contextual Header */}
+          <View style={styles.brandRow}>
+            <Image source={LOGO} style={styles.logo} resizeMode="contain" />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.title}>{title}</Text>
+              <Text style={styles.subtitle}>{subtitle}</Text>
+            </View>
+          </View>
+
+          {step === 'PHONE' ? (
+            <View style={styles.form}>
+              <Text style={styles.inputLabel}>Mobile Number</Text>
+              <View style={styles.phoneInputWrap}>
+                <Text style={styles.countryCode}>+91</Text>
+                <View style={styles.verticalDivider} />
+                <TextInput
+                  style={styles.phoneInput}
+                  placeholder="9876543210"
+                  keyboardType="phone-pad"
+                  maxLength={10}
+                  value={phone}
+                  onChangeText={setPhone}
+                  placeholderTextColor="#94a3b8"
+                  autoFocus
+                />
+              </View>
+
+              <TactileButton
+                style={[styles.primaryBtn, loading && styles.disabledBtn]}
+                onPress={handleSendOtp}
+                disabled={loading}
+                rippleColor="rgba(255, 255, 255, 0.35)"
+              >
+                {loading ? (
+                  <ActivityIndicator color="#ffffff" />
+                ) : (
+                  <View style={styles.btnInner}>
+                    <Text style={styles.primaryBtnText}>OTP Paayein</Text>
+                    <Ionicons name="arrow-forward" size={16} color="#ffffff" />
+                  </View>
+                )}
+              </TactileButton>
+
+              {/* 1-Tap Quick Demo Login */}
+              <TactileButton
+                style={styles.demoLoginCard}
+                onPress={handleInstantDemoLogin}
+                disabled={loading}
+                rippleColor="rgba(16, 185, 129, 0.25)"
+              >
+                <View style={styles.demoIcon}>
+                  <Ionicons name="flash" size={18} color="#10b981" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.demoTitle}>⚡ 1-Tap Demo Customer Login</Text>
+                  <Text style={styles.demoSubtitle}>Rajesh Kumar • 9876543210</Text>
+                </View>
+                <Ionicons name="arrow-forward-circle" size={22} color="#10b981" />
+              </TactileButton>
+            </View>
+          ) : (
+            <View style={styles.form}>
+              <View style={styles.otpHeaderRow}>
+                <Text style={styles.otpSentText}>
+                  OTP sent to <Text style={{ fontWeight: '700' }}>+91 {phone}</Text>
+                </Text>
+                <TouchableOpacity onPress={() => setStep('PHONE')}>
+                  <Text style={styles.editPhoneText}>Badlein</Text>
                 </TouchableOpacity>
               </View>
 
-              {/* Branding and Contextual Header */}
-              <View style={styles.brandRow}>
-                <Image source={LOGO} style={styles.logo} resizeMode="contain" />
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.title}>{title}</Text>
-                  <Text style={styles.subtitle}>{subtitle}</Text>
+              {devOtpHint ? (
+                <View style={styles.devHintBox}>
+                  <Ionicons name="key" size={14} color="#047857" />
+                  <Text style={styles.devHintText}>Auto Test OTP: {devOtpHint}</Text>
                 </View>
-              </View>
+              ) : null}
 
-              {step === 'PHONE' ? (
-                <View style={styles.form}>
-                  <Text style={styles.inputLabel}>Mobile Number</Text>
-                  <View style={styles.phoneInputWrap}>
-                    <Text style={styles.countryCode}>+91</Text>
-                    <View style={styles.verticalDivider} />
-                    <TextInput
-                      style={styles.phoneInput}
-                      placeholder="9876543210"
-                      keyboardType="phone-pad"
-                      maxLength={10}
-                      value={phone}
-                      onChangeText={setPhone}
-                      placeholderTextColor="#94a3b8"
-                      autoFocus
-                    />
+              <TextInput
+                style={styles.otpInput}
+                placeholder="Enter 6-digit OTP"
+                keyboardType="number-pad"
+                maxLength={6}
+                value={otp}
+                onChangeText={setOtp}
+                placeholderTextColor="#94a3b8"
+                autoFocus
+              />
+
+              <TactileButton
+                style={[styles.primaryBtn, loading && styles.disabledBtn]}
+                onPress={handleVerifyOtp}
+                disabled={loading}
+                rippleColor="rgba(255, 255, 255, 0.35)"
+              >
+                {loading ? (
+                  <ActivityIndicator color="#ffffff" />
+                ) : (
+                  <View style={styles.btnInner}>
+                    <Text style={styles.primaryBtnText}>Verify Karein & Aage Badhein</Text>
+                    <Ionicons name="checkmark-circle" size={16} color="#ffffff" />
                   </View>
+                )}
+              </TactileButton>
 
-                  <TouchableOpacity
-                    style={[styles.primaryBtn, loading && styles.disabledBtn]}
-                    onPress={handleSendOtp}
-                    disabled={loading}
-                    activeOpacity={0.85}
-                  >
-                    {loading ? (
-                      <ActivityIndicator color="#ffffff" />
-                    ) : (
-                      <View style={styles.btnInner}>
-                        <Text style={styles.primaryBtnText}>OTP Paayein</Text>
-                        <Ionicons name="arrow-forward" size={16} color="#ffffff" />
-                      </View>
-                    )}
-                  </TouchableOpacity>
-
-                  {/* 1-Tap Quick Demo Login */}
-                  <TouchableOpacity
-                    style={styles.demoLoginCard}
-                    onPress={handleInstantDemoLogin}
-                    disabled={loading}
-                    activeOpacity={0.8}
-                  >
-                    <View style={styles.demoIcon}>
-                      <Ionicons name="flash" size={18} color="#10b981" />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.demoTitle}>⚡ 1-Tap Demo Customer Login</Text>
-                      <Text style={styles.demoSubtitle}>Rajesh Kumar • 9876543210</Text>
-                    </View>
-                    <Ionicons name="arrow-forward-circle" size={22} color="#10b981" />
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <View style={styles.form}>
-                  <View style={styles.otpHeaderRow}>
-                    <Text style={styles.otpSentText}>
-                      OTP sent to <Text style={{ fontWeight: '700' }}>+91 {phone}</Text>
-                    </Text>
-                    <TouchableOpacity onPress={() => setStep('PHONE')}>
-                      <Text style={styles.editPhoneText}>Badlein</Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  {devOtpHint ? (
-                    <View style={styles.devHintBox}>
-                      <Ionicons name="key" size={14} color="#047857" />
-                      <Text style={styles.devHintText}>Auto Test OTP: {devOtpHint}</Text>
-                    </View>
-                  ) : null}
-
-                  <TextInput
-                    style={styles.otpInput}
-                    placeholder="Enter 6-digit OTP"
-                    keyboardType="number-pad"
-                    maxLength={6}
-                    value={otp}
-                    onChangeText={setOtp}
-                    placeholderTextColor="#94a3b8"
-                    autoFocus
-                  />
-
-                  <TouchableOpacity
-                    style={[styles.primaryBtn, loading && styles.disabledBtn]}
-                    onPress={handleVerifyOtp}
-                    disabled={loading}
-                    activeOpacity={0.85}
-                  >
-                    {loading ? (
-                      <ActivityIndicator color="#ffffff" />
-                    ) : (
-                      <View style={styles.btnInner}>
-                        <Text style={styles.primaryBtnText}>Verify Karein & Aage Badhein</Text>
-                        <Ionicons name="checkmark-circle" size={16} color="#ffffff" />
-                      </View>
-                    )}
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={styles.resendBtn}
-                    onPress={handleSendOtp}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.resendText}>OTP dobara bhejein</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
+              <TouchableOpacity
+                style={styles.resendBtn}
+                onPress={handleSendOtp}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.resendText}>OTP dobara bhejein</Text>
+              </TouchableOpacity>
             </View>
-          </TouchableWithoutFeedback>
-        </View>
-      </TouchableWithoutFeedback>
+          )}
+        </Animated.View>
+      </Animated.View>
     </Modal>
   );
 };

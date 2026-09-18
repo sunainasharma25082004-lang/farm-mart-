@@ -1,7 +1,8 @@
-import React from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, Pressable } from 'react-native';
+import React, { useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, Modal, TouchableOpacity, Pressable, Animated, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
+import { TactileButton } from './common/TactileButton';
 
 export const ClearCartModal = ({
   visible,
@@ -11,21 +12,50 @@ export const ClearCartModal = ({
   onCancel,
   onConfirm
 }) => {
+  const slideAnim = useRef(new Animated.Value(120)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (visible) {
+      slideAnim.setValue(120);
+      fadeAnim.setValue(0);
+      Animated.parallel([
+        Animated.spring(slideAnim, {
+          toValue: 0,
+          friction: 6,
+          tension: 180,
+          useNativeDriver: Platform.OS !== 'web'
+        }),
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 220,
+          useNativeDriver: Platform.OS !== 'web'
+        })
+      ]).start();
+    }
+  }, [visible]);
+
   if (!visible) return null;
 
   return (
     <Modal
       visible={visible}
       transparent
-      animationType="fade"
+      animationType="none"
       onRequestClose={onCancel}
     >
-      <TouchableOpacity
-        style={styles.overlay}
-        activeOpacity={1}
-        onPress={onCancel}
-      >
-        <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
+      <Animated.View style={[styles.overlay, { opacity: fadeAnim }]}>
+        <TouchableOpacity
+          style={StyleSheet.absoluteFill}
+          activeOpacity={1}
+          onPress={onCancel}
+        />
+        <Animated.View
+          style={[
+            styles.modalCard,
+            { transform: [{ translateY: slideAnim }] }
+          ]}
+        >
           <View style={styles.iconCircle}>
             <Ionicons name="cart-outline" size={32} color="#dc2626" />
           </View>
@@ -45,12 +75,16 @@ export const ClearCartModal = ({
               <Text style={styles.cancelText}>Cancel</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.confirmBtn} onPress={onConfirm} activeOpacity={0.85}>
+            <TactileButton
+              style={styles.confirmBtn}
+              onPress={onConfirm}
+              rippleColor="rgba(255, 255, 255, 0.35)"
+            >
               <Text style={styles.confirmText}>Cart hataayein & add karein</Text>
-            </TouchableOpacity>
+            </TactileButton>
           </View>
-        </Pressable>
-      </TouchableOpacity>
+        </Animated.View>
+      </Animated.View>
     </Modal>
   );
 };
@@ -58,7 +92,7 @@ export const ClearCartModal = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.75)',
+    backgroundColor: 'rgba(15, 23, 42, 0.72)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20
@@ -108,7 +142,8 @@ const styles = StyleSheet.create({
   actionRow: {
     flexDirection: 'row',
     gap: 12,
-    width: '100%'
+    width: '100%',
+    alignItems: 'center'
   },
   cancelBtn: {
     flex: 1,
@@ -127,14 +162,17 @@ const styles = StyleSheet.create({
   confirmBtn: {
     flex: 1.4,
     paddingVertical: 13,
+    paddingHorizontal: 12,
     borderRadius: 14,
     backgroundColor: colors.primary,
     alignItems: 'center',
+    justifyContent: 'center',
     elevation: 2
   },
   confirmText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#ffffff'
+    color: '#ffffff',
+    textAlign: 'center'
   }
 });

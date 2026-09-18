@@ -18,6 +18,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { usePartner } from '../context/PartnerContext';
 import { useSocket } from '../context/SocketContext';
 import { colors } from '../theme/colors';
+import { TactileButton } from '../components/common/TactileButton';
+import { AnimatedNumber } from '../components/common/AnimatedNumber';
 
 const LOGO = require('../../assets/farmart_logo.png');
 
@@ -52,6 +54,29 @@ export const VendorDashboardScreen = ({ navigation }) => {
   const [loginPasswordInput, setLoginPasswordInput] = useState('demo123');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [loginError, setLoginError] = useState('');
+
+  const switchModalAnim = useRef(new Animated.Value(100)).current;
+  const switchFadeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (showLoginModal) {
+      switchModalAnim.setValue(100);
+      switchFadeAnim.setValue(0);
+      Animated.parallel([
+        Animated.spring(switchModalAnim, {
+          toValue: 0,
+          friction: 6,
+          tension: 180,
+          useNativeDriver: Platform.OS !== 'web'
+        }),
+        Animated.timing(switchFadeAnim, {
+          toValue: 1,
+          duration: 220,
+          useNativeDriver: Platform.OS !== 'web'
+        })
+      ]).start();
+    }
+  }, [showLoginModal]);
 
   // Classic Zomato-Style Breathing Pulse Animation
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -349,13 +374,49 @@ export const VendorDashboardScreen = ({ navigation }) => {
           </View>
         </View>
 
+        {/* Smooth Horizontal Store Switcher Bar with scale/opacity emphasis */}
+        <View style={styles.storeSwitcherContainer}>
+          <Text style={styles.storeSwitcherLabel}>SWITCH ACTIVE STORE</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.storeSwitcherScroll}
+          >
+            {DEMO_VENDORS.map((v) => {
+              const isCurrent = vendor?.phone === v.phone;
+              return (
+                <TouchableOpacity
+                  key={v.phone}
+                  style={[
+                    styles.storeSwitchChip,
+                    isCurrent ? styles.storeSwitchChipActive : styles.storeSwitchChipInactive
+                  ]}
+                  onPress={() => !isCurrent && handleCustomLogin(v.phone)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={{ fontSize: 16 }}>{v.icon}</Text>
+                  <View style={{ marginLeft: 6 }}>
+                    <Text style={[styles.storeSwitchName, isCurrent && styles.storeSwitchNameActive]} numberOfLines={1}>
+                      {v.name.split(' ')[0]}
+                    </Text>
+                    <Text style={styles.storeSwitchPhone}>VEN-{v.phone.slice(-4)}</Text>
+                  </View>
+                  {isCurrent && (
+                    <View style={styles.storeSwitchDot} />
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+
         {/* Quick Metrics Grid */}
         <View style={styles.statsGrid}>
           <View style={[styles.statCard, { backgroundColor: '#f0fdf4', borderColor: '#bbf7d0' }]}>
             <View style={styles.statIconBox}>
               <Ionicons name="wallet-outline" size={18} color="#16a34a" />
             </View>
-            <Text style={styles.statVal}>₹{stats.todaySales || 0}</Text>
+            <AnimatedNumber value={stats.todaySales || 0} prefix="₹" style={styles.statVal} />
             <Text style={styles.statLabel}>Today's Sales</Text>
           </View>
 
@@ -363,9 +424,7 @@ export const VendorDashboardScreen = ({ navigation }) => {
             <View style={styles.statIconBox}>
               <Ionicons name="receipt-outline" size={18} color="#2563eb" />
             </View>
-            <Text style={[styles.statVal, { color: '#1d4ed8' }]}>
-              {inFlightOrders.length}
-            </Text>
+            <AnimatedNumber value={inFlightOrders.length} style={[styles.statVal, { color: '#1d4ed8' }]} />
             <Text style={styles.statLabel}>Active Orders</Text>
           </View>
 
@@ -373,7 +432,7 @@ export const VendorDashboardScreen = ({ navigation }) => {
             <View style={styles.statIconBox}>
               <Ionicons name="star" size={18} color="#d97706" />
             </View>
-            <Text style={[styles.statVal, { color: '#b45309' }]}>★ {vendor?.rating || 4.8}</Text>
+            <AnimatedNumber value={vendor?.rating || 4.8} prefix="★ " style={[styles.statVal, { color: '#b45309' }]} />
             <Text style={styles.statLabel}>Store Rating</Text>
           </View>
         </View>
@@ -569,94 +628,94 @@ export const VendorDashboardScreen = ({ navigation }) => {
                         >
                           <Text style={styles.rejectSmallText}>Reject</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity
+                        <TactileButton
                           style={[styles.acceptBtn, isSubmittingThis && { opacity: 0.7 }]}
                           onPress={() => handleUpdateStatus(order._id, 'ACCEPTED')}
-                          activeOpacity={0.85}
                           disabled={isSubmittingThis}
+                          rippleColor="rgba(255, 255, 255, 0.35)"
                         >
                           {isSubmittingThis ? (
                             <ActivityIndicator size="small" color="#ffffff" />
                           ) : (
-                            <>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                               <Text style={styles.btnText}>Accept</Text>
                               <Ionicons name="checkmark-circle" size={16} color="#ffffff" />
-                            </>
+                            </View>
                           )}
-                        </TouchableOpacity>
+                        </TactileButton>
                       </>
                     )}
 
                     {isAccepted && (
-                      <TouchableOpacity
+                      <TactileButton
                         style={[styles.acceptBtn, { backgroundColor: '#ea580c' }, isSubmittingThis && { opacity: 0.7 }]}
                         onPress={() => handleUpdateStatus(order._id, 'PREPARING')}
-                        activeOpacity={0.85}
                         disabled={isSubmittingThis}
+                        rippleColor="rgba(255, 255, 255, 0.35)"
                       >
                         {isSubmittingThis ? (
                           <ActivityIndicator size="small" color="#ffffff" />
                         ) : (
-                          <>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                             <Text style={styles.btnText}>Start Cooking & Packing</Text>
                             <Ionicons name="flame" size={16} color="#ffffff" />
-                          </>
+                          </View>
                         )}
-                      </TouchableOpacity>
+                      </TactileButton>
                     )}
 
                     {isPreparing && (
-                      <TouchableOpacity
+                      <TactileButton
                         style={[styles.acceptBtn, { backgroundColor: '#16a34a' }, isSubmittingThis && { opacity: 0.7 }]}
                         onPress={() => handleUpdateStatus(order._id, 'READY_FOR_RIDER')}
-                        activeOpacity={0.85}
                         disabled={isSubmittingThis}
+                        rippleColor="rgba(255, 255, 255, 0.35)"
                       >
                         {isSubmittingThis ? (
                           <ActivityIndicator size="small" color="#ffffff" />
                         ) : (
-                          <>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                             <Text style={styles.btnText}>Order is Packed</Text>
                             <Ionicons name="cube" size={16} color="#ffffff" />
-                          </>
+                          </View>
                         )}
-                      </TouchableOpacity>
+                      </TactileButton>
                     )}
 
                     {isReady && (
-                      <TouchableOpacity
+                      <TactileButton
                         style={[styles.acceptBtn, { backgroundColor: '#0284c7' }, isSubmittingThis && { opacity: 0.7 }]}
                         onPress={() => handleUpdateStatus(order._id, 'OUT_FOR_DELIVERY')}
-                        activeOpacity={0.85}
                         disabled={isSubmittingThis}
+                        rippleColor="rgba(255, 255, 255, 0.35)"
                       >
                         {isSubmittingThis ? (
                           <ActivityIndicator size="small" color="#ffffff" />
                         ) : (
-                          <>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                             <Text style={styles.btnText}>Handover to Rider</Text>
                             <Ionicons name="paper-plane" size={16} color="#ffffff" />
-                          </>
+                          </View>
                         )}
-                      </TouchableOpacity>
+                      </TactileButton>
                     )}
 
                     {isOut && (
-                      <TouchableOpacity
+                      <TactileButton
                         style={[styles.acceptBtn, { backgroundColor: '#15803d' }, isSubmittingThis && { opacity: 0.7 }]}
                         onPress={() => handleUpdateStatus(order._id, 'DELIVERED')}
-                        activeOpacity={0.85}
                         disabled={isSubmittingThis}
+                        rippleColor="rgba(255, 255, 255, 0.35)"
                       >
                         {isSubmittingThis ? (
                           <ActivityIndicator size="small" color="#ffffff" />
                         ) : (
-                          <>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                             <Text style={styles.btnText}>Mark Delivered</Text>
                             <Ionicons name="checkmark-done" size={16} color="#ffffff" />
-                          </>
+                          </View>
                         )}
-                      </TouchableOpacity>
+                      </TactileButton>
                     )}
 
                     {isDelivered && (
@@ -683,9 +742,15 @@ export const VendorDashboardScreen = ({ navigation }) => {
       </ScrollView>
 
       {/* Switch / Login Partner Modal */}
-      <Modal visible={showLoginModal} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={styles.switchModalCard}>
+      <Modal visible={showLoginModal} transparent animationType="none" onRequestClose={() => setShowLoginModal(false)}>
+        <Animated.View style={[styles.modalOverlay, { opacity: switchFadeAnim }]}>
+          <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={() => setShowLoginModal(false)} />
+          <Animated.View
+            style={[
+              styles.switchModalCard,
+              { transform: [{ translateY: switchModalAnim }] }
+            ]}
+          >
             <View style={styles.switchModalHeader}>
               <Text style={styles.switchModalTitle}>Switch Partner Account</Text>
               <TouchableOpacity onPress={() => setShowLoginModal(false)}>
@@ -701,7 +766,7 @@ export const VendorDashboardScreen = ({ navigation }) => {
               {DEMO_VENDORS.map((v) => {
                 const isCurrent = vendor?.phone === v.phone;
                 return (
-                  <TouchableOpacity
+                  <TactileButton
                     key={v.phone}
                     style={[
                       styles.demoAccountRow,
@@ -710,6 +775,7 @@ export const VendorDashboardScreen = ({ navigation }) => {
                     onPress={() => {
                       handleCustomLogin(v.phone);
                     }}
+                    rippleColor="rgba(234, 88, 12, 0.2)"
                   >
                     <Text style={{ fontSize: 24 }}>{v.icon}</Text>
                     <View style={{ flex: 1, marginLeft: 12 }}>
@@ -725,7 +791,7 @@ export const VendorDashboardScreen = ({ navigation }) => {
                     ) : (
                       <Ionicons name="chevron-forward" size={18} color="#94a3b8" />
                     )}
-                  </TouchableOpacity>
+                  </TactileButton>
                 );
               })}
             </View>
@@ -769,8 +835,8 @@ export const VendorDashboardScreen = ({ navigation }) => {
                 <Text style={styles.logoutBtnText}>Log Out Completely</Text>
               </TouchableOpacity>
             </View>
-          </View>
-        </View>
+          </Animated.View>
+        </Animated.View>
       </Modal>
     </View>
   );
@@ -963,9 +1029,72 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 12,
-    marginBottom: 12,
+    marginBottom: 10,
     borderWidth: 1,
     borderColor: '#e2e8f0'
+  },
+  storeSwitcherContainer: {
+    backgroundColor: '#ffffff',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 3,
+    elevation: 1
+  },
+  storeSwitcherLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#64748b',
+    letterSpacing: 0.8,
+    marginBottom: 8
+  },
+  storeSwitcherScroll: {
+    gap: 8
+  },
+  storeSwitchChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    minWidth: 100
+  },
+  storeSwitchChipActive: {
+    backgroundColor: '#fff7ed',
+    borderColor: '#ea580c',
+    opacity: 1
+  },
+  storeSwitchChipInactive: {
+    backgroundColor: '#f8fafc',
+    borderColor: '#e2e8f0',
+    opacity: 0.72
+  },
+  storeSwitchName: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#475569'
+  },
+  storeSwitchNameActive: {
+    color: '#c2410c',
+    fontWeight: '800'
+  },
+  storeSwitchPhone: {
+    fontSize: 9.5,
+    color: '#94a3b8'
+  },
+  storeSwitchDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#ea580c',
+    marginLeft: 6
   },
   connIndicator: {
     flexDirection: 'row',

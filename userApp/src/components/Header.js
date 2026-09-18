@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   View,
   Text,
@@ -8,12 +8,15 @@ import {
   Modal,
   TextInput,
   Pressable,
+  Animated,
+  Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import { colors } from "../theme/colors";
 import { useApp } from "../context/AppContext";
 import { useCart } from "../context/CartContext";
+import { GlassIconBtn } from "./common/GlassIconBtn";
 
 const LOGO = require("../../assets/farmart24_logo.jpg");
 
@@ -27,6 +30,9 @@ export const Header = ({
   const { billSummary } = useCart();
   const cartItemCount = billSummary?.totalCount || 0;
   const canGoBack = Boolean(showBack);
+
+  const badgeScaleAnim = useRef(new Animated.Value(1)).current;
+  const prevCountRef = useRef(cartItemCount);
 
   const [addressModalVisible, setAddressModalVisible] = useState(false);
   const [manualAddress, setManualAddress] = useState("");
@@ -105,6 +111,28 @@ export const Header = ({
     initializeLocation();
   }, [userProfile?.address, userProfile?.city]);
 
+  useEffect(() => {
+    if (cartItemCount !== prevCountRef.current) {
+      prevCountRef.current = cartItemCount;
+      if (cartItemCount > 0) {
+        // Dynamic pulse on item change
+        Animated.sequence([
+          Animated.timing(badgeScaleAnim, {
+            toValue: 1.45,
+            duration: 130,
+            useNativeDriver: Platform.OS !== 'web'
+          }),
+          Animated.spring(badgeScaleAnim, {
+            toValue: 1.0,
+            friction: 3.5,
+            tension: 220,
+            useNativeDriver: Platform.OS !== 'web'
+          })
+        ]).start();
+      }
+    }
+  }, [cartItemCount]);
+
   const openAddressModal = () => {
     setManualAddress(displayAddress);
     setAddressModalVisible(true);
@@ -130,13 +158,13 @@ export const Header = ({
     <View style={styles.wrapper}>
       <View style={styles.container}>
         {canGoBack ? (
-          <TouchableOpacity
-            style={styles.backBtn}
+          <GlassIconBtn
+            size={40}
             onPress={() => navigation.goBack()}
-            activeOpacity={0.7}
+            borderRadius={12}
           >
             <Ionicons name="arrow-back" size={22} color={colors.textPrimary} />
-          </TouchableOpacity>
+          </GlassIconBtn>
         ) : (
           <Image source={LOGO} style={styles.logoImage} resizeMode="contain" />
         )}
@@ -174,10 +202,10 @@ export const Header = ({
         </View>
 
         {showCart ? (
-          <TouchableOpacity
-            style={styles.cartButton}
+          <GlassIconBtn
+            size={42}
+            borderRadius={12}
             onPress={() => navigation && navigation.navigate("Cart")}
-            activeOpacity={0.8}
           >
             <Ionicons
               name="cart-outline"
@@ -185,13 +213,18 @@ export const Header = ({
               color={colors.textPrimary}
             />
             {cartItemCount > 0 && (
-              <View style={styles.badge}>
+              <Animated.View
+                style={[
+                  styles.badge,
+                  { transform: [{ scale: badgeScaleAnim }] }
+                ]}
+              >
                 <Text style={styles.badgeText}>
                   {cartItemCount > 9 ? "9+" : cartItemCount}
                 </Text>
-              </View>
+              </Animated.View>
             )}
-          </TouchableOpacity>
+          </GlassIconBtn>
         ) : (
           <View style={styles.cartPlaceholder} />
         )}

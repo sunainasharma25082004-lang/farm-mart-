@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,8 @@ import {
   TextInput,
   Image,
   Modal,
-  Platform
+  Platform,
+  Animated
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
@@ -18,6 +19,113 @@ import { useCart } from '../../context/CartContext';
 import { useApp } from '../../context/AppContext';
 import { apiService } from '../../services/api';
 import { showAlert } from '../../utils/alert';
+import { TactileButton } from '../../components/common/TactileButton';
+
+const StaggeredBillRow = ({ children, delay = 0, style }) => {
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const transY = useRef(new Animated.Value(8)).current;
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 250,
+          useNativeDriver: Platform.OS !== 'web'
+        }),
+        Animated.timing(transY, {
+          toValue: 0,
+          duration: 250,
+          useNativeDriver: Platform.OS !== 'web'
+        })
+      ]).start();
+    }, delay);
+    return () => clearTimeout(timer);
+  }, [delay]);
+
+  return (
+    <Animated.View
+      style={[
+        style,
+        {
+          opacity: fadeAnim,
+          transform: [{ translateY: transY }]
+        }
+      ]}
+    >
+      {children}
+    </Animated.View>
+  );
+};
+
+const AnimatedPayOption = ({ opt, isSelected, onSelect }) => {
+  const scaleAnim = useRef(new Animated.Value(isSelected ? 1.02 : 1)).current;
+
+  useEffect(() => {
+    Animated.spring(scaleAnim, {
+      toValue: isSelected ? 1.02 : 1,
+      friction: 5,
+      tension: 200,
+      useNativeDriver: Platform.OS !== 'web'
+    }).start();
+  }, [isSelected]);
+
+  return (
+    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+      <TouchableOpacity
+        style={[
+          styles.payOption,
+          isSelected && styles.payOptionSelected,
+          isSelected && {
+            shadowColor: colors.primary,
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.18,
+            shadowRadius: 6,
+            elevation: 3
+          }
+        ]}
+        onPress={onSelect}
+        activeOpacity={0.8}
+      >
+        <View
+          style={[
+            styles.payIconCircle,
+            isSelected ? { backgroundColor: '#dcfce7' } : { backgroundColor: '#f1f5f9' }
+          ]}
+        >
+          <Ionicons
+            name={opt.icon}
+            size={20}
+            color={isSelected ? colors.primary : '#64748b'}
+          />
+        </View>
+
+        <View style={{ flex: 1, marginLeft: 12 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Text style={[styles.payTitle, isSelected && styles.payTitleSelected]}>
+              {opt.title}
+            </Text>
+            {opt.tag && (
+              <View style={[styles.payTag, { backgroundColor: opt.tagColor || '#16a34a' }]}>
+                <Text style={styles.payTagText}>{opt.tag}</Text>
+              </View>
+            )}
+          </View>
+          <Text style={styles.paySub}>{opt.sub}</Text>
+        </View>
+
+        <View
+          style={[
+            styles.radioCircle,
+            isSelected && { borderColor: colors.primary, backgroundColor: colors.primary }
+          ]}
+        >
+          {isSelected && <View style={styles.radioDot} />}
+        </View>
+      </TouchableOpacity>
+    </Animated.View>
+  );
+};
 
 export const CheckoutScreen = ({ navigation }) => {
   const { items, vendorId, vendorName, billSummary, placeOrder } = useCart();
@@ -44,6 +152,28 @@ export const CheckoutScreen = ({ navigation }) => {
 
   // Post-Order Confirmation Receipt Modal
   const [confirmedOrder, setConfirmedOrder] = useState(null);
+  const receiptScale = useRef(new Animated.Value(0.88)).current;
+  const receiptOpacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (confirmedOrder) {
+      receiptScale.setValue(0.88);
+      receiptOpacity.setValue(0);
+      Animated.parallel([
+        Animated.spring(receiptScale, {
+          toValue: 1,
+          friction: 5,
+          tension: 180,
+          useNativeDriver: Platform.OS !== 'web'
+        }),
+        Animated.timing(receiptOpacity, {
+          toValue: 1,
+          duration: 250,
+          useNativeDriver: Platform.OS !== 'web'
+        })
+      ]).start();
+    }
+  }, [confirmedOrder]);
 
   const grandTotal = billSummary?.grandTotal ?? billSummary?.total ?? 0;
 
@@ -302,53 +432,14 @@ export const CheckoutScreen = ({ navigation }) => {
                 sub: 'Pay cash or scan QR on arrival',
                 tag: null
               }
-            ].map((opt) => {
-              const isSelected = paymentMethod === opt.id;
-              return (
-                <TouchableOpacity
-                  key={opt.id}
-                  style={[styles.payOption, isSelected && styles.payOptionSelected]}
-                  onPress={() => setPaymentMethod(opt.id)}
-                  activeOpacity={0.8}
-                >
-                  <View
-                    style={[
-                      styles.payIconCircle,
-                      isSelected ? { backgroundColor: '#dcfce7' } : { backgroundColor: '#f1f5f9' }
-                    ]}
-                  >
-                    <Ionicons
-                      name={opt.icon}
-                      size={20}
-                      color={isSelected ? colors.primary : '#64748b'}
-                    />
-                  </View>
-
-                  <View style={{ flex: 1, marginLeft: 12 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Text style={[styles.payTitle, isSelected && styles.payTitleSelected]}>
-                        {opt.title}
-                      </Text>
-                      {opt.tag && (
-                        <View style={[styles.payTag, { backgroundColor: opt.tagColor || '#16a34a' }]}>
-                          <Text style={styles.payTagText}>{opt.tag}</Text>
-                        </View>
-                      )}
-                    </View>
-                    <Text style={styles.paySub}>{opt.sub}</Text>
-                  </View>
-
-                  <View
-                    style={[
-                      styles.radioCircle,
-                      isSelected && { borderColor: colors.primary, backgroundColor: colors.primary }
-                    ]}
-                  >
-                    {isSelected && <View style={styles.radioDot} />}
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
+            ].map((opt) => (
+              <AnimatedPayOption
+                key={opt.id}
+                opt={opt}
+                isSelected={paymentMethod === opt.id}
+                onSelect={() => setPaymentMethod(opt.id)}
+              />
+            ))}
           </View>
         </View>
 
@@ -361,12 +452,12 @@ export const CheckoutScreen = ({ navigation }) => {
             </View>
           </View>
 
-          <View style={styles.billRow}>
+          <StaggeredBillRow delay={0} style={styles.billRow}>
             <Text style={styles.billText}>Item Total ({billSummary.totalCount} items)</Text>
             <Text style={styles.billVal}>₹{billSummary.itemsTotal ?? billSummary.subtotal ?? 0}</Text>
-          </View>
+          </StaggeredBillRow>
 
-          <View style={styles.billRow}>
+          <StaggeredBillRow delay={60} style={styles.billRow}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               <Text style={styles.billText}>Delivery Partner Fee</Text>
               {billSummary.deliveryFee === 0 && (
@@ -383,24 +474,24 @@ export const CheckoutScreen = ({ navigation }) => {
             >
               {billSummary.deliveryFee === 0 ? '₹0' : `₹${billSummary.deliveryFee}`}
             </Text>
-          </View>
+          </StaggeredBillRow>
 
           {billSummary.taxes > 0 && (
-            <View style={styles.billRow}>
+            <StaggeredBillRow delay={120} style={styles.billRow}>
               <Text style={styles.billText}>Govt. Restaurant GST (5%)</Text>
               <Text style={styles.billVal}>₹{billSummary.taxes}</Text>
-            </View>
+            </StaggeredBillRow>
           )}
 
           <View style={styles.dashedLine} />
 
-          <View style={styles.totalRow}>
+          <StaggeredBillRow delay={180} style={styles.totalRow}>
             <View>
               <Text style={styles.totalText}>Total Payable</Text>
               <Text style={styles.totalSub}>All inclusive of taxes & fees</Text>
             </View>
             <Text style={styles.totalAmount}>₹{grandTotal}</Text>
-          </View>
+          </StaggeredBillRow>
         </View>
 
         <View style={styles.safetyCard}>
@@ -420,23 +511,23 @@ export const CheckoutScreen = ({ navigation }) => {
             <Text style={styles.footerMethod}>Via {paymentMethod}</Text>
           </View>
 
-          <TouchableOpacity
+          <TactileButton
             style={[styles.payBtn, loading && styles.disabledBtn]}
             onPress={handleInitiatePayment}
             disabled={loading}
-            activeOpacity={0.85}
+            rippleColor="rgba(255, 255, 255, 0.35)"
           >
             {loading ? (
               <ActivityIndicator color="#ffffff" size="small" />
             ) : (
-              <>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
                 <Text style={styles.payBtnText}>
                   {paymentMethod === 'COD' ? 'Confirm COD Order' : `Pay ₹${grandTotal} & Place Order`}
                 </Text>
                 <Ionicons name="arrow-forward" size={18} color="#ffffff" />
-              </>
+              </View>
             )}
-          </TouchableOpacity>
+          </TactileButton>
         </View>
       </View>
 
@@ -637,7 +728,15 @@ export const CheckoutScreen = ({ navigation }) => {
       {/* 6. POST-PAYMENT ORDER RECEIPT & CONFIRMATION MODAL */}
       <Modal visible={!!confirmedOrder} transparent animationType="fade">
         <View style={styles.modalOverlay}>
-          <View style={styles.receiptCard}>
+          <Animated.View
+            style={[
+              styles.receiptCard,
+              {
+                opacity: receiptOpacity,
+                transform: [{ scale: receiptScale }]
+              }
+            ]}
+          >
             <View style={styles.receiptHeader}>
               <View style={styles.receiptTickCircle}>
                 <Ionicons name="checkmark" size={32} color="#ffffff" />
@@ -682,15 +781,17 @@ export const CheckoutScreen = ({ navigation }) => {
               </View>
             </View>
 
-            <TouchableOpacity
+            <TactileButton
               style={styles.trackOrderBtn}
               onPress={navigateToLiveTracking}
-              activeOpacity={0.85}
+              rippleColor="rgba(255, 255, 255, 0.35)"
             >
-              <Text style={styles.trackOrderBtnText}>Track Live Order In Real-Time</Text>
-              <Ionicons name="arrow-forward" size={18} color="#ffffff" />
-            </TouchableOpacity>
-          </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                <Text style={styles.trackOrderBtnText}>Track Live Order In Real-Time</Text>
+                <Ionicons name="arrow-forward" size={18} color="#ffffff" />
+              </View>
+            </TactileButton>
+          </Animated.View>
         </View>
       </Modal>
     </SafeAreaView>

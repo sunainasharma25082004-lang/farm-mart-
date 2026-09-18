@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
+import { View, StyleSheet, Platform, Animated } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,6 +10,39 @@ import { colors } from '../theme/colors';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
+
+const AnimatedPartnerTabIcon = ({ focused, iconName, color, size }) => {
+  const scaleAnim = useRef(new Animated.Value(focused ? 1.05 : 1.0)).current;
+
+  useEffect(() => {
+    if (focused) {
+      Animated.sequence([
+        Animated.timing(scaleAnim, {
+          toValue: 1.22,
+          duration: 120,
+          useNativeDriver: Platform.OS !== 'web'
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 1.0,
+          friction: 3.5,
+          tension: 200,
+          useNativeDriver: Platform.OS !== 'web'
+        })
+      ]).start();
+    }
+  }, [focused]);
+
+  return (
+    <Animated.View
+      style={[
+        { transform: [{ scale: scaleAnim }] },
+        focused && styles.activeIconWrap
+      ]}
+    >
+      <Ionicons name={iconName} size={size || 22} color={color} />
+    </Animated.View>
+  );
+};
 
 const PartnerTabs = () => {
   return (
@@ -25,12 +59,12 @@ const PartnerTabs = () => {
           paddingBottom: 8,
           paddingTop: 6
         },
-        tabBarIcon: ({ color, size }) => {
+        tabBarIcon: ({ color, size, focused }) => {
           let iconName = 'storefront-outline';
-          if (route.name === 'Dashboard') iconName = 'storefront-outline';
-          else if (route.name === 'Inventory') iconName = 'list-outline';
-          else if (route.name === 'Settlements') iconName = 'calendar-outline';
-          return <Ionicons name={iconName} size={size || 22} color={color} />;
+          if (route.name === 'Dashboard') iconName = focused ? 'storefront' : 'storefront-outline';
+          else if (route.name === 'Inventory') iconName = focused ? 'list' : 'list-outline';
+          else if (route.name === 'Settlements') iconName = focused ? 'calendar' : 'calendar-outline';
+          return <AnimatedPartnerTabIcon focused={focused} iconName={iconName} color={color} size={size} />;
         }
       })}
     >
@@ -43,9 +77,26 @@ const PartnerTabs = () => {
 
 export const PartnerNavigator = () => {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator
+      screenOptions={{
+        headerShown: false,
+        animation: 'slide_from_right',
+        animationDuration: 250,
+        gestureEnabled: true,
+        fullScreenGestureEnabled: true
+      }}
+    >
       <Stack.Screen name="PartnerTabs" component={PartnerTabs} />
       <Stack.Screen name="AddProduct" component={AddProductScreen} />
     </Stack.Navigator>
   );
 };
+
+const styles = StyleSheet.create({
+  activeIconWrap: {
+    backgroundColor: 'rgba(234, 88, 12, 0.12)',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 3
+  }
+});

@@ -1,14 +1,17 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   Modal,
   TouchableOpacity,
-  TouchableWithoutFeedback
+  TouchableWithoutFeedback,
+  Animated,
+  Platform
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
+import { TactileButton } from './common/TactileButton';
 
 export const CartMergeModal = ({
   visible,
@@ -20,57 +23,85 @@ export const CartMergeModal = ({
   onKeepGuestCart,
   onClose
 }) => {
+  const slideAnim = useRef(new Animated.Value(120)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (visible) {
+      slideAnim.setValue(120);
+      fadeAnim.setValue(0);
+      Animated.parallel([
+        Animated.spring(slideAnim, {
+          toValue: 0,
+          friction: 6,
+          tension: 180,
+          useNativeDriver: Platform.OS !== 'web'
+        }),
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 220,
+          useNativeDriver: Platform.OS !== 'web'
+        })
+      ]).start();
+    }
+  }, [visible]);
+
   if (!visible) return null;
 
   return (
     <Modal
       transparent
       visible={visible}
-      animationType="fade"
+      animationType="none"
       onRequestClose={onClose}
     >
-      <TouchableWithoutFeedback onPress={onClose}>
-        <View style={styles.overlay}>
-          <TouchableWithoutFeedback>
-            <View style={styles.modalCard}>
-              <View style={styles.iconCircle}>
-                <Ionicons name="swap-horizontal" size={28} color="#b45309" />
-              </View>
+      <Animated.View style={[styles.overlay, { opacity: fadeAnim }]}>
+        <TouchableWithoutFeedback onPress={onClose}>
+          <View style={StyleSheet.absoluteFill} />
+        </TouchableWithoutFeedback>
 
-              <Text style={styles.title}>Cart me antar mila</Text>
+        <Animated.View
+          style={[
+            styles.modalCard,
+            { transform: [{ translateY: slideAnim }] }
+          ]}
+        >
+          <View style={styles.iconCircle}>
+            <Ionicons name="swap-horizontal" size={28} color="#b45309" />
+          </View>
 
-              <Text style={styles.body}>
-                Aapke account me pehle se{' '}
-                <Text style={styles.boldText}>{currentVendorName}</Text> ke{' '}
-                <Text style={styles.boldText}>{currentVendorItemCount} items</Text> hain.{'\n\n'}
-                Abhi aapne{' '}
-                <Text style={styles.boldText}>{guestVendorName}</Text> ke{' '}
-                <Text style={styles.boldText}>{guestVendorItemCount} items</Text> add kiye the. S-farmart 24 ek order me ek hi store se delivery karta hai. Kaunsa cart rakhna chahte hain?
-              </Text>
+          <Text style={styles.title}>Cart me antar mila</Text>
 
-              <View style={styles.btnRow}>
-                <TouchableOpacity
-                  style={styles.keepAccountBtn}
-                  onPress={onKeepAccountCart}
-                  activeOpacity={0.85}
-                >
-                  <Text style={styles.keepAccountBtnText}>Account Cart Rakhein</Text>
-                  <Text style={styles.subtext}>({currentVendorName})</Text>
-                </TouchableOpacity>
+          <Text style={styles.body}>
+            Aapke account me pehle se{' '}
+            <Text style={styles.boldText}>{currentVendorName}</Text> ke{' '}
+            <Text style={styles.boldText}>{currentVendorItemCount} items</Text> hain.{'\n\n'}
+            Abhi aapne{' '}
+            <Text style={styles.boldText}>{guestVendorName}</Text> ke{' '}
+            <Text style={styles.boldText}>{guestVendorItemCount} items</Text> add kiye the. S-farmart 24 ek order me ek hi store se delivery karta hai. Kaunsa cart rakhna chahte hain?
+          </Text>
 
-                <TouchableOpacity
-                  style={styles.keepGuestBtn}
-                  onPress={onKeepGuestCart}
-                  activeOpacity={0.85}
-                >
-                  <Text style={styles.keepGuestBtnText}>Naya Cart Rakhein</Text>
-                  <Text style={styles.guestSubtext}>({guestVendorName})</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </TouchableWithoutFeedback>
-        </View>
-      </TouchableWithoutFeedback>
+          <View style={styles.btnRow}>
+            <TactileButton
+              style={styles.keepAccountBtn}
+              onPress={onKeepAccountCart}
+              rippleColor="rgba(100, 116, 139, 0.2)"
+            >
+              <Text style={styles.keepAccountBtnText}>Account Cart Rakhein</Text>
+              <Text style={styles.subtext}>({currentVendorName})</Text>
+            </TactileButton>
+
+            <TactileButton
+              style={styles.keepGuestBtn}
+              onPress={onKeepGuestCart}
+              rippleColor="rgba(255, 255, 255, 0.35)"
+            >
+              <Text style={styles.keepGuestBtnText}>Naya Cart Rakhein</Text>
+              <Text style={styles.guestSubtext}>({guestVendorName})</Text>
+            </TactileButton>
+          </View>
+        </Animated.View>
+      </Animated.View>
     </Modal>
   );
 };

@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { useCart } from '../context/CartContext';
 import { showAlert } from '../utils/alert';
+import { TactileButton } from './common/TactileButton';
 
 export const ProductCard = ({ product, onPress, compact = false }) => {
   if (!product) return null;
@@ -81,6 +82,7 @@ export const ProductCard = ({ product, onPress, compact = false }) => {
                 style={styles.qtyBtn}
                 onPress={() => updateQuantity(product._id || product.id, -1)}
                 hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                activeOpacity={0.7}
               >
                 <Ionicons name="remove" size={14} color="#ffffff" />
               </TouchableOpacity>
@@ -95,20 +97,21 @@ export const ProductCard = ({ product, onPress, compact = false }) => {
                   addToCart(product);
                 }}
                 hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                activeOpacity={0.7}
               >
                 <Ionicons name="add" size={14} color="#ffffff" />
               </TouchableOpacity>
             </View>
           ) : (
-            <TouchableOpacity
+            <TactileButton
               style={[styles.addButton, isDifferentVendor && styles.addButtonOutline]}
               onPress={() => addToCart(product)}
-              activeOpacity={0.85}
+              rippleColor="rgba(22, 163, 74, 0.28)"
             >
               <Text style={[styles.addButtonText, isDifferentVendor && styles.addButtonTextOutline]}>
                 {isDifferentVendor ? '+ ADD' : 'ADD'}
               </Text>
-            </TouchableOpacity>
+            </TactileButton>
           )}
         </View>
       </View>

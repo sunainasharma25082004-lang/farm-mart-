@@ -1,5 +1,5 @@
-import React from 'react';
-import { ScrollView, TouchableOpacity, Text, StyleSheet, View } from 'react-native';
+import React, { useRef } from 'react';
+import { ScrollView, Text, StyleSheet, View, Animated, Pressable, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 
@@ -13,6 +13,91 @@ const DEFAULT_CATEGORIES = [
   { id: 'bakery', name: 'Fresh Bakery', icon: 'disc-outline' },
   { id: 'sweets', name: 'Desi Sweets', icon: 'gift-outline' }
 ];
+
+const AnimatedChipItem = ({ cat, isSelected, onPress }) => {
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const iconScaleAnim = useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 0.92,
+      useNativeDriver: Platform.OS !== 'web',
+      friction: 5,
+      tension: 220
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    // Satisfying bounce: 0.92 -> 1.10 -> 1.0
+    Animated.sequence([
+      Animated.spring(scaleAnim, {
+        toValue: 1.10,
+        useNativeDriver: Platform.OS !== 'web',
+        friction: 4,
+        tension: 240
+      }),
+      Animated.spring(scaleAnim, {
+        toValue: 1.0,
+        useNativeDriver: Platform.OS !== 'web',
+        friction: 5,
+        tension: 180
+      })
+    ]).start();
+
+    // Icon pop
+    Animated.sequence([
+      Animated.timing(iconScaleAnim, {
+        toValue: 1.25,
+        duration: 120,
+        useNativeDriver: Platform.OS !== 'web'
+      }),
+      Animated.spring(iconScaleAnim, {
+        toValue: 1.0,
+        friction: 4,
+        tension: 200,
+        useNativeDriver: Platform.OS !== 'web'
+      })
+    ]).start();
+  };
+
+  return (
+    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+      <Pressable
+        style={({ pressed }) => [
+          styles.chip,
+          isSelected ? styles.selectedChip : styles.unselectedChip,
+          Platform.OS === 'web' && {
+            cursor: 'pointer',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)'
+          }
+        ]}
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+      >
+        <Animated.View
+          style={[
+            styles.iconWrap,
+            isSelected && styles.iconWrapSelected,
+            { transform: [{ scale: iconScaleAnim }] }
+          ]}
+        >
+          {cat.icon && !/^[a-z0-9-]+$/.test(cat.icon) ? (
+            <Text style={{ fontSize: 13 }}>{cat.icon}</Text>
+          ) : (
+            <Ionicons
+              name={cat.icon || 'basket-outline'}
+              size={15}
+              color={isSelected ? colors.primaryDark : colors.textSecondary}
+            />
+          )}
+        </Animated.View>
+        <Text style={[styles.text, isSelected && styles.selectedText]}>{cat.name}</Text>
+      </Pressable>
+    </Animated.View>
+  );
+};
 
 export const CategoryChip = ({ categories: propCats, selectedCategory, onSelectCategory }) => {
   const displayCategories = (propCats && propCats.length > 0)
@@ -33,25 +118,12 @@ export const CategoryChip = ({ categories: propCats, selectedCategory, onSelectC
         const catKey = cat.id || cat.slug || cat._id;
         const isSelected = selectedCategory === catKey;
         return (
-          <TouchableOpacity
+          <AnimatedChipItem
             key={catKey}
-            style={[styles.chip, isSelected && styles.selectedChip]}
+            cat={cat}
+            isSelected={isSelected}
             onPress={() => onSelectCategory(catKey)}
-            activeOpacity={0.8}
-          >
-            <View style={[styles.iconWrap, isSelected && styles.iconWrapSelected]}>
-              {cat.icon && !/^[a-z0-9-]+$/.test(cat.icon) ? (
-                <Text style={{ fontSize: 13 }}>{cat.icon}</Text>
-              ) : (
-                <Ionicons
-                  name={cat.icon || 'basket-outline'}
-                  size={14}
-                  color={isSelected ? colors.primaryDark : colors.textSecondary}
-                />
-              )}
-            </View>
-            <Text style={[styles.text, isSelected && styles.selectedText]}>{cat.name}</Text>
-          </TouchableOpacity>
+          />
         );
       })}
     </ScrollView>
@@ -61,42 +133,59 @@ export const CategoryChip = ({ categories: propCats, selectedCategory, onSelectC
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    gap: 8
+    paddingVertical: 10,
+    gap: 10
   },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.card,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 22,
+    paddingHorizontal: 13,
+    paddingVertical: 8,
+    borderRadius: 24,
+    gap: 7,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 2
+  },
+  unselectedChip: {
+    backgroundColor: 'rgba(255, 255, 255, 0.88)',
     borderWidth: 1,
-    borderColor: colors.border,
-    gap: 6
+    borderColor: 'rgba(226, 232, 240, 0.95)'
   },
   selectedChip: {
     backgroundColor: colors.primaryLight,
-    borderColor: colors.primary
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    shadowColor: colors.primary,
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 3
   },
   iconWrap: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: colors.background,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#f1f5f9',
     alignItems: 'center',
     justifyContent: 'center'
   },
   iconWrapSelected: {
-    backgroundColor: '#ffffff'
+    backgroundColor: '#ffffff',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 1
   },
   text: {
-    fontSize: 12,
+    fontSize: 12.5,
     fontWeight: '500',
     color: colors.textSecondary
   },
   selectedText: {
     color: colors.primaryDark,
-    fontWeight: '500'
+    fontWeight: '700'
   }
 });
