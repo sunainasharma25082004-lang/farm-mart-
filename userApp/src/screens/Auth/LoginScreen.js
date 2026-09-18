@@ -29,18 +29,27 @@ export const LoginScreen = ({ navigation }) => {
   const [focusedInput, setFocusedInput] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const handleDemoLogin = () => {
+  const navigateAfterLogin = () => {
+    if (navigation && typeof navigation.canGoBack === 'function' && navigation.canGoBack()) {
+      navigation.goBack();
+    } else if (navigation && typeof navigation.navigate === 'function') {
+      navigation.navigate("MainTabs");
+    }
+  };
+
+  const handleDemoLogin = async () => {
     setPhone("9876543210");
     setPassword("demo123");
-    loginUser({
-      name: "Rajesh Kumar",
-      fullName: "Rajesh Kumar",
-      phone: "9876543210",
-      email: "rajesh.customer@sfarmart.in",
-      villageHub: "Tarn Taran Village Hub",
-      address: "Flat 402, Green Avenue, Model Town",
-      walletBalance: 250
-    });
+    setLoading(true);
+    try {
+      await loginUser("9876543210", "demo123");
+      navigateAfterLogin();
+    } catch (e) {
+      console.warn("Demo login error:", e);
+      navigateAfterLogin();
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleLogin = async () => {
@@ -51,7 +60,7 @@ export const LoginScreen = ({ navigation }) => {
 
     // Direct Instant Match for Dummy / Demo Account
     if (phone === "9876543210" || phone === "demo" || password === "demo123") {
-      handleDemoLogin();
+      await handleDemoLogin();
       return;
     }
 
@@ -60,11 +69,11 @@ export const LoginScreen = ({ navigation }) => {
       const loggedIn = await loginUser(phone, password);
       setLoading(false);
       if (loggedIn) {
-        navigation.goBack();
+        navigateAfterLogin();
       }
     } catch (error) {
       setLoading(false);
-      handleDemoLogin();
+      await handleDemoLogin();
     }
   };
 
@@ -119,6 +128,23 @@ export const LoginScreen = ({ navigation }) => {
               doorstep.
             </Text>
           </View>
+
+          {/* 1-Tap Quick Customer Login Banner */}
+          <TouchableOpacity
+            style={styles.heroDemoLoginBtn}
+            onPress={handleDemoLogin}
+            disabled={loading}
+            activeOpacity={0.85}
+          >
+            <View style={styles.heroDemoIcon}>
+              <Ionicons name="flash" size={20} color="#ffffff" />
+            </View>
+            <View style={{ flex: 1, marginLeft: 12 }}>
+              <Text style={styles.heroDemoTitle}>⚡ 1-Tap Instant Customer Login</Text>
+              <Text style={styles.heroDemoSub}>Log in as Rajesh Kumar • 9876543210</Text>
+            </View>
+            <Ionicons name="arrow-forward-circle" size={26} color="#16a34a" />
+          </TouchableOpacity>
 
           {/* Login Card Form */}
           <View style={styles.card}>
@@ -301,6 +327,40 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: Platform.OS === "ios" ? 12 : 20,
     paddingBottom: 30,
+  },
+  heroDemoLoginBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f0fdf4',
+    borderWidth: 1.5,
+    borderColor: '#86efac',
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 16,
+    shadowColor: '#16a34a',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    elevation: 3
+  },
+  heroDemoIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: '#16a34a',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  heroDemoTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#15803d'
+  },
+  heroDemoSub: {
+    fontSize: 11.5,
+    color: '#166534',
+    marginTop: 2,
+    fontWeight: '500'
   },
   headerBar: {
     flexDirection: "row",

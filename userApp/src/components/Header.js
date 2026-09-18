@@ -10,6 +10,7 @@ import {
   Pressable,
   Animated,
   Platform,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
@@ -26,7 +27,25 @@ export const Header = ({
   showCart = true,
   showBack = false,
 }) => {
-  const { userProfile, setUserProfile } = useApp();
+  const { userProfile, setUserProfile, isAuthenticated, loginUser } = useApp();
+  const [isQuickLoggingIn, setIsQuickLoggingIn] = useState(false);
+
+  const handleHeaderQuickLogin = async () => {
+    setIsQuickLoggingIn(true);
+    try {
+      if (typeof loginUser === "function") {
+        await loginUser("9876543210", "demo123");
+      } else if (navigation && typeof navigation.navigate === "function") {
+        navigation.navigate("Login");
+      }
+    } catch (e) {
+      if (navigation && typeof navigation.navigate === "function") {
+        navigation.navigate("Login");
+      }
+    } finally {
+      setIsQuickLoggingIn(false);
+    }
+  };
   const { billSummary } = useCart();
   const cartItemCount = billSummary?.totalCount || 0;
   const canGoBack = Boolean(showBack);
@@ -201,33 +220,68 @@ export const Header = ({
           )}
         </View>
 
-        {showCart ? (
-          <GlassIconBtn
-            size={42}
-            borderRadius={12}
-            onPress={() => navigation && navigation.navigate("Cart")}
-          >
-            <Ionicons
-              name="cart-outline"
-              size={22}
-              color={colors.textPrimary}
-            />
-            {cartItemCount > 0 && (
-              <Animated.View
-                style={[
-                  styles.badge,
-                  { transform: [{ scale: badgeScaleAnim }] }
-                ]}
-              >
-                <Text style={styles.badgeText}>
-                  {cartItemCount > 9 ? "9+" : cartItemCount}
-                </Text>
-              </Animated.View>
-            )}
-          </GlassIconBtn>
-        ) : (
-          <View style={styles.cartPlaceholder} />
-        )}
+        <View style={styles.rightActionsRow}>
+          {!userProfile ? (
+            <TouchableOpacity
+              style={styles.loginQuickChip}
+              onPress={handleHeaderQuickLogin}
+              disabled={isQuickLoggingIn}
+              activeOpacity={0.8}
+            >
+              {isQuickLoggingIn ? (
+                <ActivityIndicator size="small" color="#15803d" />
+              ) : (
+                <>
+                  <Ionicons name="flash" size={13} color="#16a34a" />
+                  <Text style={styles.loginQuickChipText}>1-Tap Login</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={styles.userAvatarChip}
+              onPress={() => {
+                if (navigation && typeof navigation.navigate === "function") {
+                  navigation.navigate("ProfileWallet");
+                }
+              }}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.userAvatarInitial}>
+                {(userProfile?.name || 'R').charAt(0).toUpperCase()}
+              </Text>
+              <View style={styles.userOnlineDot} />
+            </TouchableOpacity>
+          )}
+
+          {showCart ? (
+            <GlassIconBtn
+              size={42}
+              borderRadius={12}
+              onPress={() => navigation && navigation.navigate("Cart")}
+            >
+              <Ionicons
+                name="cart-outline"
+                size={22}
+                color={colors.textPrimary}
+              />
+              {cartItemCount > 0 && (
+                <Animated.View
+                  style={[
+                    styles.badge,
+                    { transform: [{ scale: badgeScaleAnim }] },
+                  ]}
+                >
+                  <Text style={styles.badgeText}>
+                    {cartItemCount > 9 ? "9+" : cartItemCount}
+                  </Text>
+                </Animated.View>
+              )}
+            </GlassIconBtn>
+          ) : (
+            <View style={styles.cartPlaceholder} />
+          )}
+        </View>
       </View>
 
       <Modal
@@ -431,5 +485,58 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     fontSize: 14,
     fontWeight: '500',
+  },
+  rightActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  loginQuickChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ecfdf5',
+    borderWidth: 1.2,
+    borderColor: '#86efac',
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    gap: 4,
+  },
+  loginQuickChipText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#15803d',
+  },
+  userAvatarChip: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#16a34a',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    borderWidth: 2,
+    borderColor: '#ffffff',
+    shadowColor: '#16a34a',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  userAvatarInitial: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  userOnlineDot: {
+    position: 'absolute',
+    bottom: -1,
+    right: -1,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#22c55e',
+    borderWidth: 1.5,
+    borderColor: '#ffffff',
   },
 });

@@ -16,12 +16,14 @@ import { Header } from '../../components/Header';
 import { ShoppingFromBanner } from '../../components/ShoppingFromBanner';
 import { apiService } from '../../services/api';
 import { useCart } from '../../context/CartContext';
+import { useApp } from '../../context/AppContext';
 import { ClearCartModal } from '../../components/ClearCartModal';
 import { colors } from '../../theme/colors';
 
 const { width } = Dimensions.get('window');
 
 export const HomeScreen = ({ navigation }) => {
+  const { isAuthenticated, loginUser } = useApp();
   const [categories, setCategories] = useState([]);
   const [vendors, setVendors] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -85,6 +87,38 @@ export const HomeScreen = ({ navigation }) => {
     <View style={styles.container}>
       <Header navigation={navigation} />
       <ShoppingFromBanner navigation={navigation} />
+
+      {!isAuthenticated && (
+        <View style={styles.quickLoginBanner}>
+          <View style={styles.quickLoginBannerLeft}>
+            <View style={styles.quickLoginIconBubble}>
+              <Ionicons name="flash" size={16} color="#ffffff" />
+            </View>
+            <View style={{ flex: 1, marginLeft: 10 }}>
+              <Text style={styles.quickLoginTitle}>Fast Dev & Testing Mode ⚡</Text>
+              <Text style={styles.quickLoginSub}>
+                1-tap login as Rajesh Kumar (₹250 Wallet)
+              </Text>
+            </View>
+          </View>
+          <TouchableOpacity
+            style={styles.quickLoginBtn}
+            onPress={async () => {
+              try {
+                await loginUser('9876543210', 'demo123');
+              } catch (e) {
+                if (navigation && typeof navigation.navigate === 'function') {
+                  navigation.navigate('Login');
+                }
+              }
+            }}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.quickLoginBtnText}>Instant Login</Text>
+            <Ionicons name="arrow-forward" size={13} color="#ffffff" />
+          </TouchableOpacity>
+        </View>
+      )}
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -693,5 +727,61 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontWeight: '800',
     fontSize: 15
-  }
+  },
+  quickLoginBanner: {
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 4,
+    backgroundColor: '#ecfdf5',
+    borderWidth: 1.5,
+    borderColor: '#6ee7b7',
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    shadowColor: '#10b981',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  quickLoginBannerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  quickLoginIconBubble: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#16a34a',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quickLoginTitle: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: '#065f46',
+  },
+  quickLoginSub: {
+    fontSize: 11,
+    color: '#047857',
+    marginTop: 1,
+  },
+  quickLoginBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#16a34a',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 10,
+  },
+  quickLoginBtnText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '700',
+  },
 });

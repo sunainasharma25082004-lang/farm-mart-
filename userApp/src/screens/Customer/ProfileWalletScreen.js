@@ -24,7 +24,7 @@ import { showAlert } from '../../utils/alert';
 const LOGO = require('../../../assets/farmart24_logo.jpg');
 
 export const ProfileWalletScreen = ({ navigation }) => {
-  const { userProfile, isAuthenticated, logoutUser } = useApp();
+  const { userProfile, isAuthenticated, logoutUser, loginUser } = useApp();
   const { requireLogin } = useAuthGate();
   const { clearCart } = useCart();
   const socket = useCustomerSocket();
@@ -110,12 +110,27 @@ export const ProfileWalletScreen = ({ navigation }) => {
               Log in to view your profile, wallet balance, saved addresses, and track live orders.
             </Text>
             <TouchableOpacity
+              style={styles.guest1TapDemoBtn}
+              onPress={async () => {
+                try {
+                  await loginUser('9876543210', 'demo123');
+                } catch (e) {
+                  console.warn('1-tap demo login error:', e);
+                }
+              }}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="flash" size={18} color="#ffffff" />
+              <Text style={styles.guest1TapDemoBtnText}>⚡ 1-Tap Instant Customer Login</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
               style={styles.guestLoginBtn}
               onPress={() => requireLogin({ type: 'WALLET' })}
               activeOpacity={0.85}
             >
-              <Text style={styles.guestLoginBtnText}>Log In to S-farmart 24</Text>
-              <Ionicons name="arrow-forward" size={16} color="#ffffff" />
+              <Text style={styles.guestLoginBtnText}>Phone / OTP Se Log In Karein</Text>
+              <Ionicons name="arrow-forward" size={16} color="#15803d" />
             </TouchableOpacity>
           </View>
         ) : (
@@ -662,23 +677,44 @@ const styles = StyleSheet.create({
     marginBottom: 18,
     paddingHorizontal: 12
   },
+  guest1TapDemoBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#16a34a',
+    paddingHorizontal: 20,
+    paddingVertical: 13,
+    borderRadius: 14,
+    width: '100%',
+    marginBottom: 10,
+    shadowColor: '#16a34a',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.28,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  guest1TapDemoBtnText: {
+    color: '#ffffff',
+    fontSize: 14.5,
+    fontWeight: '700',
+  },
   guestLoginBtn: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 8,
-    backgroundColor: colors.primary,
-    paddingHorizontal: 22,
-    paddingVertical: 12,
+    backgroundColor: '#f0fdf4',
+    borderWidth: 1.5,
+    borderColor: '#86efac',
+    paddingHorizontal: 18,
+    paddingVertical: 11,
     borderRadius: 14,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 4
+    width: '100%',
   },
   guestLoginBtnText: {
-    color: '#ffffff',
-    fontSize: 14.5,
-    fontWeight: '700'
-  }
+    color: '#15803d',
+    fontSize: 13.5,
+    fontWeight: '700',
+  },
 });
