@@ -62,6 +62,9 @@ export const getAllProducts = async (req, res) => {
 export const getProductById = async (req, res) => {
   try {
     const { id } = req.params;
+    if (!id || !id.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({ success: false, code: 'INVALID_ID', message: 'Invalid product ID format' });
+    }
     const product = await Product.findById(id)
       .populate('category', 'name slug icon type')
       .populate('vendor', 'storeName ownerName phone storeType isOpen rating avgPrepTimeMins minOrderValue');
@@ -72,6 +75,9 @@ export const getProductById = async (req, res) => {
 
     res.json({ success: true, product });
   } catch (error) {
+    if (error.name === 'CastError') {
+      return res.status(400).json({ success: false, code: 'INVALID_ID', message: 'Invalid product ID format' });
+    }
     res.status(500).json({ success: false, message: 'Error fetching product' });
   }
 };

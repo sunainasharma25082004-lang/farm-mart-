@@ -35,6 +35,9 @@ export const getAllVendors = async (req, res) => {
 export const getVendorById = async (req, res) => {
   try {
     const { id } = req.params;
+    if (!id || !id.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({ success: false, code: 'INVALID_ID', message: 'Invalid vendor ID format' });
+    }
     const vendor = await Vendor.findById(id).populate('categories');
 
     if (!vendor) {
@@ -43,6 +46,9 @@ export const getVendorById = async (req, res) => {
 
     res.json({ success: true, vendor });
   } catch (err) {
+    if (err.name === 'CastError') {
+      return res.status(400).json({ success: false, code: 'INVALID_ID', message: 'Invalid vendor ID format' });
+    }
     console.error('Error fetching vendor:', err);
     res.status(500).json({ success: false, message: 'Failed to fetch vendor' });
   }
@@ -51,6 +57,9 @@ export const getVendorById = async (req, res) => {
 export const getVendorProducts = async (req, res) => {
   try {
     const { id } = req.params;
+    if (!id || !id.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({ success: false, code: 'INVALID_ID', message: 'Invalid vendor ID format' });
+    }
     const { category, subCategory } = req.query;
 
     const query = { vendor: id, isActive: true };
@@ -67,6 +76,9 @@ export const getVendorProducts = async (req, res) => {
       products
     });
   } catch (err) {
+    if (err.name === 'CastError') {
+      return res.status(400).json({ success: false, code: 'INVALID_ID', message: 'Invalid vendor ID format' });
+    }
     console.error('Error fetching vendor products:', err);
     res.status(500).json({ success: false, message: 'Failed to fetch vendor products' });
   }
