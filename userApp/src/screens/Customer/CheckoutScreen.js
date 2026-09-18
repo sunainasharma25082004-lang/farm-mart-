@@ -700,8 +700,7 @@ export const CheckoutScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
-    ...(Platform.OS === 'web' ? { height: '100vh', maxHeight: '100vh', overflow: 'hidden' } : {})
+    backgroundColor: '#f8fafc'
   },
   scrollFlex: {
     flex: 1
