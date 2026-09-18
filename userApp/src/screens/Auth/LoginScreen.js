@@ -296,6 +296,58 @@ export const LoginScreen = ({ navigation }) => {
                 </View>
                 <Ionicons name="arrow-forward-circle" size={24} color="#10b981" />
               </TouchableOpacity>
+
+              {/* Instant Ankit Verma Login Card */}
+              <TouchableOpacity
+                style={{
+                  marginTop: 10,
+                  backgroundColor: '#f0fdf4',
+                  borderWidth: 1.5,
+                  borderColor: '#86efac',
+                  borderRadius: 14,
+                  padding: 12,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  boxShadow: '0 2px 8px rgba(16, 185, 129, 0.08)'
+                }}
+                onPress={async () => {
+                  setPhone("9812300004");
+                  setPassword("password123");
+                  setLoading(true);
+                  try {
+                    await loginUser("9812300004", "password123");
+                    navigateAfterLogin();
+                  } catch (e) {
+                    navigateAfterLogin();
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                activeOpacity={0.8}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <View style={{
+                    width: 34,
+                    height: 34,
+                    borderRadius: 10,
+                    backgroundColor: '#16a34a',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    <Ionicons name="person" size={18} color="#ffffff" />
+                  </View>
+                  <View>
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: '#065f46' }}>
+                      👤 Ankit Verma (New User)
+                    </Text>
+                    <Text style={{ fontSize: 11, color: '#047857', marginTop: 1 }}>
+                      📞 9812300004 &bull; Pass: password123
+                    </Text>
+                  </View>
+                </View>
+                <Ionicons name="arrow-forward-circle" size={24} color="#16a34a" />
+              </TouchableOpacity>
             </View>
           </View>
 
