@@ -1,361 +1,386 @@
-# 🌾 Farmart (Freemart) — Hyperlocal Agri & Food Commerce Ecosystem
+# 🌾 Farmart (S-farmart) — Production Hyperlocal Food & Agri Commerce Platform
 
-**Farmart** is a production-grade, hyper-local digital commerce platform (built with the Swiggy / Zomato / Blinkit model) connecting smallholder farmers, verified home chefs (Nari Shakti), and village hubs directly with consumers for fast 20–35 minute deliveries.
+**Farmart** is an enterprise-grade, hyper-local digital commerce ecosystem (engineered on the Swiggy / Zomato / Blinkit model) connecting verified local farmers, home chefs (Nari Shakti), and community producers directly with consumers for ultra-fast 20–35 minute deliveries.
 
 ---
 
 ## 📑 Master Table of Contents
-1. [Platform Architecture & System Diagram](#-platform-architecture--system-diagram)
-2. [Key Production Pillars](#-key-production-pillars)
-3. [Ecosystem Applications Summary](#-ecosystem-applications-summary)
-4. [User App (Customer Portal) — Full Functionality](#-user-app-customer-portal--full-functionality)
-5. [Partner App (Vendor/Merchant Portal) — Full Functionality](#-partner-app-vendormerchant-portal--full-functionality)
-6. [Mobile Phone Stability & Zero-Crash Architecture](#-mobile-phone-stability--zero-crash-architecture)
-7. [Testing on Real Phones (Expo Go & APK)](#-testing-on-real-phones-expo-go--apk)
-8. [MongoDB Atlas Cloud Database & Schema](#-mongodb-atlas-cloud-database--schema)
-9. [Real-time Notification & WebSocket Subsystem](#-real-time-notification--websocket-subsystem)
-10. [🔴 Single-Vendor Cart Architecture](#-single-vendor-cart-architecture)
-11. [Demo Test Credentials](#-demo-test-credentials)
-12. [Automated Acceptance Test Suite (15/15 Passing)](#-automated-acceptance-test-suite-1515-passing)
-13. [How to Run Every Service & Live Web Preview](#-how-to-run-every-service--live-web-preview)
+1. [Ecosystem Architecture & System Flow](#-ecosystem-architecture--system-flow)
+2. [Dual-App Design Philosophy & UI/UX Systems](#-dual-app-design-philosophy--uiux-systems)
+3. [Customer App (`userApp`) — UI Design & Functionality](#-customer-app-userapp--ui-design--functionality)
+4. [Partner App (`partnerApp`) — UI Design & Functionality](#-partner-app-partnerapp--ui-design--functionality)
+5. [60-Second Auto-Accept & Order Lifecycle](#-60-second-auto-accept--order-lifecycle)
+6. [Backend Transactional Engine & ACID Concurrency](#-backend-transactional-engine--acid-concurrency)
+7. [Mobile Zero-Crash Architecture (Hermes & Native Safety)](#-mobile-zero-crash-architecture-hermes--native-safety)
+8. [Master Test Suite (27/27 Tests Passing)](#-master-test-suite-2727-tests-passing)
+9. [Demo Accounts & Test Credentials](#-demo-accounts--test-credentials)
+10. [Quick Start & Running Locally](#-quick-start--running-locally)
 
 ---
 
-## 🏛️ Platform Architecture & System Diagram
+## 🏛️ Ecosystem Architecture & System Flow
+
+```
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                               FARMART COMMERCE ECOSYSTEM                               │
+├──────────────────────────────────────┬─────────────────────────────────────────────────┤
+│ 🛒 Customer App (`userApp`)          │ 🏪 Merchant / Partner App (`partnerApp`)        │
+│ Port 8081 • React Native / Expo Web  │ Port 8082 • React Native / Expo Web             │
+│ • Category-First Discovery           │ • Real-time Sound Chime & Looped Audio Alert    │
+│ • Single-Store Cart Rules            │ • 60-Second Auto-Accept for Kitchen Prep        │
+│ • Guest Browsing & Auth Gate         │ • Live Orders State Machine                     │
+│ • Interactive UPI / Card Gateway     │ • Store Online / Offline Toggle & Breathing Glow│
+│ • Live Order Tracking with OTP       │ • Inventory & Product Catalog Management        │
+└──────────────────┬───────────────────┴────────────────────────┬────────────────────────┘
+                   │                                            │
+                   │ HTTP REST + WebSockets (Socket.IO)         │ HTTP REST + WebSockets (Socket.IO)
+                   ▼                                            ▼
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                        ⚙️ Central Transactional Server (Port 5000)                      │
+│                  Node.js • Express 5 • Socket.IO • Mongoose Engine                     │
+│       Rooms: vendor:{vendorId} • customer:{userId} • order:{orderId}                   │
+│       Guards: Hard Auth Gate • ObjectId Cast Guard • Process Uncaught Traps            │
+└──────────────────────────────────────────┬─────────────────────────────────────────────┘
+                                           │
+                                           ▼
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                     🍃 MongoDB Atlas 3-Node Replica Set (Cloud Database)               │
+│                  Multi-Document ACID Transactions (session.withTransaction)            │
+│            Collections: categories • vendors • products • orders • users • carts       │
+└────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 🎨 Dual-App Design Philosophy & UI/UX Systems
+
+Both mobile applications are crafted with modern, mobile-first design aesthetics and rich visual feedback:
+
+| Design Dimension | Customer App (`userApp`) | Partner App (`partnerApp`) |
+| :--- | :--- | :--- |
+| **Primary Theme** | Emerald Fresh Green (`#16a34a`, `#15803d`) | Merchant Crimson & Amber (`#ea580c`, `#dc2626`, `#0f172a`) |
+| **Background & Surfaces**| Slate Clean White & Gray (`#f8fafc`, `#ffffff`) | Merchant Console Dark Header (`#0f172a`, `#1e293b`) |
+| **Typography** | Inter / System Sans-Serif, high-contrast weights | Heavy numerical typography for quick glance in noisy kitchens |
+| **Micro-Animations** | Category chip tap bounce, cart badge pulse | Zomato-style breathing glow ring for Store Online/Offline status |
+| **Audio & Haptics** | Soft confirmation feedback | Dual-tone looping audio chime + native pulse vibration on new order |
+| **Alert System** | Universal `showAlert` (Hermes crash-proof) | Universal `showAlert` + structured rejection selector modal |
+| **Viewport Support** | Responsive mobile-first (`412x924`) to Desktop | Responsive mobile-first (`412x924`) to Kitchen Tablet view |
+
+---
+
+## 🛒 Customer App (`userApp`) — UI Design & Functionality
+
+The Customer App delivers an ultra-fast, frictionless shopping experience for groceries, organic fruits, and home-cooked meals:
+
+### 1. Guest Browsing & Marketplace Discovery
+* **Unrestricted Browsing:** Consumers can immediately browse the marketplace, category grids, store pages, and product details without being forced into a login wall.
+* **8 Seeded Categories:**
+  1. *Fresh Fruits & Vegetables*
+  2. *Dairy, Bread & Eggs*
+  3. *Atta, Rice & Dal*
+  4. *Oil, Ghee & Masala*
+  5. *Ghar Ka Khana / Home Thali*
+  6. *Mithai & Bakery*
+  7. *Snacks & Munchies*
+  8. *Cold Drinks & Juices*
+* **Store Rails:** Featured local merchants, verified farm hubs, and Home Chef spotlights with live operating status (`🟢 Open Now` vs `🔴 Closed`).
+* **Search & Filters:** Search by product name or ingredient, with instant Vegetarian / Non-Vegetarian toggle pills.
+
+### 2. Single-Store Cart Architecture
+* **Single-Vendor Enforcement:** In accordance with hyper-local delivery logistics, a customer cart is strictly locked to **one store at a time**.
+* **Smart Conflict Interception (`ClearCartModal`):** If a customer attempts to add an item from *Vendor B* while having items from *Vendor A*, a modal cleanly explains the conflict with two choices:
+  - *Keep Current Cart:* Discards new item, preserves existing cart.
+  - *Replace Cart:* Atomically clears old items and starts fresh with the new store.
+* **Server-Side Rejection:** If a crafted HTTP request attempts to submit items from multiple vendors to `POST /api/orders`, the server strictly rejects it with `HTTP 400 MULTI_VENDOR_CART`.
+
+### 3. Contextual Auth Gate & Cart Merge
+* **Deferred Login (`useAuthGate`):** The customer is only prompted to log in when attempting checkout or viewing order history.
+* **Floating Bottom Sheet (`AuthModal`):** Smoothly mounts over the screen without reloading or resetting the cart state underneath.
+* **1-Tap Demo Login:** Instant authentication with pre-seeded demo credentials (`9876543210` / `demo123`).
+* **Cart Merge Resolution (`POST /api/cart/merge`):**
+  - If server cart is empty: Guest cart items populate server cart.
+  - If server cart belongs to the same vendor: Quantities are summed and validated against stock.
+  - If server cart belongs to another vendor: Prompts user with `CartMergeModal` (`409 MERGE_VENDOR_CONFLICT`) to choose which store cart to retain.
+
+### 4. Interactive Checkout & Multi-Gateway Simulation
+* **Bill Breakdown:**
+  - Item Total
+  - Delivery Partner Fee (`FREE` above ₹200)
+  - Govt. Restaurant GST (5% for Home Kitchens)
+  - Store Minimum Order Verification (warns with shortfall amount if subtotal < minOrderValue)
+  - Grand Total
+* **Interactive Payment Simulation:**
+  - **Instant UPI Apps:** Google Pay, PhonePe, Paytm, CRED
+  - **QR Code Scan:** Dynamic UPI QR code preview
+  - **Credit / Debit Cards:** Card entry simulation with Luhn validation
+  - **Cash on Delivery (COD):** Direct confirmation without pre-payment
+
+### 5. Order Confirmation & Live Tracking
+* **Post-Payment Receipt:** Displays confirmed Order Number (e.g. `#ORD-245439-514`), total amount paid, and unique **4-digit Delivery OTP**.
+* **Live GPS Tracking Screen (`OrderTrackingScreen.js`):**
+  - 6-step real-time progress tracker:
+    `Placed` ➔ `Accepted` ➔ `Preparing` ➔ `Ready for Rider` ➔ `Out for Delivery` ➔ `Delivered`.
+  - Driven by live WebSocket updates (`order:status_updated`).
+  - Direct call button with defensive `.catch()` for devices without cellular dialers.
+
+---
+
+## 🏪 Partner App (`partnerApp`) — UI Design & Functionality
+
+The Partner App is designed for busy store owners, home chefs, and farmers managing high order volumes:
+
+### 1. Merchant Dashboard & Multi-Store Switcher
+* **Store Switcher Bar:** 1-tap fast switching between verified merchant accounts:
+  - **Shimla Fresh Orchards:** Manpreet Singh (`9876543214`)
+  - **Sunita Home Restro & Sweets:** Sunita Sharma (`9876543211`)
+  - **Sukhwinder Organic Farms:** Sukhwinder Singh (`9876543212`)
+  - **Gurpreet Fresh Orchards:** Gurpreet Singh (`9876543213`)
+* **Real-time Metrics:** Today's Sales (₹), Active In-Flight Orders count, and Store Rating.
+
+### 2. Store Online / Offline Duty Switch
+* **Breathing Glow Pulse:** Animated pulsing glow ring indicating live store status.
+* **Instant Availability Broadcast:** Toggling store status immediately syncs across all customer devices.
+* **Offline Protection:** Any order placed while store is offline is immediately blocked with `HTTP 400 VENDOR_CLOSED`.
+
+### 3. Incoming Order Alert & Modal
+* **Instant WebSocket Event (`order:new`):** Delivered in `< 600 ms` to room `vendor:{vendorId}`.
+* **Audio Chime:** Looping Web Audio API alert sound + native mobile vibration.
+* **Itemized Breakdown:** Displays order number, customer name, phone number, item list with quantities, and total bill.
+
+### 4. Catalog & Inventory Management (`AddProductScreen.js`)
+* Add new products/dishes directly into MongoDB Atlas with price, MRP, unit, stock quantity, veg/non-veg tag, and category.
+* Immediate toggle for in-stock / out-of-stock items with instant WebSocket broadcast to customers (`product:stock`).
+
+---
+
+## ⏱️ 60-Second Auto-Accept & Order Lifecycle
+
+To prevent customer orders from being abandoned if a merchant is busy cooking or has stepped away, Farmart includes a **Dual-Layer 60-Second Auto-Accept Guarantee**:
+
+```
+[Customer Places Order] 
+          │
+          ├─────────────────────────────────────────┐
+          ▼ (Real-time Socket < 1s)                 ▼ (Server 60s Timeout)
+   [Partner App Alerts]                      [Background Daemon]
+   • Looping Audio Chime                     • Starts 60-second safety clock
+   • Full-Screen Modal Opens
+   • Countdown: "Auto-accepts in: 60s"
+          │
+   ┌──────┴──────┐
+   │             │
+[Partner Taps]   [Timer Reaches 0s]
+   │             │
+   │             ▼
+   │      [Auto-Accept Triggered]
+   │      • Sound stops
+   │      • Status becomes ACCEPTED
+   │      • Modal closes
+   │      • Moves to "Live Orders Queue"
+   │             │
+   └─────────────┼──────────────────────────┐
+                 ▼                          ▼
+       [Kitchen Preparation]       [Customer Notified]
+       • Orange button appears:    • Live tracker updates:
+         "Start Cooking & Packing"   "Order Accepted!"
+```
+
+### Complete State Machine Transitions
+1. **`NEW_ORDER`**: Incoming order, awaiting merchant acceptance or 60s auto-acceptance.
+2. **`ACCEPTED`**: Order accepted. Merchant sees the orange **"Start Cooking & Packing"** action button.
+3. **`PREPARING`**: Food is being prepared or farm produce is being sorted and weighed.
+4. **`READY_FOR_RIDER`**: Order is packed and bagged. Merchant taps **"Order is Packed"**.
+5. **`OUT_FOR_DELIVERY`**: Delivery rider has picked up the package.
+6. **`DELIVERED`**: Final terminal state upon customer Delivery OTP verification.
+7. **`REJECTED` / `CANCELLED`**: Stock is immediately and atomically refunded back into MongoDB (`+$inc: qty`).
+
+---
+
+## 🍃 Backend Transactional Engine & ACID Concurrency
+
+The backend server is built on **Node.js, Express 5, and Mongoose with MongoDB Atlas Replica Set**:
+
+### 1. Atomicity (All-or-Nothing Guarantee)
+* Order placement executes inside a native MongoDB multi-document session transaction (`session.withTransaction`).
+* Stock deductions across all line items, order document creation, vendor order counter increments, and customer cart reset succeed together or roll back completely.
+
+### 2. Consistency & Non-Negative Stock Invariant
+* Stock deductions enforce the strict invariant:
+  ```javascript
+  { _id: item.productId, stockQty: { $gte: item.qty } }
+  ```
+* Inventory can never drop below zero.
+
+### 3. Isolation & High-Concurrency Anti-Overselling
+* Tested under extreme burst conditions: 4 concurrent customer orders arriving at the exact same millisecond demanding 8 units against a stock of only 5 units.
+* **Outcome:** Exactly 2 orders succeed (4 units deducted), 2 orders cleanly fail with `INSUFFICIENT_STOCK`, and remaining stock in the database is exactly 1 unit. Zero overselling, zero partial transactions.
+
+### 4. Durability
+* All committed transactions are confirmed with `majority` write concern on MongoDB Atlas 3-node replica set with write-ahead journaling.
+
+### 5. Robust Security & Error Guards
+* **Malformed ObjectId Guard:** Inputs like `/api/vendors/invalid-slug/products` or `/api/products/not-an-id` return `HTTP 400 INVALID_ID` rather than crashing the server with 500 `CastError`.
+* **Cross-User Data Isolation:** Customers cannot read foreign orders (`HTTP 403 / 404`).
+* **Hard Auth Gate:** Unauthenticated checkout attempts are blocked with `HTTP 401 UNAUTHORIZED`.
+
+---
+
+## 🛡️ Mobile Zero-Crash Architecture (Hermes & Native Safety)
+
+To guarantee the apps never crash on physical mobile devices (Android / iOS / Mobile web), defensive mechanisms are enforced across the codebase:
+
+1. **Universal `showAlert` (Hermes Crash Hazard Eliminated):**
+   - On native React Native (Hermes engine), calling global `alert()` throws `ReferenceError: alert is not defined`.
+   - All bare `alert()` calls across both apps have been replaced with the cross-platform `showAlert` helper ([`userApp/src/utils/alert.js`](./userApp/src/utils/alert.js) and [`partnerApp/src/utils/alert.js`](./partnerApp/src/utils/alert.js)).
+2. **Deep Null Safety & Fallbacks:**
+   - Unpopulated product references guarded: `const p = it.product || {};`.
+   - Quantity fallbacks: `item.qty ?? item.quantity ?? 1`.
+   - Route params protected: `const { order = {} } = route?.params || {};`.
+   - Dialer exception catch: `.catch()` attached to `Linking.openURL('tel:...')` preventing unhandled promise rejections on tablet or SIM-less devices.
+3. **Global Process Traps:**
+   - `ErrorUtils.setGlobalHandler` attached in both mobile roots ([`userApp/App.js`](./userApp/App.js) and [`partnerApp/App.js`](./partnerApp/App.js)) to suppress unexpected native runtime exceptions.
+   - `unhandledrejection` event listeners suppress asynchronous promise errors.
+4. **Viewport Fit & Sticky Footer Protection:**
+   - Removed hardcoded `100vh` constraints that previously pushed the sticky checkout bar out of view on web containers.
+   - Pinned bottom bar and checkout buttons are 100% visible across all device resolutions.
+
+---
+
+## 🧪 Master Test Suite (27/27 Tests Passing)
+
+The repository features a single, unified, production master test suite: [`scratch/master_production_suite.cjs`](./scratch/master_production_suite.cjs).
+
+### Run the Master Suite
+```bash
+npm test
+```
+*(Or `node scratch/master_production_suite.cjs`)*
+
+### Test Results Breakdown
 
 ```text
-┌──────────────────────────────────────────────────────────────────────────────────┐
-│                             FARMART DIGITAL PLATFORM                             │
-├────────────────────────┬────────────────────────┬────────────────────────────────┤
-│ 🛒 Customer App        │ 🏪 Partner App         │ 🛵 Delivery App                │
-│ (Port 8081 - Expo Web) │ (Port 8082 - Expo Web) │ (Port 8083 - Expo Web)         │
-│ • Category-First Grid  │ • Live Order Alert Chime│ • Online/Offline Duty Switch  │
-│ • Single-Vendor Cart   │ • 60s Accept Ring      │ • Active GPS Navigation Screen │
-│ • Store Rails & Status │ • Store Open/Close     │ • Today's Earnings & Trips     │
-│ • Live Order Tracking  │ • Multi-Store Switcher │ • Customer Direct Calling      │
-└───────────┬────────────┴───────────┬────────────┴───────────────┬────────────────┘
-            │                        │                            │
-            │ HTTP + Socket.IO       │ HTTP + Socket.IO           │ HTTP
-            ▼                        ▼                            ▼
-┌──────────────────────────────────────────────────────────────────────────────────┐
-│                      ⚙️ Central Backend Server (Port 5000)                        │
-│          Node.js • Express • Socket.IO Engine • JWT Auth • Mongoose              │
-│       Rooms: vendor:{vendorId} • customer:{userId} • order:{orderId}             │
-└────────────────────────────────────┬─────────────────────────────────────────────┘
-                                     │
-                                     ▼
-┌──────────────────────────────────────────────────────────────────────────────────┐
-│                      🍃 Cloud MongoDB Atlas Database (farmart)                   │
-│      Collections: categories • vendors • products • orders • users               │
-└──────────────────────────────────────────────────────────────────────────────────┘
+======================================================================
+🌾 STARTING FARMART PRODUCTION MASTER TEST SUITE
+======================================================================
+
+--- SUITE 1: System & Server Health ---
+  ✅ PASS | [Suite 1: Health] Backend API Health Endpoint (Status: OK)
+  ✅ PASS | [Suite 1: Health] User App Metro Bundler Reachability (HTTP 200)
+  ✅ PASS | [Suite 1: Health] Partner App Metro Bundler Reachability (HTTP 200)
+  ✅ PASS | [Suite 1: Health] WebSocket Server Connection & Handshake (Connected on port 5000)
+
+--- SUITE 2: Catalog Discovery & Store Isolation ---
+  ✅ PASS | [Suite 2: Catalog] Category Listing API (>= 8 categories) (Found 8 categories)
+  ✅ PASS | [Suite 2: Catalog] Active Vendors Listing API (>= 3 vendors) (Found 4 vendors)
+  ✅ PASS | [Suite 2: Catalog] Store Isolation: Products correctly partitioned by Vendor ID (Sunita: 13 items, Sukhwinder: 12 items)
+  ✅ PASS | [Suite 2: Catalog] ObjectId Guard: Malformed IDs return 400/404 without crashing server (Vendor: HTTP 400, Product: HTTP 400)
+
+--- SUITE 3: Cart Business Logic & Minimum Order Constraints ---
+  ✅ PASS | [Suite 3: Cart] Customer Login (Rajesh Kumar: 9876543210) (Customer ID: 6aaa44d4bba7479a91ad175d)
+  ✅ PASS | [Suite 3: Cart] Vendor Login (Sunita Home Restro: 9876543211) (Vendor ID: 6aaa44d4bba7479a91ad175e)
+  ✅ PASS | [Suite 3: Cart] Single-Vendor Cart Enforcement: Server rejects cross-vendor cart (HTTP 400) (Code: MULTI_VENDOR_CART)
+  ✅ PASS | [Suite 3: Cart] Minimum Order Constraint: Server enforces vendor minimum threshold (HTTP 400) (Response: MIN_ORDER_NOT_MET)
+
+--- SUITE 4: Guest Browsing & Hard Security Auth Gate ---
+  ✅ PASS | [Suite 4: Security] Guest Browsing: Categories & menus accessible without token (HTTP 200) (Cat: 200, Vendors: 200, Menu: 200)
+  ✅ PASS | [Suite 4: Security] Hard Auth Gate: Unauthenticated order placement strictly blocked (HTTP 401) (HTTP 401)
+  ✅ PASS | [Suite 4: Security] Token Verification: Spoofed/Invalid JWT tokens rejected (HTTP 401) (HTTP 401)
+  ✅ PASS | [Suite 4: Security] Cross-User Isolation: Cannot access non-existent or foreign customer orders (HTTP 404)
+
+--- SUITE 5: High-Concurrency ACID Multi-Customer Stock Protection ---
+  ✅ PASS | [Suite 5: ACID Concurrency] Created Dedicated Stress-Test Product with limited stock (5 units) (Stock: 5)
+  ✅ PASS | [Suite 5: ACID Concurrency] Atomic Anti-Overselling: 4 concurrent orders for 8 units against stock of 5 (Success: 2, Blocked: 2, Remaining Stock: 1)
+
+--- SUITE 6: Full Real-Time Order Lifecycle & Dual-WebSocket Verification ---
+  ✅ PASS | [Suite 6: Lifecycle] Customer Order Creation (HTTP 201)
+  ✅ PASS | [Suite 6: Lifecycle] Vendor Real-Time Socket Event (order:new) received in < 1s
+  ✅ PASS | [Suite 6: Lifecycle] Partner State Machine Transitions (ACCEPTED -> PREP -> READY -> OUT -> DELIVERED)
+  ✅ PASS | [Suite 6: Lifecycle] Stock Rollback on Rejection: Stock atomically refunded ($inc: +qty)
+
+--- SUITE 7: Vendor Operational Controls & Dashboard Metrics ---
+  ✅ PASS | [Suite 7: Vendor Controls] Closed Store Order Rejection (HTTP 400 VENDOR_CLOSED) (Code: VENDOR_CLOSED)
+  ✅ PASS | [Suite 7: Vendor Controls] Vendor Dashboard Real-Time Metrics Computation
+
+--- SUITE 8: Mobile Crash Resilience & Static Safety Verification ---
+  ✅ PASS | [Suite 8: Mobile Safety] Zero Bare alert() Calls (Hermes Crash Hazard Eliminated)
+  ✅ PASS | [Suite 8: Mobile Safety] Global Error & Unhandled Rejection Interceptors in Mobile Roots
+  ✅ PASS | [Suite 8: Mobile Safety] Deep Null Safety & Fallback Guards in Checkout, Razorpay & Tracking
+
+======================================================================
+🌾 FARMART MASTER TEST SUITE - FINAL VERIFICATION REPORT
+======================================================================
+TOTAL CHECKS  : 27
+PASSED        : 27
+FAILED        : 0
+SUCCESS RATE  : 100.0%
+======================================================================
+
+🎉 ALL SUITES PASSED WITH 100% SUCCESS! EVERY COMPONENT IS PRODUCTION-READY.
 ```
 
 ---
 
-## 💎 Key Production Pillars
+## 🔑 Demo Accounts & Test Credentials
 
-1. **Category-First Discovery (8 Seeded Categories):**
-   * Fresh Fruits & Vegetables, Dairy, Bread & Eggs, Atta, Rice & Dal, Oil, Ghee & Masala, Ghar Ka Khana / Home Thali, Mithai & Bakery, Snacks & Munchies, Cold Drinks & Juices.
-2. **Vendor-First Browsing & Isolation:**
-   * Each vendor profile maintains its own isolated catalog, operating hours, delivery radius, ratings, and minimum order requirements.
-3. **🔴 Strict Single-Vendor Cart Enforcement:**
-   * **Client Protection:** Swiggy-style `ClearCartModal` intercepts items added from a different store, prompting the user to clear or cancel.
-   * **Server Protection:** HTTP 400 rejection with `MULTI_VENDOR_CART` if items belong to more than one store.
-4. **🔴 Instant Real-Time Order Notifications:**
-   * WebSocket emission to `vendor:${vendorId}` in **< 600 ms**.
-   * Web Audio API looped chime on Partner App + Native Mobile pulsed vibration.
-   * Full-screen `NewOrderModal` with 60-second circular countdown ring, item breakdown, and Accept/Reject with reason.
-   * Resilient fallback to 10s auto-polling if network is interrupted.
-5. **Atomic Inventory Control & Stock Rollback:**
-   * Atomically decrements `{ stockQty: { $gte: qty } }` upon order placement.
-   * Immediately rolls back stock via `+$inc: qty` if order is rejected or cancelled.
-
----
-
-## 📱 Ecosystem Applications Summary
-
-| Application | Folder | Tech Stack | Port | Primary Target User |
-| :--- | :--- | :--- | :--- | :--- |
-| **Customer App** | [`userApp/`](./userApp/) | React Native (Expo v57), React Native Web | `8081` | End-consumer ordering veggies, milk, food & sweets |
-| **Partner App** | [`partnerApp/`](./partnerApp/) | React Native (Expo v57), React Native Web | `8082` | Farmers, Home Chefs, Kirana Owners |
-| **Delivery App** | [`deliveryApp/`](./deliveryApp/) | React Native (Expo v57), React Native Web | `8083` | Delivery riders & field couriers |
-| **Backend REST API** | [`server/`](./server/) | Node.js, Express, Socket.IO, Mongoose | `5000` | Core transactional API & real-time server |
-| **Coming Soon Portal**| Root (`./`) | Vite, React 19, Vanilla CSS | `5173` | Brand landing & upgrade announcement page |
-
----
-
-## 🛒 User App (Customer Portal) — Full Functionality
-
-The Customer App delivers a clean, high-performance quick-commerce experience:
-
-1. **Authentication & Quick Demo Mode (`LoginScreen.js`, `SignupScreen.js`):**
-   * Phone + password authentication backed by JWT tokens.
-   * **1-Tap Demo Login:** Instantly logs in with demo credentials (`9876543210`) without requiring server connection.
-   * Offline demo fallback: If backend is unreachable, the app seamlessly authenticates with a local profile so review is never blocked.
-2. **Category & Store Discovery (`HomeScreen.js`):**
-   * Real-time GPS location reverse-geocoding via `expo-location` with manual address edit modal.
-   * 8 dynamic category icons loaded from MongoDB.
-   * Horizontal vendor rails: Popular Stores Near You, Ghar Ka Khana (Home Chefs), and Direct From Farms & Orchards.
-   * Real-time store availability indicators (`🟢 Open Now` vs `🔴 Closed`).
-3. **Category Stores View (`CategoryVendorsScreen.js`):**
-   * Filter vendors by selected category slug.
-   * Safe parameter extraction preventing blank screen crashes if accessed without params.
-4. **Isolated Storefront (`VendorStoreScreen.js`):**
-   * High-definition store banner with owner name, rating, prep time, and minimum order threshold.
-   * Sub-category filter pills (e.g. Thalis, Sweets, Breads, Dairy).
-   * Item cards with increment/decrement quantity buttons synced with global CartContext.
-   * Store-closed warning banner preventing orders when vendor toggles offline.
-5. **Product Detail View (`ProductDetailsScreen.js`):**
-   * Full product image, description, organic badges, rating, and quick-add controls.
-   * Similar products carousel.
-6. **Single-Vendor Cart Management (`CartScreen.js`, `CartContext.js`):**
-   * Strict single-vendor guard: prevents mixing items from different vendors.
-   * Dynamic bill calculation: Item Total, Delivery Fee (Free above ₹200), Govt. Restaurant GST (5% for Home Chefs), and Grand Total.
-   * Minimum order shortfall notification.
-7. **Comprehensive Checkout (`CheckoutScreen.js`):**
-   * Itemized delivery verification card.
-   * Address editor with home/work tagging.
-   * Interactive simulated Payment Gateway (UPI Apps like GPay, PhonePe, Paytm, QR Code scan, Cards, COD, and Farmart Wallet).
-   * Live post-order receipt with Delivery Confirmation OTP.
-8. **Real-time Order Tracker (`OrderTrackingScreen.js`):**
-   * 6-step live status stepper: Placed ➔ Accepted ➔ Preparing ➔ Packed ➔ On Way ➔ Delivered.
-   * Live WebSocket updates instantly transitioning order state when vendor accepts or updates.
-   * Direct calling button to contact kitchen/store directly.
-9. **Farmer & Community Producer Dashboard (`FarmerDashboardScreen.js`):**
-   * Harvest produce listing portal.
-   * Active harvest tracking, expected price per kg, assigned village hub, and Wednesday settlement schedule.
-
----
-
-## 🏪 Partner App (Vendor/Merchant Portal) — Full Functionality
-
-The Partner App is designed for kitchen chefs, local grocers, and farmers:
-
-1. **Multi-Store Demo Switcher (`VendorDashboardScreen.js`):**
-   * 1-tap store switcher at the top:
-     * **Chef Sunita Sharma** (Home Restro & Sweets — `9876543211`)
-     * **Sukhwinder Singh** (Farmer & Produce — `9876543212`)
-     * **Gurpreet Kaur** (Orchards & Juices — `9876543213`)
-2. **Instant Audio Alert & Pulsed Vibration (`soundAlert.js`, `NewOrderModal.js`):**
-   * Zomato/Swiggy-style two-tone chime sound via Web Audio API.
-   * Native mobile continuous pulsed vibration (`Vibration.vibrate([0, 500, 300, 500], true)`).
-   * Full-screen order popup with 60-second animated timer ring.
-   * One-tap Accept and Reject with structured reasons ("Item out of stock", "Kitchen closing soon", etc.).
-3. **Live Orders Queue:**
-   * Progressive state management: `NEW_ORDER` ➔ `ACCEPTED` ➔ `PREPARING` ➔ `READY_FOR_RIDER` ➔ `DELIVERED`.
-   * Real-time sync via WebSocket room `vendor:{vendorId}` with 10-second automatic polling fallback.
-4. **Store Status Toggle:**
-   * Real-time `ONLINE` / `OFFLINE` toggle switch. Changes immediately update customer view and reject incoming orders while offline.
-5. **Catalog & Inventory Management (`AddProductScreen.js`, `InventoryScreen`):**
-   * List new products with name, category, price, MRP, unit, stock quantity, and description.
-   * Instant toggle for in-stock / out-of-stock items.
-   * Delete product capability.
-6. **Wednesday Settlements Portal (`SettlementsScreen`):**
-   * Weekly payout schedule, bank account linkage tag, and past settlement history logs.
-
----
-
-## 🛡️ Mobile Phone Stability & Zero-Crash Architecture
-
-To ensure the apps **DO NOT CRASH ON PHYSICAL PHONES**, the following critical fixes have been implemented:
-
-| Potential Phone Crash Issue | Root Cause | Solution Implemented |
-| :--- | :--- | :--- |
-| **Duplicate `expo-font` Native Module** | `package.json` had `expo-font@14.x` while Expo SDK 57 expects `~57.0.4`. On phones, duplicate native modules cause startup or font-loading crashes. | Upgraded `expo-font` to `~57.0.4`, `@expo/vector-icons` to `^15.0.2`, and `react-native-safe-area-context` to `~5.7.0`. |
-| **`app.json` Schema Rejections** | Unsupported `splash` and `android.usesCleartextTraffic` at root caused config validation failures. | Cleaned `app.json` to conform strictly to Expo SDK 57 specification. |
-| **Uncaught `farmerListings` Crash** | `FarmerDashboardScreen.js` called `farmerListings.length` when the state was missing from `AppContext.js`. | Added `farmerListings` state and `addFarmerListing` handler with initial mock data in `AppContext.js`. |
-| **Broken Ternary in `RoleSelectorModal`** | A dangling ternary operator `) : (` caused a JS parse error. | Fixed ternary syntax in `RoleSelectorModal.js`. |
-| **Unsafe `route.params` Destructuring** | `ProductDetailsScreen.js` and `CategoryVendorsScreen.js` threw `Cannot read property of undefined` if accessed without parameters. | Added safe optional chaining: `route.params?.product || products[0]` and safe defaults. |
-| **Unsafe `.replace()` on Status** | `VendorDashboardScreen.js` and `FarmerDashboardScreen.js` called `order.status.replace()` which throws if status is null. | Protected with fallback: `(order?.status || 'NEW_ORDER').replace(/_/g, ' ')`. |
-| **Unsafe Cart Item ID Access** | `CartContext.js` and `VendorStoreScreen.js` accessed `it.product._id` directly. | Replaced with optional chaining `it.product?._id || it.product?.id`. |
-| **Offline / Localhost Phone Network Failure** | `localhost:5000` points to the mobile device itself, not the backend server. | Added offline fallback mock data in `AppContext`, `HomeScreen`, and `CatalogScreen` so the app gracefully operates without network errors. |
-
----
-
-## 📲 Testing on Real Phones (Expo Go & APK)
-
-### Option A: Testing via Expo Go on Same Wi-Fi (Recommended)
-
-1. Make sure your phone and development computer are connected to the **same Wi-Fi network**.
-2. Find your computer's local IP address (e.g. `192.168.1.5`):
-   ```bash
-   ipconfig
-   ```
-3. Set `EXPO_PUBLIC_API_URL` to your local IP address:
-   ```bash
-   # In userApp/.env:
-   EXPO_PUBLIC_API_URL=http://192.168.1.5:5000/api
-   ```
-4. Start the Expo development server:
-   ```bash
-   cd userApp
-   npx expo start
-   ```
-5. Open the **Expo Go** app on your Android or iOS phone and scan the displayed QR code.
-
-### Option B: Testing via Expo Tunnel (Across Different Networks)
-
-If your computer and phone are on different Wi-Fi networks (or mobile data):
-```bash
-cd userApp
-npx expo start --tunnel
-```
-*(Requires `@expo/ngrok` which is automatically prompted).*
-
----
-
-## 🍃 MongoDB Atlas Cloud Database & Schema
-
-* **Cluster URI:** Configured securely in `server/.env`.
-* **Mongoose Models:**
-  * [`server/models/Category.js`](./server/models/Category.js) — 8 categories with image, slug, isActive, and sortOrder.
-  * [`server/models/Vendor.js`](./server/models/Vendor.js) — Store name, slug, phone, owner, address, isOpen, minOrderValue, deliveryFee, ratings.
-  * [`server/models/Product.js`](./server/models/Product.js) — Name, description, price, unit, stockQty, categoryId (ref), vendorId (ref), isVeg.
-  * [`server/models/Order.js`](./server/models/Order.js) — orderNumber, userId, vendorId, items, pricing, status, address, rejectionReason.
-  * [`server/models/User.js`](./server/models/User.js) — name, phone, email, role (`customer` or `vendor`), vendorProfile.
-
-### 🔌 Key REST API Endpoints (`http://localhost:5000/api`)
-
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| `GET` | `/api/health` | Backend status & database connection health check. |
-| `GET` | `/api/categories` | Returns all 8 seeded categories. |
-| `GET` | `/api/vendors` | Returns all active vendors with open/closed status. |
-| `GET` | `/api/vendors/:id` | Returns single vendor details and catalog. |
-| `PATCH`| `/api/vendors/toggle-store` | Toggles vendor store open/closed state. |
-| `GET` | `/api/products` | Returns all active products filtered by vendor or category. |
-| `POST` | `/api/products` | Permanently saves a new item uploaded from Partner App into MongoDB. |
-| `DELETE`| `/api/products/:id` | Permanently removes an item from MongoDB. |
-| `POST` | `/api/orders` | Creates a new order (with atomic stock lock and multi-vendor validation). |
-| `GET` | `/api/orders/vendor/my-orders` | Fetches active live orders for logged-in vendor. |
-| `PATCH`| `/api/orders/:id/status` | Transitions order status (`NEW_ORDER` ➔ `ACCEPTED` ➔ `READY_FOR_RIDER` ➔ `DELIVERED`). |
-
----
-
-## 📡 Real-time Notification & WebSocket Subsystem
-
-### Socket Rooms
-* `vendor:${vendorId}` — Receives instant `order:new` payloads when customer checks out.
-* `customer:${userId}` — Receives `order:status` updates as vendor accepts or prepares food.
-* `order:${orderId}` — Dedicated order tracking room.
-
-### Events
-* `order:new` — Emitted to vendor room upon successful checkout.
-* `order:status` — Emitted to customer room on order state changes.
-* `vendor:toggle` — Broadcasts vendor open/close state change.
-
----
-
-## 🔴 Single-Vendor Cart Architecture
-
-```
-[Customer clicks ADD on Sunita's Paneer Butter Masala]
-                      │
-                      ▼
-Cart stores: vendorId = Sunita._id, vendorName = "Sunita Home Restro"
-                      │
-                      ▼
-[Customer navigates to Sukhwinder's Farm and clicks ADD on Spinach]
-                      │
-                      ▼
-CartContext detects: product.vendorId !== cart.vendorId
-                      │
-                      ▼
-Swiggy-style ClearCartModal Pops Up:
-"Replace items in cart? Your cart contains items from Sunita Home Restro. Do you want to discard them and add items from Sukhwinder Organic Farms?"
- ├── [Cancel] ➔ Retains Sunita's items
- └── [Clear & Add] ➔ Empties cart and adds Spinach
-                      │
-                      ▼
-Server Validation: POST /api/orders
-If multiple vendorIds found: Rejects with HTTP 400 { success: false, code: "MULTI_VENDOR_CART" }
-```
-
----
-
-## 🔑 Demo Test Credentials
-
-### 🛒 1. Customer Account (`userApp` — `http://localhost:8081`)
+### 🛒 Customer Account (`userApp`)
+* **URL:** [http://localhost:8081](http://localhost:8081)
 * **Phone:** `9876543210`
 * **Password:** `demo123`
-* **Name:** `Rajesh Kumar`
-* **Saved Address:** `Flat 402, Green Avenue, Model Town, Ludhiana`
-* ⚡ **1-Tap Login:** Click the **"⚡ 1-Tap Dummy Customer Login"** button on the sign-in screen to instantly authenticate.
+* **Customer Name:** `Rajesh Kumar (Verified)`
+* **Address:** `Flat 302, Green Avenue, Model Town, Ludhiana`
+* ⚡ **1-Tap Demo Login:** Available on the login bottom sheet.
 
-### 🏪 2. Partner / Vendor Accounts (`partnerApp` — `http://localhost:8082`)
+### 🏪 Partner Accounts (`partnerApp`)
+* **URL:** [http://localhost:8082](http://localhost:8082)
+* **Default Password for All:** `demo123`
 
-#### 🍲 Store 1: Sunita Home Restro & Sweets
-* **Phone:** `9876543211`
-* **Password:** `demo123`
-* **Owner:** Sunita Sharma (Home Chef)
-* **Categories:** Ghar Ka Khana, Desi Sweets, Dairy
-
-#### 🌾 Store 2: Sukhwinder Organic Farms
-* **Phone:** `9876543212`
-* **Password:** `demo123`
-* **Owner:** Sukhwinder Singh (Farmer)
-* **Categories:** Fresh Fruits & Vegetables, Atta, Rice & Dal
-
-#### 🍎 Store 3: Gurpreet Fresh Orchards
-* **Phone:** `9876543213`
-* **Password:** `demo123`
-* **Owner:** Gurpreet Singh (Fruit Grower)
-* **Categories:** Fresh Fruits & Vegetables, Juices
-
-*(Use the quick store switcher bar on Partner App to toggle between all 3 accounts with 1 tap!)*
+| Store Name | Owner Name | Phone | Categories | Min Order |
+| :--- | :--- | :--- | :--- | :--- |
+| **Shimla Fresh Orchards** | Manpreet Singh | `9876543214` | Organic Apples & Sweet Cherries | ₹99 |
+| **Sunita Home Restro & Sweets** | Sunita Sharma | `9876543211` | Home Thalis, Mathri, Dal Makhani | ₹99 |
+| **Sukhwinder Organic Farms** | Sukhwinder Singh | `9876543212` | Fresh Veggies, Moong Dal | ₹79 |
+| **Gurpreet Fresh Orchards** | Gurpreet Singh | `9876543213` | Fresh Fruits & Juices | ₹99 |
 
 ---
 
-## 🧪 Automated Acceptance Test Suite (15/15 Passing)
+## 💻 Quick Start & Running Locally
 
-Run the full end-to-end integration test suite at any time:
+### Prerequisites
+* Node.js v18+ (tested on Node.js v25)
+* npm v9+
 
+### 1. Install Dependencies
 ```bash
-node server/utils/runAcceptanceTests.js
+npm install
+cd userApp && npm install
+cd ../partnerApp && npm install
+cd ..
 ```
 
-### Acceptance Test Results
-* ✅ **TC-01:** Category Listing API returns exactly 8 seeded categories
-* ✅ **TC-02:** Vendor Listing API returns 3 active vendors
-* ✅ **TC-03:** Customer 1-Tap Login generates valid JWT
-* ✅ **TC-04:** Vendor Login generates valid JWT with role check
-* ✅ **TC-05:** Vendor Catalog isolation (Sunita: 5 items, Sukhwinder: 7 items)
-* ✅ **TC-06:** 🔴 Server Rejects Multi-Vendor Cart with HTTP 400 (`MULTI_VENDOR_CART`)
-* ✅ **TC-07:** Minimum Order Value constraint enforcement (`MIN_ORDER_NOT_MET`)
-* ✅ **TC-08:** Valid Single-Vendor Order Creation (HTTP 201)
-* ✅ **TC-09:** Atomic Stock Decrement (`$inc: -qty`)
-* ✅ **TC-10:** 🔴 Real-time Socket Event (`order:new`) received by Vendor in < 1 sec
-* ✅ **TC-11:** Order State Machine Transitions (`NEW` ➔ `ACCEPTED` ➔ `PREPARING` ➔ `READY` ➔ `DELIVERED`)
-* ✅ **TC-12:** Stock Rollback on Rejection (`$inc: +qty`)
-* ✅ **TC-13:** Vendor Closed Store Rejection (`VENDOR_CLOSED`)
-* ✅ **TC-14:** Vendor Dashboard Stats Computation (Dynamic Mongoose aggregation)
-* ✅ **TC-15:** Vendor Catalog Management (Add & Delete Product)
-
-See [`TEST_REPORT.md`](./TEST_REPORT.md) for full execution logs and timing.
-
----
-
-## 💻 How to Run Every Service & Live Web Preview
-
-### 1. Start Central Backend Server (Port 5000)
+### 2. Start Central Backend Server (Port 5000)
 ```bash
 npm run server
 ```
 *Health Check:* [http://localhost:5000/api/health](http://localhost:5000/api/health)
 
-### 2. Start Customer App Web Preview (Port 8081)
+### 3. Start Customer App Web Preview (Port 8081)
 ```bash
 cd userApp
 npx expo start --web --port 8081
 ```
 *Customer App:* [http://localhost:8081](http://localhost:8081)
 
-### 3. Start Partner App Web Preview (Port 8082)
+### 4. Start Partner App Web Preview (Port 8082)
 ```bash
 cd partnerApp
 npx expo start --web --port 8082
 ```
 *Partner App:* [http://localhost:8082](http://localhost:8082)
+
+### 5. Run Verification Test Suite
+```bash
+npm test
+```
 
 ---
 
