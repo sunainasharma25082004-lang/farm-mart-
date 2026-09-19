@@ -39,41 +39,55 @@ export const LoginScreen = ({ navigation }) => {
 
   const handleDemoLogin = async () => {
     setPhone("9876543210");
-    setPassword("demo123");
+    setPassword("password123");
     setLoading(true);
     try {
-      await loginUser("9876543210", "demo123");
-      navigateAfterLogin();
+      const user = await loginUser("9876543210", "password123");
+      if (user) {
+        navigateAfterLogin();
+      } else {
+        showAlert("Login Error", "Could not log in with demo account.");
+      }
     } catch (e) {
       console.warn("Demo login error:", e);
-      navigateAfterLogin();
+      showAlert("Login Error", "Could not connect to server.");
     } finally {
       setLoading(false);
     }
   };
 
   const handleLogin = async () => {
-    if (!phone || !password) {
-      showAlert("Error", "Please enter phone and password.");
+    const cleanPhone = phone ? phone.trim() : "";
+    const cleanPass = password ? password.trim() : "";
+
+    if (!cleanPhone || !cleanPass) {
+      showAlert("Error", "Please enter phone number and password.");
       return;
     }
 
-    // Direct Instant Match for Dummy / Demo Account
-    if (phone === "9876543210" || phone === "demo" || password === "demo123") {
+    if (cleanPhone.toLowerCase() === "demo") {
       await handleDemoLogin();
       return;
     }
 
     setLoading(true);
     try {
-      const loggedIn = await loginUser(phone, password);
+      const user = await loginUser(cleanPhone, cleanPass);
       setLoading(false);
-      if (loggedIn) {
+      if (user) {
         navigateAfterLogin();
+      } else {
+        showAlert(
+          "Login Failed",
+          "Invalid phone number or password. If you are a new customer, please register on the Sign Up tab."
+        );
       }
     } catch (error) {
       setLoading(false);
-      await handleDemoLogin();
+      showAlert(
+        "Login Failed",
+        error?.message || "Could not log in. Please check your credentials."
+      );
     }
   };
 

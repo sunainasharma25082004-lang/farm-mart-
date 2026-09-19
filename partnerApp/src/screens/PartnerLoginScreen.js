@@ -52,7 +52,7 @@ export const PartnerLoginScreen = () => {
   const { loginVendor } = usePartner();
 
   const [phone, setPhone] = useState('');
-  const [password, setPassword] = useState('demo123');
+  const [password, setPassword] = useState('password123');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -83,8 +83,8 @@ export const PartnerLoginScreen = () => {
 
   const handleQuickLogin = (demo) => {
     setPhone(demo.phone);
-    setPassword('demo123');
-    handleLogin(demo.phone, 'demo123');
+    setPassword('password123');
+    handleLogin(demo.phone, 'password123');
   };
 
   return (

@@ -115,31 +115,21 @@ export const AppProvider = ({ children }) => {
 
     try {
       const res = await apiService.customerLogin(userOrPhone, password);
-      if (res && res.success && res.user) {
+      if (res && (res.success || res.ok) && res.user) {
         setUserProfile(res.user);
         const tok = res.accessToken || res.token;
-        if (tok) setToken(tok);
+        if (tok) {
+          setToken(tok);
+          setAuthToken(tok);
+        }
         setIsAuthenticated(true);
         return res.user;
       }
+      return null;
     } catch (e) {
-      console.warn('Customer login API fallback:', e);
+      console.warn('Customer login API error:', e);
+      return null;
     }
-
-    // Demo fallback for offline resilience
-    const fallbackUser = {
-      name: 'Rajesh Kumar',
-      fullName: 'Rajesh Kumar',
-      phone: typeof userOrPhone === 'string' ? userOrPhone : '9876543210',
-      email: 'rajesh.customer@sfarmart.in',
-      city: 'Ludhiana',
-      address: 'Flat 302, Green Avenue, Model Town, Ludhiana',
-      walletBalance: 25000,
-      walletRupees: 250
-    };
-    setUserProfile(fallbackUser);
-    setIsAuthenticated(true);
-    return fallbackUser;
   }, []);
 
   // Explicit User Logout

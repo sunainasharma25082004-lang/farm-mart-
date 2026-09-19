@@ -1,7 +1,10 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { driverProfile as initialProfile, weeklyEarningsHistory as initialHistory } from '../data/mockDeliveryData';
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://farm-mart-api.onrender.com/api';
+const API_BASE_URL =
+  typeof window !== 'undefined' && window.location && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+    ? `http://${window.location.hostname}:5000/api`
+    : (process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000/api');
 
 const DeliveryContext = createContext();
 

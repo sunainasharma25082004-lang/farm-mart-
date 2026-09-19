@@ -198,19 +198,29 @@ export const apiService = {
   customerLogin: async (phone = '9876543210', password = 'demo123') => {
     try {
       const deviceId = await storage.getDeviceId();
-      const response = await apiClient.post('/auth/customer/login', { phone, password, deviceId });
-      if (response.data?.accessToken || response.data?.token) {
-        const tok = response.data.accessToken || response.data.token;
-        await storage.setAccessToken(tok);
-        setAuthToken(tok);
+      let response;
+      try {
+        response = await apiClient.post('/auth/customer/login', { phone, password, deviceId });
+      } catch (postErr) {
+        // Fallback to /login route on same API
+        response = await apiClient.post('/login', { phone, password, deviceId });
       }
-      if (response.data?.refreshToken) {
-        await storage.setRefreshToken(response.data.refreshToken);
+      const data = response?.data;
+      if (data && (data.success || data.ok)) {
+        const tok = data.accessToken || data.token;
+        if (tok) {
+          await storage.setAccessToken(tok);
+          setAuthToken(tok);
+        }
+        if (data.refreshToken) {
+          await storage.setRefreshToken(data.refreshToken);
+        }
+        return data;
       }
-      return response.data;
+      return { success: false, ok: false, message: data?.message || 'Login failed' };
     } catch (error) {
       console.warn('Customer login failed:', error.message);
-      return { success: false, message: error.message || 'Login failed' };
+      return { success: false, ok: false, message: error.response?.data?.message || error.message || 'Login failed' };
     }
   },
 
