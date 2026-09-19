@@ -13,6 +13,11 @@ const getBaseUrl = () => {
     return process.env.EXPO_PUBLIC_API_URL;
   }
 
+  // Production standalone APK fallback
+  if (!__DEV__) {
+    return 'https://farm-mart-api.onrender.com/api';
+  }
+
   // Real phone over Wi-Fi: Constants.expoConfig?.hostUri gives dev PC's IP (e.g. 192.168.1.x)
   const hostUri =
     Constants.expoConfig?.hostUri ||

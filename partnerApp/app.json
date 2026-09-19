@@ -22,15 +22,17 @@
         "RECEIVE_BOOT_COMPLETED",
         "INTERNET",
         "ACCESS_NETWORK_STATE"
-      ]
+      ],
+      "usesCleartextTraffic": true
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "extra": {
       "eas": {
-        "projectId": "farmart-partner-app"
+        "projectId": "59989093-917c-4e06-9cfd-15ab65aa3aee"
       }
-    }
+    },
+    "owner": "sfarmart"
   }
 }
