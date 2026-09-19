@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "server": "node server/server.js",
-    "test": "node scratch/master_production_suite.cjs",
+    "test": "node server/utils/runAcceptanceTests.js",
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview"

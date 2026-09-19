@@ -248,13 +248,13 @@ To guarantee the apps never crash on physical mobile devices (Android / iOS / Mo
 
 ## 🧪 Master Test Suite (27/27 Tests Passing)
 
-The repository features a single, unified, production master test suite: [`scratch/master_production_suite.cjs`](./scratch/master_production_suite.cjs).
+The repository features an automated production acceptance test suite: [`server/utils/runAcceptanceTests.js`](./server/utils/runAcceptanceTests.js).
 
-### Run the Master Suite
+### Run the Acceptance Suite
 ```bash
 npm test
 ```
-*(Or `node scratch/master_production_suite.cjs`)*
+*(Or `node server/utils/runAcceptanceTests.js`)*
 
 ### Test Results Breakdown
 
