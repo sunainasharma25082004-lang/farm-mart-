@@ -489,7 +489,7 @@ export const InventoryScreen = ({ navigation }) => {
       <WaterBackground />
 
       {/* Header */}
-      <View style={[styles.headerBar, { paddingTop: insets.top + 10 }]}>
+      <View style={[styles.headerBar, { paddingTop: Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight || 24) : 20) + 10 }]}>
         <View style={{ flex: 1 }}>
           <Text style={styles.headerBarTitle}>My Store Catalog ({inventory.length})</Text>
           <Text style={styles.headerBarSub}>{vendor?.storeName || 'Merchant Store'}</Text>
@@ -537,7 +537,7 @@ export const InventoryScreen = ({ navigation }) => {
         contentContainerStyle={[
           styles.scrollContent,
           {
-            paddingBottom: insets.bottom + 110,
+            paddingBottom: Math.max(insets.bottom, 20) + 110,
             maxWidth: isTablet ? 720 : '100%',
             alignSelf: 'center',
             width: '100%'
@@ -704,7 +704,7 @@ export const SettlementsScreen = () => {
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
       <WaterBackground />
 
-      <View style={[styles.headerBar, { paddingTop: insets.top + 10 }]}>
+      <View style={[styles.headerBar, { paddingTop: Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight || 24) : 20) + 10 }]}>
         <Text style={styles.headerBarTitle}>Wednesday Settlements</Text>
       </View>
 
@@ -712,7 +712,7 @@ export const SettlementsScreen = () => {
         contentContainerStyle={[
           styles.scrollContent,
           {
-            paddingBottom: insets.bottom + 110,
+            paddingBottom: Math.max(insets.bottom, 20) + 110,
             maxWidth: isTablet ? 720 : '100%',
             alignSelf: 'center',
             width: '100%'

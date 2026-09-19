@@ -106,8 +106,8 @@ export const VendorDashboardScreen = ({ navigation, initialSection }) => {
         contentContainerStyle={[
           styles.scrollContent,
           {
-            paddingTop: insets.top + 12,
-            paddingBottom: insets.bottom + 110
+            paddingTop: Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight || 24) : 20) + 12,
+            paddingBottom: Math.max(insets.bottom, 20) + 110
           }
         ]}
         showsVerticalScrollIndicator={false}

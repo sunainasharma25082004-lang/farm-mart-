@@ -23,7 +23,7 @@ export const VillageHubScreen = ({ navigation }) => {
     <View style={styles.container}>
       <Header navigation={navigation} title="Village Hub Terminal" />
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <View style={styles.hubHeader}>
           <Ionicons name="home" size={28} color="#ffffff" />
           <View>
@@ -92,7 +92,7 @@ export const WomenEntrepreneurScreen = ({ navigation }) => {
     <View style={styles.container}>
       <Header navigation={navigation} title="Women Entrepreneur Portal" />
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <View style={styles.weBanner}>
           <Ionicons name="heart-circle" size={36} color="#ffffff" />
           <View style={{ flex: 1 }}>

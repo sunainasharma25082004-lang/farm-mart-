@@ -73,8 +73,8 @@ export const PartnerLoginScreen = () => {
         contentContainerStyle={[
           styles.scrollContent,
           {
-            paddingTop: insets.top + 24,
-            paddingBottom: insets.bottom + 40,
+            paddingTop: Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight || 24) : 20) + 24,
+            paddingBottom: Math.max(insets.bottom, 20) + 40,
             maxWidth: isTablet ? 520 : '100%',
             alignSelf: 'center',
             width: '100%'

@@ -272,6 +272,7 @@ export const CheckoutScreen = ({ navigation }) => {
         style={styles.scrollFlex}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
         {/* Fast Delivery Banner */}
         <View style={styles.deliveryBanner}>

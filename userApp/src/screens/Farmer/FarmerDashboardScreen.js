@@ -14,7 +14,7 @@ export const FarmerDashboardScreen = ({ navigation }) => {
     <View style={styles.container}>
       <Header navigation={navigation} title="Farmer Partner Portal" />
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         {/* Banner */}
         <View style={styles.banner}>
           <Ionicons name="leaf" size={28} color="#ffffff" />
@@ -99,7 +99,7 @@ export const AddHarvestScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <Header navigation={navigation} title="List Produce" />
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <View style={styles.formCard}>
           <Text style={styles.formTitle}>Harvest Details</Text>
 
