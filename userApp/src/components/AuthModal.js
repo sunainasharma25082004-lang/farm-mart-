@@ -104,25 +104,7 @@ export const AuthModal = ({
       }
     } catch (err) {
       setLoading(false);
-      // Fallback for demo phone
-      if (phone.trim() === '9876543210' || cleanOtp === '123456') {
-        const u = await loginUser('9876543210', 'demo123');
-        if (onSuccess) onSuccess(u);
-      } else {
-        showAlert('Verification Error', err?.message || 'OTP verification fail hua.');
-      }
-    }
-  };
-
-  const handleInstantDemoLogin = async () => {
-    setLoading(true);
-    try {
-      const u = await loginUser('9876543210', 'demo123');
-      setLoading(false);
-      if (onSuccess) onSuccess(u);
-    } catch (e) {
-      setLoading(false);
-      console.warn('Demo login failed:', e);
+      showAlert('Verification Error', err?.message || 'OTP verification fail hua.');
     }
   };
 
@@ -207,22 +189,6 @@ export const AuthModal = ({
                 )}
               </TactileButton>
 
-              {/* 1-Tap Quick Demo Login */}
-              <TactileButton
-                style={styles.demoLoginCard}
-                onPress={handleInstantDemoLogin}
-                disabled={loading}
-                rippleColor="rgba(16, 185, 129, 0.25)"
-              >
-                <View style={styles.demoIcon}>
-                  <Ionicons name="flash" size={18} color="#10b981" />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.demoTitle}>⚡ 1-Tap Demo Customer Login</Text>
-                  <Text style={styles.demoSubtitle}>Rajesh Kumar • 9876543210</Text>
-                </View>
-                <Ionicons name="arrow-forward-circle" size={22} color="#10b981" />
-              </TactileButton>
             </View>
           ) : (
             <View style={styles.form}>

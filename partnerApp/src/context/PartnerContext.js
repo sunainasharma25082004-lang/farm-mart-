@@ -100,7 +100,7 @@ export const PartnerProvider = ({ children }) => {
 
 
   // Vendor login (Phone & Password)
-  const loginVendor = useCallback(async (phone, password = 'demo123') => {
+  const loginVendor = useCallback(async (phone, password = 'password123') => {
     try {
       setIsLoading(true);
       const res = await fetch(`${API_BASE_URL}/auth/vendor/login`, {

@@ -195,7 +195,7 @@ export const apiService = {
     }
   },
 
-  customerLogin: async (phone = '9876543210', password = 'demo123') => {
+  customerLogin: async (phone, password) => {
     try {
       const deviceId = await storage.getDeviceId();
       let response;

@@ -109,20 +109,6 @@ export const ProfileWalletScreen = ({ navigation }) => {
             <Text style={styles.guestSub}>
               Log in to view your profile, wallet balance, saved addresses, and track live orders.
             </Text>
-            <TouchableOpacity
-              style={styles.guest1TapDemoBtn}
-              onPress={async () => {
-                try {
-                  await loginUser('9876543210', 'demo123');
-                } catch (e) {
-                  console.warn('1-tap demo login error:', e);
-                }
-              }}
-              activeOpacity={0.85}
-            >
-              <Ionicons name="flash" size={18} color="#ffffff" />
-              <Text style={styles.guest1TapDemoBtnText}>⚡ 1-Tap Instant Customer Login</Text>
-            </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.guestLoginBtn}

@@ -437,30 +437,33 @@ export const deleteAccount = async (req, res) => {
  */
 export const customerLogin = async (req, res) => {
   try {
-    const { phone = '9876543210', password = 'demo123', name } = req.body;
+    const { phone, password, name } = req.body;
+    if (!phone) {
+      return res.status(400).json({ ok: false, success: false, message: 'Phone number is required' });
+    }
     const cleanPhone = phone.trim();
 
-    let user = await User.findOne({ phone: cleanPhone });
+    let user = await User.findOne({ phone: cleanPhone }).select('+passwordHash +password');
     if (!user) {
-      user = await User.create({
-        name: name || `Customer ${cleanPhone.slice(-4)}`,
-        phone: cleanPhone,
-        role: 'CUSTOMER',
-        status: 'ACTIVE',
-        isPhoneVerified: true,
-        walletBalance: 25000,
-        addresses: [
-          {
-            label: 'Home',
-            name: name || 'Customer',
-            phone: cleanPhone,
-            line1: 'Flat 302, Green Avenue, Model Town',
-            city: 'Ludhiana',
-            pincode: '141001',
-            isDefault: true
-          }
-        ]
+      return res.status(401).json({
+        ok: false,
+        success: false,
+        code: 'USER_NOT_FOUND',
+        message: 'Customer account not found. Please register on the Sign Up tab.'
       });
+    }
+
+    const storedHash = user.passwordHash || user.password;
+    if (storedHash && password) {
+      const isMatch = await bcrypt.compare(password, storedHash);
+      if (!isMatch) {
+        return res.status(401).json({
+          ok: false,
+          success: false,
+          code: 'INVALID_CREDENTIALS',
+          message: 'Invalid password. Please check your credentials.'
+        });
+      }
     }
 
     const accessToken = generateAccessToken(user);
@@ -485,46 +488,22 @@ export const customerLogin = async (req, res) => {
  */
 export const vendorLogin = async (req, res) => {
   try {
-    const { phone, password = 'demo123' } = req.body;
+    const { phone, password } = req.body;
     if (!phone) {
       return res.status(400).json({ success: false, message: 'Phone number is required' });
     }
 
-    let vendor = await Vendor.findOne({ phone: phone.trim() }).populate('categories');
-    if (!vendor && req.body.storeName) {
-      // Prevent duplicate vendors with the same store name
-      const cleanStore = req.body.storeName.trim();
-      vendor = await Vendor.findOne({ storeName: new RegExp(`^${cleanStore}$`, 'i') }).populate('categories');
+    const cleanPhone = phone.trim();
+    let vendor = await Vendor.findOne({ phone: cleanPhone }).populate('categories');
+    if (!vendor) {
+      return res.status(401).json({ success: false, message: 'Vendor account not found with this phone number.' });
     }
 
-    if (!vendor) {
-      const Category = (await import('../models/Category.js')).default;
-      const defaultCategories = await Category.find().limit(3);
-      const catIds = defaultCategories.length > 0 ? defaultCategories.map((c) => c._id) : [];
-      const hash = await bcrypt.hash(password || 'demo123', 10);
-      vendor = await Vendor.create({
-        storeName: req.body.storeName || `S-farmart Store (${phone.trim().slice(-4)})`,
-        ownerName: req.body.ownerName || `Partner ${phone.trim().slice(-4)}`,
-        phone: phone.trim(),
-        passwordHash: hash,
-        storeType: req.body.storeType || 'FARMER',
-        categories: catIds,
-        description: 'Fresh direct-from-origin produce & gourmet handcrafted essentials.',
-        logo: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=200&auto=format&fit=crop&q=60',
-        banner: 'https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=800&auto=format&fit=crop&q=80',
-        isOpen: true,
-        isActive: true,
-        isApproved: true,
-        minOrderValue: 79,
-        avgPrepTimeMins: 20,
-        address: {
-          line1: 'Shop #12, Market Complex',
-          city: 'Ludhiana',
-          state: 'Punjab',
-          pincode: '141001'
-        }
-      });
-      await vendor.populate('categories');
+    if (vendor.passwordHash && password) {
+      const isValid = await bcrypt.compare(password, vendor.passwordHash);
+      if (!isValid) {
+        return res.status(401).json({ success: false, message: 'Invalid password. Please check your credentials.' });
+      }
     }
 
     const token = jwt.sign(

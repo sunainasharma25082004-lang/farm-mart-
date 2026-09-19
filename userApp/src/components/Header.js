@@ -27,25 +27,7 @@ export const Header = ({
   showCart = true,
   showBack = false,
 }) => {
-  const { userProfile, setUserProfile, isAuthenticated, loginUser } = useApp();
-  const [isQuickLoggingIn, setIsQuickLoggingIn] = useState(false);
-
-  const handleHeaderQuickLogin = async () => {
-    setIsQuickLoggingIn(true);
-    try {
-      if (typeof loginUser === "function") {
-        await loginUser("9876543210", "demo123");
-      } else if (navigation && typeof navigation.navigate === "function") {
-        navigation.navigate("Login");
-      }
-    } catch (e) {
-      if (navigation && typeof navigation.navigate === "function") {
-        navigation.navigate("Login");
-      }
-    } finally {
-      setIsQuickLoggingIn(false);
-    }
-  };
+  const { userProfile, setUserProfile, isAuthenticated } = useApp();
   const { billSummary } = useCart();
   const cartItemCount = billSummary?.totalCount || 0;
   const canGoBack = Boolean(showBack);
@@ -224,18 +206,15 @@ export const Header = ({
           {!userProfile ? (
             <TouchableOpacity
               style={styles.loginQuickChip}
-              onPress={handleHeaderQuickLogin}
-              disabled={isQuickLoggingIn}
+              onPress={() => {
+                if (navigation && typeof navigation.navigate === "function") {
+                  navigation.navigate("Login");
+                }
+              }}
               activeOpacity={0.8}
             >
-              {isQuickLoggingIn ? (
-                <ActivityIndicator size="small" color="#15803d" />
-              ) : (
-                <>
-                  <Ionicons name="flash" size={13} color="#16a34a" />
-                  <Text style={styles.loginQuickChipText}>1-Tap Login</Text>
-                </>
-              )}
+              <Ionicons name="log-in-outline" size={15} color="#16a34a" />
+              <Text style={styles.loginQuickChipText}>Login</Text>
             </TouchableOpacity>
           ) : (
             <TouchableOpacity

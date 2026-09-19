@@ -23,12 +23,6 @@ import { AnimatedNumber } from '../components/common/AnimatedNumber';
 
 const LOGO = require('../../assets/farmart_logo.png');
 
-const DEMO_VENDORS = [
-  { name: 'Sunita Sharma (Home Chef)', phone: '9876543211', icon: '🍳', storeType: 'HOME_CHEF' },
-  { name: 'Sukhwinder Singh (Farmer)', phone: '9876543212', icon: '🌾', storeType: 'FARMER' },
-  { name: 'Gurpreet Kaur (Orchards)', phone: '9876543213', icon: '🍊', storeType: 'FARMER' },
-  { name: 'Manpreet Singh (Shimla Orchards)', phone: '9876543214', icon: '🍎', storeType: 'FARMER' }
-];
 
 export const VendorDashboardScreen = ({ navigation }) => {
   const {
@@ -51,7 +45,7 @@ export const VendorDashboardScreen = ({ navigation }) => {
   // Partner Login / Switch Modal
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginPhoneInput, setLoginPhoneInput] = useState('');
-  const [loginPasswordInput, setLoginPasswordInput] = useState('demo123');
+  const [loginPasswordInput, setLoginPasswordInput] = useState('password123');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [loginError, setLoginError] = useState('');
 
@@ -134,7 +128,7 @@ export const VendorDashboardScreen = ({ navigation }) => {
         setShowLoginModal(false);
         setLoginPhoneInput('');
       } else {
-        setLoginError(res?.message || 'Vendor not found with this phone. Try demo accounts.');
+        setLoginError(res?.message || 'Vendor not found or invalid credentials.');
       }
     } catch (err) {
       setLoginError('Login failed. Please check network.');
@@ -183,24 +177,6 @@ export const VendorDashboardScreen = ({ navigation }) => {
                 </>
               )}
             </TouchableOpacity>
-          </View>
-
-          <View style={styles.quickAccountsSection}>
-            <Text style={styles.quickAccountsTitle}>OR ONE-TAP DEMO LOGIN:</Text>
-            {DEMO_VENDORS.map((v) => (
-              <TouchableOpacity
-                key={v.phone}
-                style={styles.quickAccountBtn}
-                onPress={() => handleCustomLogin(v.phone)}
-              >
-                <Text style={{ fontSize: 18 }}>{v.icon}</Text>
-                <View style={{ flex: 1, marginLeft: 10 }}>
-                  <Text style={styles.quickAccountName}>{v.name}</Text>
-                  <Text style={styles.quickAccountPhone}>ID: VEN-{v.phone}</Text>
-                </View>
-                <Ionicons name="arrow-forward" size={16} color={colors.primary} />
-              </TouchableOpacity>
-            ))}
           </View>
         </View>
       </View>
@@ -722,47 +698,9 @@ export const VendorDashboardScreen = ({ navigation }) => {
               </TouchableOpacity>
             </View>
 
-            <Text style={styles.switchModalSub}>
-              Select a partner profile or enter another phone number to switch store.
-            </Text>
-
-            <View style={styles.demoAccountsList}>
-              {DEMO_VENDORS.map((v) => {
-                const isCurrent = vendor?.phone === v.phone;
-                return (
-                  <TactileButton
-                    key={v.phone}
-                    style={[
-                      styles.demoAccountRow,
-                      isCurrent && styles.demoAccountRowActive
-                    ]}
-                    onPress={() => {
-                      handleCustomLogin(v.phone);
-                    }}
-                    rippleColor="rgba(234, 88, 12, 0.2)"
-                  >
-                    <Text style={{ fontSize: 24 }}>{v.icon}</Text>
-                    <View style={{ flex: 1, marginLeft: 12 }}>
-                      <Text style={[styles.demoName, isCurrent && { color: colors.primaryDark }]}>
-                        {v.name}
-                      </Text>
-                      <Text style={styles.demoPhone}>ID: VEN-{v.phone}</Text>
-                    </View>
-                    {isCurrent ? (
-                      <View style={styles.activePill}>
-                        <Text style={styles.activePillText}>ACTIVE</Text>
-                      </View>
-                    ) : (
-                      <Ionicons name="chevron-forward" size={18} color="#94a3b8" />
-                    )}
-                  </TactileButton>
-                );
-              })}
-            </View>
-
-            {/* Custom Phone / ID Direct Login Section */}
+            {/* Switch Account Section */}
             <View style={styles.modalCustomLoginSection}>
-              <Text style={styles.modalCustomLabel}>OR ENTER PARTNER PHONE / ID:</Text>
+              <Text style={styles.modalCustomLabel}>ENTER REGISTERED PARTNER PHONE NUMBER:</Text>
               <View style={styles.modalInputRow}>
                 <TextInput
                   style={styles.modalTextInput}

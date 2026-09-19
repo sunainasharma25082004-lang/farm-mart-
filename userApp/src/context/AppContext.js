@@ -106,7 +106,7 @@ export const AppProvider = ({ children }) => {
   }, []);
 
   // Login method
-  const loginUser = useCallback(async (userOrPhone = '9876543210', password = 'demo123') => {
+  const loginUser = useCallback(async (userOrPhone, password) => {
     if (typeof userOrPhone === 'object' && userOrPhone !== null) {
       setUserProfile((prev) => ({ ...prev, ...userOrPhone }));
       setIsAuthenticated(true);

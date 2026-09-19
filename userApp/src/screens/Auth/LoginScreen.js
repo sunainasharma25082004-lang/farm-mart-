@@ -37,36 +37,12 @@ export const LoginScreen = ({ navigation }) => {
     }
   };
 
-  const handleDemoLogin = async () => {
-    setPhone("9876543210");
-    setPassword("password123");
-    setLoading(true);
-    try {
-      const user = await loginUser("9876543210", "password123");
-      if (user) {
-        navigateAfterLogin();
-      } else {
-        showAlert("Login Error", "Could not log in with demo account.");
-      }
-    } catch (e) {
-      console.warn("Demo login error:", e);
-      showAlert("Login Error", "Could not connect to server.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleLogin = async () => {
     const cleanPhone = phone ? phone.trim() : "";
     const cleanPass = password ? password.trim() : "";
 
     if (!cleanPhone || !cleanPass) {
       showAlert("Error", "Please enter phone number and password.");
-      return;
-    }
-
-    if (cleanPhone.toLowerCase() === "demo") {
-      await handleDemoLogin();
       return;
     }
 
@@ -92,7 +68,7 @@ export const LoginScreen = ({ navigation }) => {
   };
 
   const skipLogin = () => {
-    handleDemoLogin();
+    navigateAfterLogin();
   };
 
   return (

@@ -32,6 +32,7 @@ export const registerUser = async (req, res) => {
       id: `USER-${Date.now()}`,
       name,
       phone: cleanPhone,
+      passwordHash: hashedPassword,
       password: hashedPassword,
       role: 'CUSTOMER',
       status: 'ACTIVE',
@@ -76,7 +77,7 @@ export const registerUser = async (req, res) => {
 
 /**
  * POST /api/login
- * Handles customer login, generates valid JWT tokens, auto-creates user if new so testing never fails.
+ * Handles customer login, verifies password against hash, prevents duplicate/unregistered logins.
  */
 export const loginUser = async (req, res) => {
   const { phone, password } = req.body;
@@ -87,31 +88,28 @@ export const loginUser = async (req, res) => {
   const cleanPhone = phone.trim();
 
   try {
-    let user = await User.findOne({ phone: cleanPhone });
+    let user = await User.findOne({ phone: cleanPhone }).select('+passwordHash +password');
 
     if (!user) {
-      // Auto-create customer so any phone number can log in without barriers
-      user = await User.create({
-        name: `Customer ${cleanPhone.slice(-4)}`,
-        phone: cleanPhone,
-        role: 'CUSTOMER',
-        status: 'ACTIVE',
-        isPhoneVerified: true,
-        walletBalance: 25000,
-        city: 'Ludhiana',
-        addresses: [
-          {
-            label: 'Home',
-            name: `Customer ${cleanPhone.slice(-4)}`,
-            phone: cleanPhone,
-            line1: 'Flat 302, Green Avenue, Model Town',
-            city: 'Ludhiana',
-            state: 'Punjab',
-            pincode: '141001',
-            isDefault: true
-          }
-        ]
+      return res.status(401).json({
+        success: false,
+        ok: false,
+        code: 'USER_NOT_FOUND',
+        message: 'Account not found with this phone number. Please register on the Sign Up tab.'
       });
+    }
+
+    const storedHash = user.passwordHash || user.password;
+    if (storedHash && password) {
+      const isMatch = await bcrypt.compare(password, storedHash);
+      if (!isMatch) {
+        return res.status(401).json({
+          success: false,
+          ok: false,
+          code: 'INVALID_CREDENTIALS',
+          message: 'Invalid password. Please check your credentials.'
+        });
+      }
     }
 
     const accessToken = generateAccessToken(user);

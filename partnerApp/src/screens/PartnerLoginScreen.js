@@ -17,42 +17,11 @@ import { colors } from '../theme/colors';
 
 const LOGO = require('../../assets/farmart_logo.png');
 
-const DEMO_ACCOUNTS = [
-  {
-    name: 'Sunita Sharma',
-    type: 'Home Chef & Sweets',
-    phone: '9876543211',
-    icon: '🍳',
-    desc: 'Amritsari Mathri, Desi Chaas, Mithai'
-  },
-  {
-    name: 'Sukhwinder Singh',
-    type: 'Organic Farm Harvest',
-    phone: '9876543212',
-    icon: '🌾',
-    desc: 'Fresh Vegetables, Tomatoes, Spinach'
-  },
-  {
-    name: 'Gurpreet Kaur',
-    type: 'Fruit Orchards',
-    phone: '9876543213',
-    icon: '🍊',
-    desc: 'Kinnow, Farm Fresh Apples, Citrus'
-  },
-  {
-    name: 'Manpreet Singh',
-    type: 'Shimla Fresh Orchards',
-    phone: '9876543214',
-    icon: '🍎',
-    desc: 'Himachal Apples, Cherries, Golden Apples'
-  }
-];
-
 export const PartnerLoginScreen = () => {
   const { loginVendor } = usePartner();
 
   const [phone, setPhone] = useState('');
-  const [password, setPassword] = useState('password123');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -63,6 +32,11 @@ export const PartnerLoginScreen = () => {
 
     if (!targetPhone) {
       setErrorMessage('Please enter your 10-digit registered phone number');
+      return;
+    }
+
+    if (!targetPass) {
+      setErrorMessage('Please enter your account password');
       return;
     }
 
@@ -79,12 +53,6 @@ export const PartnerLoginScreen = () => {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleQuickLogin = (demo) => {
-    setPhone(demo.phone);
-    setPassword('password123');
-    handleLogin(demo.phone, 'password123');
   };
 
   return (
@@ -107,39 +75,6 @@ export const PartnerLoginScreen = () => {
           </Text>
         </View>
 
-        {/* Switch / Select Active Store on Login Screen */}
-        <View style={styles.storeSwitcherContainer}>
-          <Text style={styles.storeSwitcherLabel}>SWITCH ACTIVE STORE</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.storeSwitcherScroll}
-          >
-            {DEMO_ACCOUNTS.map((v) => {
-              const isSelected = phone === v.phone;
-              return (
-                <TouchableOpacity
-                  key={v.phone}
-                  style={[
-                    styles.storeSwitchChip,
-                    isSelected ? styles.storeSwitchChipActive : styles.storeSwitchChipInactive
-                  ]}
-                  onPress={() => handleQuickLogin(v)}
-                  activeOpacity={0.8}
-                >
-                  <Text style={{ fontSize: 18 }}>{v.icon}</Text>
-                  <View style={{ marginLeft: 6 }}>
-                    <Text style={[styles.storeSwitchName, isSelected && styles.storeSwitchNameActive]} numberOfLines={1}>
-                      {v.name.split(' ')[0]}
-                    </Text>
-                    <Text style={styles.storeSwitchPhone}>VEN-{v.phone.slice(-4)}</Text>
-                  </View>
-                  {isSelected && <View style={styles.storeSwitchDot} />}
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        </View>
 
         {/* Login Form Box */}
         <View style={styles.card}>
@@ -183,7 +118,7 @@ export const PartnerLoginScreen = () => {
             <View style={styles.inputWrap}>
               <TextInput
                 style={[styles.textInput, { paddingLeft: 14 }]}
-                placeholder="Enter password (default: demo123)"
+                placeholder="Enter password"
                 placeholderTextColor="#94a3b8"
                 value={password}
                 onChangeText={setPassword}
@@ -220,42 +155,6 @@ export const PartnerLoginScreen = () => {
           </TouchableOpacity>
         </View>
 
-        {/* 1-Tap Quick Fill Demo Merchants Section */}
-        <View style={styles.demoSection}>
-          <View style={styles.demoSectionHeader}>
-            <View style={styles.demoDivider} />
-            <Text style={styles.demoSectionTitle}>OR 1-TAP DEMO MERCHANTS</Text>
-            <View style={styles.demoDivider} />
-          </View>
-
-          <Text style={styles.demoHint}>
-            Tap any merchant below to instantly log into their store & orders:
-          </Text>
-
-          <View style={styles.demoList}>
-            {DEMO_ACCOUNTS.map((d) => (
-              <TouchableOpacity
-                key={d.phone}
-                style={styles.demoCard}
-                onPress={() => handleQuickLogin(d)}
-                activeOpacity={0.85}
-              >
-                <View style={styles.demoIconCircle}>
-                  <Text style={{ fontSize: 22 }}>{d.icon}</Text>
-                </View>
-                <View style={{ flex: 1, marginLeft: 12 }}>
-                  <Text style={styles.demoName}>{d.name}</Text>
-                  <Text style={styles.demoType}>{d.type}</Text>
-                  <Text style={styles.demoPhone}>📞 {d.phone}</Text>
-                </View>
-                <View style={styles.quickLoginBadge}>
-                  <Text style={styles.quickLoginText}>LOG IN</Text>
-                  <Ionicons name="chevron-forward" size={14} color="#15803d" />
-                </View>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
       </ScrollView>
     </View>
   );
