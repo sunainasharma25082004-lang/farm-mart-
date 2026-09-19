@@ -18,47 +18,124 @@ import { Ionicons } from '@expo/vector-icons';
 import { usePartner } from '../context/PartnerContext';
 import { colors } from '../theme/colors';
 
-// High-resolution presets for merchants
-const IMAGE_PRESETS = [
+// High-resolution presets for merchants with complete instant-add data
+const QUICK_PRODUCT_PRESETS = [
   {
+    name: 'Special Punjabi Veg Thali',
     label: 'Veg Thali',
     icon: '🍛',
+    categoryMatch: ['restaurant', 'food', 'meal', 'prepared', 'cook'],
+    price: '120',
+    mrp: '150',
+    unit: '1 plate',
+    stock: '25',
+    isVeg: true,
+    description: 'Fresh royal thali with 2 sabzi, dal makhani, 4 rotis, jeera rice, salad & sweet.',
     url: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=600&auto=format&fit=crop&q=80'
   },
   {
+    name: 'Fresh Mixed Green Veggies',
     label: 'Green Veggies',
     icon: '🥦',
+    categoryMatch: ['vegetable', 'veg', 'farm', 'fresh', 'produce'],
+    price: '60',
+    mrp: '80',
+    unit: '1 kg',
+    stock: '50',
+    isVeg: true,
+    description: 'Farm fresh broccoli, spinach, and leafy seasonal greens picked this morning.',
     url: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=600&auto=format&fit=crop&q=80'
   },
   {
+    name: 'Organic Farm Potatoes (Aloo)',
     label: 'Potatoes',
     icon: '🥔',
+    categoryMatch: ['vegetable', 'veg', 'farm', 'fresh', 'produce'],
+    price: '30',
+    mrp: '40',
+    unit: '1 kg',
+    stock: '100',
+    isVeg: true,
+    description: 'Crisp, nutrient-rich soil grown mountain potatoes suitable for daily cooking.',
     url: 'https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=600&auto=format&fit=crop&q=80'
   },
   {
+    name: 'Kashmiri Sweet Red Apples',
     label: 'Fresh Apples',
     icon: '🍎',
+    categoryMatch: ['fruit', 'fresh', 'produce'],
+    price: '140',
+    mrp: '170',
+    unit: '1 kg',
+    stock: '30',
+    isVeg: true,
+    description: 'Naturally sweet, juicy, and crunchy premium orchard apples.',
     url: 'https://images.unsplash.com/photo-1619566636858-adf3ef46400b?w=600&auto=format&fit=crop&q=80'
   },
   {
+    name: 'Hot Desi Ghee Paratha (2 Pcs)',
     label: 'Hot Parathas',
     icon: '🫓',
+    categoryMatch: ['restaurant', 'food', 'meal', 'bread'],
+    price: '50',
+    mrp: '65',
+    unit: '1 plate',
+    stock: '40',
+    isVeg: true,
+    description: 'Hot, flaky tandoori / tawa parathas served with butter and fresh mint curd.',
     url: 'https://images.unsplash.com/photo-1626074353765-517a681e40be?w=600&auto=format&fit=crop&q=80'
   },
   {
-    label: 'Desi Sweets',
-    icon: '🍯',
-    url: 'https://images.unsplash.com/photo-1599488615731-7e5c2823ff28?w=600&auto=format&fit=crop&q=80'
-  },
-  {
-    label: 'Pure Dairy',
+    name: 'Pure Desi Cow Milk',
+    label: 'Pure Milk',
     icon: '🥛',
+    categoryMatch: ['dairy', 'milk', 'egg'],
+    price: '65',
+    mrp: '70',
+    unit: '1 litre',
+    stock: '50',
+    isVeg: true,
+    description: 'Unadulterated A2 raw farm cow milk delivered chilled and fresh.',
     url: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?w=600&auto=format&fit=crop&q=80'
   },
   {
-    label: 'Fresh Juice',
-    icon: '🧃',
-    url: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=600&auto=format&fit=crop&q=80'
+    name: 'Pure Desi Ghee & Gulab Jamun',
+    label: 'Desi Sweets',
+    icon: '🍯',
+    categoryMatch: ['dairy', 'sweet', 'dessert'],
+    price: '180',
+    mrp: '220',
+    unit: '500 g',
+    stock: '20',
+    isVeg: true,
+    description: 'Melt-in-mouth traditional desi sweets prepared in pure churned ghee.',
+    url: 'https://images.unsplash.com/photo-1599488615731-7e5c2823ff28?w=600&auto=format&fit=crop&q=80'
+  },
+  {
+    name: 'Farm Fresh Red Tomatoes',
+    label: 'Tomatoes',
+    icon: '🍅',
+    categoryMatch: ['vegetable', 'veg', 'produce'],
+    price: '35',
+    mrp: '45',
+    unit: '1 kg',
+    stock: '60',
+    isVeg: true,
+    description: 'Firm, juicy, ripe field tomatoes packed with natural flavor.',
+    url: 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=600&auto=format&fit=crop&q=80'
+  },
+  {
+    name: 'Fresh Red Onions (Pyaz)',
+    label: 'Fresh Onions',
+    icon: '🧅',
+    categoryMatch: ['vegetable', 'veg', 'produce'],
+    price: '35',
+    mrp: '45',
+    unit: '1 kg',
+    stock: '80',
+    isVeg: true,
+    description: 'Dry, firm, pungent onions selected for long shelf life and great tadka.',
+    url: 'https://images.unsplash.com/photo-1618512496248-a07fe83aa8cb?w=600&auto=format&fit=crop&q=80'
   }
 ];
 
@@ -68,19 +145,20 @@ const STOCK_PRESETS = ['10', '25', '50', '100', '200'];
 export const AddProductScreen = ({ navigation }) => {
   const { addInventoryItem, categories, vendor } = usePartner();
 
-  const [name, setName] = useState('');
+  const [name, setName] = useState(QUICK_PRODUCT_PRESETS[0].name);
   const [selectedCatId, setSelectedCatId] = useState(
     categories && categories.length > 0 ? categories[0]._id : ''
   );
-  const [price, setPrice] = useState('');
-  const [mrp, setMrp] = useState('');
-  const [unit, setUnit] = useState('1 pc');
-  const [stock, setStock] = useState('25');
-  const [description, setDescription] = useState('');
-  const [imageUrl, setImageUrl] = useState(IMAGE_PRESETS[0].url);
+  const [price, setPrice] = useState(QUICK_PRODUCT_PRESETS[0].price);
+  const [mrp, setMrp] = useState(QUICK_PRODUCT_PRESETS[0].mrp);
+  const [unit, setUnit] = useState(QUICK_PRODUCT_PRESETS[0].unit);
+  const [stock, setStock] = useState(QUICK_PRODUCT_PRESETS[0].stock);
+  const [description, setDescription] = useState(QUICK_PRODUCT_PRESETS[0].description);
+  const [imageUrl, setImageUrl] = useState(QUICK_PRODUCT_PRESETS[0].url);
   const [isVeg, setIsVeg] = useState(true);
-  const [focusedInput, setFocusedInput] = useState(null);
+  const [selectedPresetIndex, setSelectedPresetIndex] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [instantAddingIndex, setInstantAddingIndex] = useState(null);
   const [showCustomImage, setShowCustomImage] = useState(false);
   const [statusMessage, setStatusMessage] = useState(null);
 
@@ -110,6 +188,65 @@ export const AddProductScreen = ({ navigation }) => {
     }
   };
 
+  // Helper to match category by keywords
+  const findMatchingCategoryId = (keywords = []) => {
+    if (!categories || categories.length === 0) return '';
+    for (const kw of keywords) {
+      const match = categories.find((c) =>
+        c.name?.toLowerCase().includes(kw.toLowerCase())
+      );
+      if (match) return match._id;
+    }
+    return categories[0]._id;
+  };
+
+  // Preset Selection: Pre-populates all fields cleanly without typing
+  const handleSelectPreset = (preset, idx) => {
+    setSelectedPresetIndex(idx);
+    setName(preset.name);
+    setPrice(preset.price);
+    setMrp(preset.mrp);
+    setUnit(preset.unit);
+    setStock(preset.stock);
+    setImageUrl(preset.url);
+    setIsVeg(preset.isVeg);
+    setDescription(preset.description);
+
+    const matchedCat = findMatchingCategoryId(preset.categoryMatch);
+    if (matchedCat) setSelectedCatId(matchedCat);
+  };
+
+  // Instant 1-Tap Publish: Directly adds preset to MongoDB with 1 tap
+  const handleInstantAdd = async (preset, idx) => {
+    if (isSubmitting || instantAddingIndex !== null) return;
+    setInstantAddingIndex(idx);
+    try {
+      const catId = findMatchingCategoryId(preset.categoryMatch) || selectedCatId || categories?.[0]?._id;
+      const res = await addInventoryItem({
+        name: preset.name,
+        categoryId: catId,
+        category: catId,
+        price: Number(preset.price),
+        mrp: Number(preset.mrp),
+        unit: preset.unit,
+        stock: Number(preset.stock),
+        description: preset.description,
+        image: preset.url,
+        isVeg: preset.isVeg
+      });
+
+      if (res && res.success !== false) {
+        showFeedback('Added to Store! 🎉', `"${preset.name}" is now live in your store catalog!`, true);
+      } else {
+        showFeedback('Error', res?.message || 'Could not save item. Try again.');
+      }
+    } catch (e) {
+      showFeedback('Error', 'Could not publish item. Please check network.');
+    } finally {
+      setInstantAddingIndex(null);
+    }
+  };
+
   const handleSubmit = async () => {
     if (isSubmitting) return;
 
@@ -126,7 +263,6 @@ export const AddProductScreen = ({ navigation }) => {
     setIsSubmitting(true);
     try {
       const catId = selectedCatId || (categories && categories.length > 0 ? categories[0]._id : null);
-
       const finalMrp = numMrp && numMrp >= numPrice ? numMrp : Math.round(numPrice * 1.15);
 
       const res = await addInventoryItem({
@@ -138,7 +274,7 @@ export const AddProductScreen = ({ navigation }) => {
         unit: unit.trim() || '1 pc',
         stock: Number(stock || 25),
         description: description.trim(),
-        image: imageUrl || IMAGE_PRESETS[0].url,
+        image: imageUrl || QUICK_PRODUCT_PRESETS[0].url,
         isVeg: Boolean(isVeg)
       });
 
@@ -170,7 +306,7 @@ export const AddProductScreen = ({ navigation }) => {
           <Ionicons name="arrow-back" size={20} color="#0f172a" />
         </TouchableOpacity>
         <View style={{ alignItems: 'center' }}>
-          <Text style={styles.headerTitle}>Add New Listing</Text>
+          <Text style={styles.headerTitle}>Add Product to Store</Text>
           <Text style={styles.headerSubtitle} numberOfLines={1}>
             {vendor?.storeName || 'Merchant Portal'}
           </Text>
@@ -215,410 +351,402 @@ export const AddProductScreen = ({ navigation }) => {
         </View>
       )}
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={{ flex: 1 }}
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="always"
+        keyboardDismissMode="none"
+        removeClippedSubviews={false}
+        nestedScrollEnabled={true}
+        showsVerticalScrollIndicator={false}
       >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.formCard}>
-            <View style={styles.cardHeader}>
-              <View>
-                <Text style={styles.cardHeaderTitle}>PUBLISH DIRECT TO MONGODB</Text>
-                <Text style={styles.cardHeaderSub}>
-                  Selling under:{' '}
-                  <Text style={{ fontWeight: '700', color: colors.primaryDark }}>
-                    {vendor?.storeName}
-                  </Text>
-                </Text>
-              </View>
-              <View style={styles.liveTag}>
-                <View style={styles.livePulse} />
-                <Text style={styles.liveTagText}>STORE ONLINE</Text>
-              </View>
+        {/* 🌟 1-TAP QUICK ADD CATALOG PRESETS */}
+        <View style={styles.quickAddSection}>
+          <View style={styles.quickAddHeader}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Text style={{ fontSize: 16 }}>⚡</Text>
+              <Text style={styles.quickAddTitle}>1-Tap Quick Add with Icon</Text>
             </View>
+            <Text style={styles.quickAddSub}>Tap to add immediately or customize below</Text>
+          </View>
 
-            {/* Product / Dish Name */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Product / Dish Name *</Text>
-              <View
-                style={[
-                  styles.inputWrap,
-                  focusedInput === 'name' && styles.inputWrapFocused
-                ]}
-              >
-                <Ionicons
-                  name="pricetag-outline"
-                  size={18}
-                  color={focusedInput === 'name' ? colors.primary : '#94a3b8'}
-                  style={styles.inputIcon}
-                />
-                <TextInput
-                  style={styles.input}
-                  placeholder="e.g. Special Punjabi Thali, Organic Carrots"
-                  placeholderTextColor="#94a3b8"
-                  value={name}
-                  onChangeText={setName}
-                  onFocus={() => setFocusedInput('name')}
-                  onBlur={() => setFocusedInput(null)}
-                />
-              </View>
-            </View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            keyboardShouldPersistTaps="always"
+            contentContainerStyle={styles.presetScrollContent}
+          >
+            {QUICK_PRODUCT_PRESETS.map((preset, idx) => {
+              const isSelected = selectedPresetIndex === idx;
+              const isAddingThis = instantAddingIndex === idx;
 
-            {/* Veg / Non-Veg Indicator Toggle */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Food Classification</Text>
-              <View style={styles.vegToggleRow}>
-                <TouchableOpacity
-                  style={[styles.vegBtn, isVeg && styles.vegBtnActive]}
-                  onPress={() => setIsVeg(true)}
-                  activeOpacity={0.8}
-                >
-                  <View style={styles.vegBadgeGreen}>
-                    <View style={styles.vegDotGreen} />
-                  </View>
-                  <Text style={[styles.vegBtnText, isVeg && styles.vegBtnTextActive]}>
-                    100% Pure Veg / Farm Produce
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.vegBtn, !isVeg && styles.nonVegBtnActive]}
-                  onPress={() => setIsVeg(false)}
-                  activeOpacity={0.8}
-                >
-                  <View style={styles.vegBadgeRed}>
-                    <View style={styles.vegDotRed} />
-                  </View>
-                  <Text style={[styles.vegBtnText, !isVeg && styles.nonVegBtnTextActive]}>
-                    Non-Veg
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {/* Select Category */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Select Category</Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
-                contentContainerStyle={styles.catChipRow}
-              >
-                {categories?.map((cat) => {
-                  const isSelected = (selectedCatId || categories[0]?._id) === cat._id;
-                  return (
-                    <TouchableOpacity
-                      key={cat._id}
-                      style={[styles.catChip, isSelected && styles.catChipSelected]}
-                      onPress={() => setSelectedCatId(cat._id)}
-                      activeOpacity={0.8}
-                    >
-                      <Text style={{ marginRight: 4 }}>{cat.icon || '🥦'}</Text>
-                      <Text
-                        style={[
-                          styles.catChipText,
-                          isSelected && styles.catChipTextSelected
-                        ]}
-                      >
-                        {cat.name}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
-            </View>
-
-            {/* Image Selector & Presets */}
-            <View style={styles.inputGroup}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Text style={styles.label}>Product Image</Text>
-                <TouchableOpacity
-                  onPress={() => setShowCustomImage(!showCustomImage)}
-                  hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                >
-                  <Text style={styles.toggleCustomText}>
-                    {showCustomImage ? '← Use Quick Presets' : 'Custom Image URL +'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
-              {!showCustomImage ? (
-                <View>
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    keyboardShouldPersistTaps="handled"
-                    contentContainerStyle={styles.imagePresetRow}
-                  >
-                    {IMAGE_PRESETS.map((preset, idx) => {
-                      const isSelected = imageUrl === preset.url;
-                      return (
-                        <TouchableOpacity
-                          key={idx}
-                          style={[
-                            styles.imagePresetCard,
-                            isSelected && styles.imagePresetCardSelected
-                          ]}
-                          onPress={() => setImageUrl(preset.url)}
-                          activeOpacity={0.8}
-                        >
-                          <Image source={{ uri: preset.url }} style={styles.imagePresetThumb} />
-                          <View style={styles.imagePresetMeta}>
-                            <Text style={styles.imagePresetLabel}>
-                              {preset.icon} {preset.label}
-                            </Text>
-                          </View>
-                          {isSelected && (
-                            <View style={styles.presetCheckmark}>
-                              <Ionicons name="checkmark-circle" size={16} color="#16a34a" />
-                            </View>
-                          )}
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </ScrollView>
-                </View>
-              ) : (
+              return (
                 <View
+                  key={idx}
                   style={[
-                    styles.inputWrap,
-                    focusedInput === 'img' && styles.inputWrapFocused
+                    styles.presetCard,
+                    isSelected && styles.presetCardActive
                   ]}
                 >
-                  <Ionicons
-                    name="image-outline"
-                    size={18}
-                    color={focusedInput === 'img' ? colors.primary : '#94a3b8'}
-                    style={styles.inputIcon}
-                  />
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Paste direct image link (https://...)"
-                    placeholderTextColor="#94a3b8"
-                    value={imageUrl}
-                    onChangeText={setImageUrl}
-                    onFocus={() => setFocusedInput('img')}
-                    onBlur={() => setFocusedInput(null)}
-                    autoCapitalize="none"
-                  />
-                </View>
-              )}
-
-              {/* Live Preview Card */}
-              <View style={styles.previewBox}>
-                <Image source={{ uri: imageUrl }} style={styles.previewImage} />
-                <View style={styles.previewInfo}>
-                  <Text style={styles.previewBadge}>PREVIEW IN USER APP</Text>
-                  <Text style={styles.previewName} numberOfLines={1}>
-                    {name || 'Sample Product Name'}
-                  </Text>
-                  <Text style={styles.previewPrice}>
-                    ₹{price || '0'}{' '}
-                    <Text style={styles.previewUnit}>/ {unit || '1 pc'}</Text>
-                  </Text>
-                </View>
-              </View>
-            </View>
-
-            {/* Price & MRP Row */}
-            <View style={styles.row}>
-              <View style={{ flex: 1, marginRight: 10 }}>
-                <Text style={styles.label}>Selling Price (₹) *</Text>
-                <View
-                  style={[
-                    styles.inputWrap,
-                    focusedInput === 'price' && styles.inputWrapFocused
-                  ]}
-                >
-                  <Text style={styles.currencyPrefix}>₹</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="120"
-                    placeholderTextColor="#94a3b8"
-                    keyboardType="numeric"
-                    value={price}
-                    onChangeText={setPrice}
-                    onFocus={() => setFocusedInput('price')}
-                    onBlur={() => setFocusedInput(null)}
-                  />
-                </View>
-              </View>
-
-              <View style={{ flex: 1 }}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Text style={styles.label}>MRP (₹)</Text>
-                  {discountPercent > 0 && (
-                    <View style={styles.discountBadge}>
-                      <Text style={styles.discountBadgeText}>{discountPercent}% OFF</Text>
-                    </View>
-                  )}
-                </View>
-                <View
-                  style={[
-                    styles.inputWrap,
-                    focusedInput === 'mrp' && styles.inputWrapFocused
-                  ]}
-                >
-                  <Text style={styles.currencyPrefix}>₹</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="150"
-                    placeholderTextColor="#94a3b8"
-                    keyboardType="numeric"
-                    value={mrp}
-                    onChangeText={setMrp}
-                    onFocus={() => setFocusedInput('mrp')}
-                    onBlur={() => setFocusedInput(null)}
-                  />
-                </View>
-              </View>
-            </View>
-
-            {/* Unit Row & Quick Chips */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Unit of Measurement</Text>
-              <View
-                style={[
-                  styles.inputWrap,
-                  focusedInput === 'unit' && styles.inputWrapFocused,
-                  { marginBottom: 8 }
-                ]}
-              >
-                <Ionicons
-                  name="cube-outline"
-                  size={18}
-                  color={focusedInput === 'unit' ? colors.primary : '#94a3b8'}
-                  style={styles.inputIcon}
-                />
-                <TextInput
-                  style={styles.input}
-                  value={unit}
-                  onChangeText={setUnit}
-                  placeholder="e.g. 1 kg, 500 g, 1 plate"
-                  placeholderTextColor="#94a3b8"
-                  onFocus={() => setFocusedInput('unit')}
-                  onBlur={() => setFocusedInput(null)}
-                />
-              </View>
-
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
-                contentContainerStyle={styles.quickChipRow}
-              >
-                {UNIT_PRESETS.map((u, i) => (
                   <TouchableOpacity
-                    key={i}
-                    style={[styles.quickChip, unit === u && styles.quickChipActive]}
-                    onPress={() => setUnit(u)}
+                    activeOpacity={0.8}
+                    onPress={() => handleSelectPreset(preset, idx)}
+                    style={{ flex: 1 }}
                   >
-                    <Text style={[styles.quickChipText, unit === u && styles.quickChipTextActive]}>
-                      {u}
+                    <View style={styles.presetImgWrap}>
+                      <Image source={{ uri: preset.url }} style={styles.presetImage} />
+                      <View style={styles.presetIconBadge}>
+                        <Text style={{ fontSize: 16 }}>{preset.icon}</Text>
+                      </View>
+                      <View style={[styles.vegTinyBadge, { borderColor: preset.isVeg ? '#16a34a' : '#ef4444' }]}>
+                        <View style={[styles.vegTinyDot, { backgroundColor: preset.isVeg ? '#16a34a' : '#ef4444' }]} />
+                      </View>
+                    </View>
+
+                    <View style={styles.presetBody}>
+                      <Text style={styles.presetLabel} numberOfLines={1}>
+                        {preset.label}
+                      </Text>
+                      <Text style={styles.presetPrice}>
+                        ₹{preset.price}{' '}
+                        <Text style={styles.presetUnit}>/{preset.unit}</Text>
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+
+                  {/* Direct 1-Tap Publish Button */}
+                  <TouchableOpacity
+                    style={[
+                      styles.instantAddBtn,
+                      isAddingThis && { opacity: 0.6 }
+                    ]}
+                    onPress={() => handleInstantAdd(preset, idx)}
+                    disabled={isAddingThis}
+                    activeOpacity={0.8}
+                  >
+                    {isAddingThis ? (
+                      <ActivityIndicator size="small" color="#ffffff" />
+                    ) : (
+                      <>
+                        <Ionicons name="flash" size={13} color="#ffffff" />
+                        <Text style={styles.instantAddBtnText}>1-Tap Add</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
+          </ScrollView>
+        </View>
+
+        {/* 📝 DETAILED LISTING FORM */}
+        <View style={styles.formCard}>
+          <View style={styles.cardHeader}>
+            <View>
+              <Text style={styles.cardHeaderTitle}>CUSTOM LISTING DETAILS</Text>
+              <Text style={styles.cardHeaderSub}>
+                Publishing to store:{' '}
+                <Text style={{ fontWeight: '700', color: colors.primaryDark }}>
+                  {vendor?.storeName || 'Merchant Store'}
+                </Text>
+              </Text>
+            </View>
+            <View style={styles.liveTag}>
+              <View style={styles.livePulse} />
+              <Text style={styles.liveTagText}>DIRECT SAVE</Text>
+            </View>
+          </View>
+
+          {/* 1. Product / Dish Name */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Product / Dish Name *</Text>
+            <View style={styles.inputWrap}>
+              <Ionicons
+                name="pricetag-outline"
+                size={18}
+                color={colors.primary}
+                style={styles.inputIcon}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="e.g. Special Punjabi Thali, Organic Carrots"
+                placeholderTextColor="#94a3b8"
+                value={name}
+                onChangeText={setName}
+                autoCorrect={false}
+              />
+            </View>
+          </View>
+
+          {/* 2. Live Preview Card */}
+          <View style={styles.previewBox}>
+            <Image source={{ uri: imageUrl }} style={styles.previewImage} />
+            <View style={styles.previewInfo}>
+              <Text style={styles.previewBadge}>PREVIEW IN USER APP</Text>
+              <Text style={styles.previewName} numberOfLines={1}>
+                {name || 'Sample Product Name'}
+              </Text>
+              <Text style={styles.previewPrice}>
+                ₹{price || '0'}{' '}
+                <Text style={styles.previewUnit}>/ {unit || '1 pc'}</Text>
+                {discountPercent > 0 ? ` (${discountPercent}% OFF)` : ''}
+              </Text>
+            </View>
+          </View>
+
+          {/* 3. Veg / Non-Veg Toggle */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Classification</Text>
+            <View style={styles.vegToggleRow}>
+              <TouchableOpacity
+                style={[styles.vegBtn, isVeg && styles.vegBtnActive]}
+                onPress={() => setIsVeg(true)}
+                activeOpacity={0.8}
+              >
+                <View style={styles.vegBadgeGreen}>
+                  <View style={styles.vegDotGreen} />
+                </View>
+                <Text style={[styles.vegBtnText, isVeg && styles.vegBtnTextActive]}>
+                  100% Pure Veg / Farm Fresh
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.vegBtn, !isVeg && styles.nonVegBtnActive]}
+                onPress={() => setIsVeg(false)}
+                activeOpacity={0.8}
+              >
+                <View style={styles.vegBadgeRed}>
+                  <View style={styles.vegDotRed} />
+                </View>
+                <Text style={[styles.vegBtnText, !isVeg && styles.nonVegBtnTextActive]}>
+                  Non-Veg
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* 4. Select Category */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Select Category</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              keyboardShouldPersistTaps="always"
+              contentContainerStyle={styles.catChipRow}
+            >
+              {categories?.map((cat) => {
+                const isSelected = (selectedCatId || categories[0]?._id) === cat._id;
+                return (
+                  <TouchableOpacity
+                    key={cat._id}
+                    style={[styles.catChip, isSelected && styles.catChipSelected]}
+                    onPress={() => setSelectedCatId(cat._id)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={{ marginRight: 4 }}>{cat.icon || '🥦'}</Text>
+                    <Text
+                      style={[
+                        styles.catChipText,
+                        isSelected && styles.catChipTextSelected
+                      ]}
+                    >
+                      {cat.name}
                     </Text>
                   </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
+                );
+              })}
+            </ScrollView>
+          </View>
 
-            {/* Available Stock & Quick Chips */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Available Stock (Units)</Text>
-              <View
-                style={[
-                  styles.inputWrap,
-                  focusedInput === 'stock' && styles.inputWrapFocused,
-                  { marginBottom: 8 }
-                ]}
-              >
-                <Ionicons
-                  name="layers-outline"
-                  size={18}
-                  color={focusedInput === 'stock' ? colors.primary : '#94a3b8'}
-                  style={styles.inputIcon}
-                />
+          {/* 5. Price & MRP Row */}
+          <View style={styles.row}>
+            <View style={{ flex: 1, marginRight: 10 }}>
+              <Text style={styles.label}>Selling Price (₹) *</Text>
+              <View style={styles.inputWrap}>
+                <Text style={styles.currencyPrefix}>₹</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="25"
+                  placeholder="120"
                   placeholderTextColor="#94a3b8"
                   keyboardType="numeric"
-                  value={stock}
-                  onChangeText={setStock}
-                  onFocus={() => setFocusedInput('stock')}
-                  onBlur={() => setFocusedInput(null)}
+                  value={price}
+                  onChangeText={setPrice}
                 />
               </View>
-
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
-                contentContainerStyle={styles.quickChipRow}
-              >
-                {STOCK_PRESETS.map((s, i) => (
-                  <TouchableOpacity
-                    key={i}
-                    style={[styles.quickChip, stock === s && styles.quickChipActive]}
-                    onPress={() => setStock(s)}
-                  >
-                    <Text style={[styles.quickChipText, stock === s && styles.quickChipTextActive]}>
-                      {s} units
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
             </View>
 
-            {/* Product Description */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Product Description / Highlights</Text>
-              <View
-                style={[
-                  styles.inputWrap,
-                  { height: 80, alignItems: 'flex-start', paddingTop: 10 },
-                  focusedInput === 'desc' && styles.inputWrapFocused
-                ]}
-              >
+            <View style={{ flex: 1 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Text style={styles.label}>MRP (₹)</Text>
+                {discountPercent > 0 && (
+                  <View style={styles.discountBadge}>
+                    <Text style={styles.discountBadgeText}>{discountPercent}% OFF</Text>
+                  </View>
+                )}
+              </View>
+              <View style={styles.inputWrap}>
+                <Text style={styles.currencyPrefix}>₹</Text>
                 <TextInput
-                  style={[styles.input, { height: 60 }]}
-                  placeholder="Organic freshness, ingredients, cooking style, or serving details..."
+                  style={styles.input}
+                  placeholder="150"
                   placeholderTextColor="#94a3b8"
-                  multiline
-                  value={description}
-                  onChangeText={setDescription}
-                  onFocus={() => setFocusedInput('desc')}
-                  onBlur={() => setFocusedInput(null)}
+                  keyboardType="numeric"
+                  value={mrp}
+                  onChangeText={setMrp}
                 />
               </View>
             </View>
-
-            {/* Submit Button */}
-            <TouchableOpacity
-              style={[styles.submitBtn, isSubmitting && styles.submitBtnDisabled]}
-              onPress={handleSubmit}
-              disabled={isSubmitting}
-              activeOpacity={0.85}
-            >
-              {isSubmitting ? (
-                <>
-                  <ActivityIndicator size="small" color="#ffffff" />
-                  <Text style={styles.submitBtnText}>Publishing to MongoDB...</Text>
-                </>
-              ) : (
-                <>
-                  <Ionicons name="cloud-upload-outline" size={20} color="#ffffff" />
-                  <Text style={styles.submitBtnText}>Publish Listing to Store</Text>
-                </>
-              )}
-            </TouchableOpacity>
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+
+          {/* 6. Unit of Measurement */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Unit of Measurement</Text>
+            <View style={[styles.inputWrap, { marginBottom: 8 }]}>
+              <Ionicons
+                name="cube-outline"
+                size={18}
+                color={colors.primary}
+                style={styles.inputIcon}
+              />
+              <TextInput
+                style={styles.input}
+                value={unit}
+                onChangeText={setUnit}
+                placeholder="e.g. 1 kg, 500 g, 1 plate"
+                placeholderTextColor="#94a3b8"
+              />
+            </View>
+
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              keyboardShouldPersistTaps="always"
+              contentContainerStyle={styles.quickChipRow}
+            >
+              {UNIT_PRESETS.map((u, i) => (
+                <TouchableOpacity
+                  key={i}
+                  style={[styles.quickChip, unit === u && styles.quickChipActive]}
+                  onPress={() => setUnit(u)}
+                >
+                  <Text style={[styles.quickChipText, unit === u && styles.quickChipTextActive]}>
+                    {u}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+
+          {/* 7. Available Stock */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Available Stock (Units)</Text>
+            <View style={[styles.inputWrap, { marginBottom: 8 }]}>
+              <Ionicons
+                name="layers-outline"
+                size={18}
+                color={colors.primary}
+                style={styles.inputIcon}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="25"
+                placeholderTextColor="#94a3b8"
+                keyboardType="numeric"
+                value={stock}
+                onChangeText={setStock}
+              />
+            </View>
+
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              keyboardShouldPersistTaps="always"
+              contentContainerStyle={styles.quickChipRow}
+            >
+              {STOCK_PRESETS.map((s, i) => (
+                <TouchableOpacity
+                  key={i}
+                  style={[styles.quickChip, stock === s && styles.quickChipActive]}
+                  onPress={() => setStock(s)}
+                >
+                  <Text style={[styles.quickChipText, stock === s && styles.quickChipTextActive]}>
+                    {s} units
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+
+          {/* 8. Custom Image Toggle */}
+          <View style={styles.inputGroup}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Text style={styles.label}>Product Image URL</Text>
+              <TouchableOpacity
+                onPress={() => setShowCustomImage(!showCustomImage)}
+                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+              >
+                <Text style={styles.toggleCustomText}>
+                  {showCustomImage ? 'Hide Custom URL' : 'Custom Image Link +'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {showCustomImage && (
+              <View style={[styles.inputWrap, { marginTop: 6 }]}>
+                <Ionicons
+                  name="image-outline"
+                  size={18}
+                  color={colors.primary}
+                  style={styles.inputIcon}
+                />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Paste image link (https://...)"
+                  placeholderTextColor="#94a3b8"
+                  value={imageUrl}
+                  onChangeText={setImageUrl}
+                  autoCapitalize="none"
+                />
+              </View>
+            )}
+          </View>
+
+          {/* 9. Product Description */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Product Description / Highlights</Text>
+            <View style={[styles.inputWrap, { height: 75, alignItems: 'flex-start', paddingTop: 10 }]}>
+              <TextInput
+                style={[styles.input, { height: 55 }]}
+                placeholder="Freshness details, organic origin, or serving style..."
+                placeholderTextColor="#94a3b8"
+                multiline
+                value={description}
+                onChangeText={setDescription}
+              />
+            </View>
+          </View>
+
+          {/* Submit Button */}
+          <TouchableOpacity
+            style={[styles.submitBtn, isSubmitting && styles.submitBtnDisabled]}
+            onPress={handleSubmit}
+            disabled={isSubmitting}
+            activeOpacity={0.85}
+          >
+            {isSubmitting ? (
+              <>
+                <ActivityIndicator size="small" color="#ffffff" />
+                <Text style={styles.submitBtnText}>Publishing to MongoDB...</Text>
+              </>
+            ) : (
+              <>
+                <Ionicons name="cloud-upload" size={20} color="#ffffff" />
+                <Text style={styles.submitBtnText}>Publish Listing to Store</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
     </View>
   );
 };
@@ -1073,6 +1201,133 @@ const styles = StyleSheet.create({
     maxWidth: 580,
     width: '100%',
     alignSelf: 'center'
+  },
+  quickAddSection: {
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    shadowColor: 'rgba(15, 23, 42, 0.05)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 10,
+    elevation: 3
+  },
+  quickAddHeader: {
+    marginBottom: 12
+  },
+  quickAddTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#0f172a'
+  },
+  quickAddSub: {
+    fontSize: 11.5,
+    color: '#64748b',
+    marginTop: 2
+  },
+  presetScrollContent: {
+    gap: 12,
+    paddingVertical: 4,
+    paddingRight: 10
+  },
+  presetCard: {
+    width: 140,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: '#e2e8f0',
+    backgroundColor: '#f8fafc',
+    overflow: 'hidden',
+    justifyContent: 'space-between',
+    paddingBottom: 8
+  },
+  presetCardActive: {
+    borderColor: '#16a34a',
+    backgroundColor: '#f0fdf4',
+    shadowColor: '#16a34a',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 3
+  },
+  presetImgWrap: {
+    width: '100%',
+    height: 85,
+    position: 'relative'
+  },
+  presetImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover'
+  },
+  presetIconBadge: {
+    position: 'absolute',
+    top: 6,
+    left: 6,
+    backgroundColor: '#ffffff',
+    borderRadius: 8,
+    padding: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2
+  },
+  vegTinyBadge: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 16,
+    height: 16,
+    backgroundColor: '#ffffff',
+    borderRadius: 3,
+    borderWidth: 1.5,
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  vegTinyDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4
+  },
+  presetBody: {
+    paddingHorizontal: 8,
+    paddingTop: 8,
+    paddingBottom: 6
+  },
+  presetLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#1e293b'
+  },
+  presetPrice: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#16a34a',
+    marginTop: 2
+  },
+  presetUnit: {
+    fontSize: 10,
+    fontWeight: '500',
+    color: '#64748b'
+  },
+  instantAddBtn: {
+    marginHorizontal: 8,
+    marginTop: 4,
+    backgroundColor: '#16a34a',
+    borderRadius: 10,
+    paddingVertical: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4
+  },
+  instantAddBtnText: {
+    color: '#ffffff',
+    fontSize: 11,
+    fontWeight: '800'
   },
   formCard: {
     backgroundColor: '#ffffff',

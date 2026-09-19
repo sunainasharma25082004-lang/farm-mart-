@@ -100,12 +100,12 @@ export const NewOrderModal = ({ order, onAccept, onReject, onClose }) => {
   useEffect(() => {
     if (!order) return;
 
-    // Entrance spring animation
+    // Entrance spring animation (using false to stay synchronized with JS-driven pulse border)
     Animated.spring(entranceScale, {
       toValue: 1,
       friction: 5,
       tension: 180,
-      useNativeDriver: Platform.OS !== 'web'
+      useNativeDriver: false
     }).start();
 
     // Pulsing border glow animation in sync with alert
@@ -134,13 +134,13 @@ export const NewOrderModal = ({ order, onAccept, onReject, onClose }) => {
       Animated.timing(tickAnim, {
         toValue: 1.25,
         duration: 90,
-        useNativeDriver: Platform.OS !== 'web'
+        useNativeDriver: false
       }),
       Animated.spring(tickAnim, {
         toValue: 1,
         friction: 4,
         tension: 200,
-        useNativeDriver: Platform.OS !== 'web'
+        useNativeDriver: false
       })
     ]).start();
   }, [timeLeft]);

@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { API_BASE_URL } from '../config/env';
+import storage from '../services/storage';
 
 const PartnerContext = createContext();
 
@@ -98,8 +99,7 @@ export const PartnerProvider = ({ children }) => {
     }
   }, [token]);
 
-
-  // Vendor login (Phone & Password)
+  // Vendor login (Phone & Password) with persistent storage
   const loginVendor = useCallback(async (phone, password = 'password123') => {
     try {
       setIsLoading(true);
@@ -112,6 +112,9 @@ export const PartnerProvider = ({ children }) => {
       if (data.success && data.vendor) {
         setVendor(data.vendor);
         setToken(data.token);
+        // Persist to storage so user never has to log in again on app launch
+        await storage.setVendor(data.vendor);
+        await storage.setToken(data.token);
         // Immediately clear previous vendor's orders and inventory
         setOrders([]);
         setInventory([]);
@@ -129,31 +132,53 @@ export const PartnerProvider = ({ children }) => {
     }
   }, [fetchInventory, fetchOrders, fetchStats]);
 
-  // Initial load: Only fetch categories, no auto-login so user lands on Login Screen
+  // Initial load: Restore persistent session from device storage
   useEffect(() => {
-    fetchCategories();
-    setIsLoading(false);
-  }, [fetchCategories]);
+    let isMounted = true;
+    const initPartnerSession = async () => {
+      fetchCategories();
+      try {
+        const savedVendor = await storage.getVendor();
+        const savedToken = await storage.getToken();
+        if (isMounted && savedVendor) {
+          setVendor(savedVendor);
+          if (savedToken) setToken(savedToken);
+          fetchInventory(savedVendor._id);
+          fetchOrders(savedVendor._id, savedToken);
+          if (savedToken) fetchStats(savedToken);
+        }
+      } catch (e) {
+        console.warn('Could not restore partner session:', e);
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    };
+    initPartnerSession();
+    return () => {
+      isMounted = false;
+    };
+  }, [fetchCategories, fetchInventory, fetchOrders, fetchStats]);
 
-  // Periodic polling fallback (every 10 seconds)
+  // Periodic fast polling fallback (every 5 seconds)
   useEffect(() => {
     if (!vendor?._id) return;
     const interval = setInterval(() => {
       fetchOrders(vendor._id);
       fetchInventory(vendor._id);
       if (token) fetchStats(token);
-    }, 10000);
+    }, 5000);
     return () => clearInterval(interval);
   }, [vendor?._id, token, fetchOrders, fetchInventory, fetchStats]);
 
   const [isTogglingStore, setIsTogglingStore] = useState(false);
 
-  // Logout Vendor
-  const logoutVendor = useCallback(() => {
+  // Logout Vendor and clear persisted credentials
+  const logoutVendor = useCallback(async () => {
     setVendor(null);
     setToken(null);
     setOrders([]);
     setInventory([]);
+    await storage.clearAuth();
   }, []);
 
   // Toggle Store Online / Offline status with idempotency lock
