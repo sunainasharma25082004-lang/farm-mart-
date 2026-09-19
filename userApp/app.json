@@ -18,6 +18,8 @@
       },
       "package": "com.viz_eas001.userApp",
       "permissions": [
+        "INTERNET",
+        "ACCESS_NETWORK_STATE",
         "ACCESS_COARSE_LOCATION",
         "ACCESS_FINE_LOCATION"
       ]
