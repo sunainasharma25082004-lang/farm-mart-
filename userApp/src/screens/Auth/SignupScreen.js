@@ -85,23 +85,17 @@ export const SignupScreen = ({ navigation }) => {
         );
       } else {
         showAlert(
-          "Registration Note",
-          data.message || "Could not register. Logging you in..."
+          "Already Registered",
+          data.message || "This mobile number is already registered. Please switch to the Log In tab."
         );
-        await loginUser(phone, password);
-        navigation.navigate("MainTabs");
       }
     } catch (error) {
       setLoading(false);
-      console.warn("Signup network fallback:", error);
-      await loginUser({
-        name,
-        phone,
-        city: city || 'Ludhiana',
-        walletBalance: 25000,
-        walletRupees: 250
-      });
-      navigation.navigate("MainTabs");
+      console.warn("Signup error:", error);
+      showAlert(
+        "Registration Error",
+        error.message || "Could not complete registration. Please try again."
+      );
     }
   };
 

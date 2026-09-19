@@ -19,18 +19,11 @@ export const registerUser = async (req, res) => {
   try {
     let existingUser = await User.findOne({ phone: cleanPhone });
     if (existingUser) {
-      if (name) existingUser.name = name;
-      await existingUser.save();
-      const accessToken = generateAccessToken(existingUser);
-      const refreshToken = await generateRefreshToken(existingUser, req.body.deviceId || 'web');
-      return res.status(200).json({
-        success: true,
-        ok: true,
-        message: 'Account already exists. Logged in successfully!',
-        token: accessToken,
-        accessToken,
-        refreshToken,
-        user: formatUserResponse(existingUser)
+      return res.status(400).json({
+        success: false,
+        ok: false,
+        code: 'USER_ALREADY_EXISTS',
+        message: 'Mobile number is already registered. Please log in with your password.'
       });
     }
 
