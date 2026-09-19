@@ -9,15 +9,30 @@ import {
   StatusBar,
   ScrollView,
   Platform,
-  Image
+  Image,
+  useWindowDimensions
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { usePartner } from '../context/PartnerContext';
 import { colors } from '../theme/colors';
+import { GlassCard } from '../components/GlassCard';
+import { WaterBackground } from '../components/WaterBackground';
 
 const LOGO = require('../../assets/farmart_logo.png');
 
+const DEMO_ACCOUNTS = [
+  { name: 'Shimla Fresh Orchards', phone: '9876543214', owner: 'Manpreet Singh', icon: 'leaf-outline' },
+  { name: 'Sunita Home Restro', phone: '9876543211', owner: 'Chef Sunita', icon: 'restaurant-outline' },
+  { name: 'Sukhwinder Farms', phone: '9876543212', owner: 'Sukhwinder Singh', icon: 'flower-outline' },
+  { name: 'Gurpreet Orchards', phone: '9876543213', owner: 'Gurpreet Singh', icon: 'nutrition-outline' }
+];
+
 export const PartnerLoginScreen = () => {
+  const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const isTablet = width > 600;
+
   const { loginVendor } = usePartner();
 
   const [phone, setPhone] = useState('');
@@ -57,30 +72,39 @@ export const PartnerLoginScreen = () => {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+      <WaterBackground />
 
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          {
+            paddingTop: insets.top + 24,
+            paddingBottom: insets.bottom + 40,
+            maxWidth: isTablet ? 520 : '100%',
+            alignSelf: 'center',
+            width: '100%'
+          }
+        ]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
         {/* Brand Header */}
         <View style={styles.header}>
-          <View style={styles.logoCircle}>
+          <View style={styles.logoGlassGlow}>
             <Image source={LOGO} style={styles.logoImage} resizeMode="contain" />
           </View>
-          <Text style={styles.brandTitle}>S-farmart Partner Hub</Text>
+          <Text style={styles.brandTitle}>Farmart Partner Hub</Text>
           <Text style={styles.brandSub}>
-            Merchant Portal • Manage live store, incoming orders & inventory
+            Merchant Portal • Live store duty, incoming kitchen orders & catalog
           </Text>
         </View>
 
-
-        {/* Login Form Box */}
-        <View style={styles.card}>
+        {/* Login Form Glass Card */}
+        <GlassCard style={styles.card} showSheen={true}>
           <Text style={styles.cardTitle}>Partner Login</Text>
           <Text style={styles.cardSub}>
-            Enter your credentials to access your store dashboard
+            Enter credentials or tap a test merchant account below
           </Text>
 
           {errorMessage ? (
@@ -95,17 +119,15 @@ export const PartnerLoginScreen = () => {
             <Text style={styles.fieldLabel}>REGISTERED PHONE NUMBER</Text>
             <View style={styles.inputWrap}>
               <View style={styles.prefixBox}>
-                <Text style={styles.prefixText}>🇮🇳 +91</Text>
+                <Ionicons name="call-outline" size={16} color="#64748b" />
+                <Text style={styles.prefixText}>+91</Text>
               </View>
               <TextInput
                 style={styles.textInput}
-                placeholder="Enter 10-digit phone"
-                placeholderTextColor="#94a3b8"
+                placeholder="10-digit mobile number"
+                placeholderTextColor={colors.textMuted}
                 value={phone}
-                onChangeText={(txt) => {
-                  setPhone(txt);
-                  setErrorMessage('');
-                }}
+                onChangeText={setPhone}
                 keyboardType="phone-pad"
                 maxLength={10}
               />
@@ -116,10 +138,13 @@ export const PartnerLoginScreen = () => {
           <View style={styles.fieldGroup}>
             <Text style={styles.fieldLabel}>PASSWORD</Text>
             <View style={styles.inputWrap}>
+              <View style={styles.prefixBox}>
+                <Ionicons name="lock-closed-outline" size={16} color="#64748b" />
+              </View>
               <TextInput
-                style={[styles.textInput, { paddingLeft: 14 }]}
+                style={[styles.textInput, { paddingRight: 44 }]}
                 placeholder="Enter password"
-                placeholderTextColor="#94a3b8"
+                placeholderTextColor={colors.textMuted}
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
@@ -127,34 +152,61 @@ export const PartnerLoginScreen = () => {
               <TouchableOpacity
                 style={styles.eyeBtn}
                 onPress={() => setShowPassword(!showPassword)}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
                 <Ionicons
                   name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                  size={20}
+                  size={18}
                   color="#64748b"
                 />
               </TouchableOpacity>
             </View>
           </View>
 
-          {/* Submit Button */}
+          {/* Submit Action */}
           <TouchableOpacity
-            style={[styles.loginBtn, isLoading && { opacity: 0.75 }]}
+            style={styles.submitBtn}
             onPress={() => handleLogin()}
             disabled={isLoading}
-            activeOpacity={0.85}
+            activeOpacity={0.8}
           >
             {isLoading ? (
               <ActivityIndicator size="small" color="#ffffff" />
             ) : (
               <>
-                <Text style={styles.loginBtnText}>Log In to Store</Text>
+                <Text style={styles.submitText}>Log In to Store Console</Text>
                 <Ionicons name="arrow-forward" size={18} color="#ffffff" />
               </>
             )}
           </TouchableOpacity>
-        </View>
 
+          {/* Quick Demo Switcher Section */}
+          <View style={styles.demoSection}>
+            <Text style={styles.demoSectionTitle}>1-Tap Demo Merchant Access:</Text>
+            <View style={styles.demoGrid}>
+              {DEMO_ACCOUNTS.map((acc, idx) => (
+                <TouchableOpacity
+                  key={idx}
+                  style={styles.demoChip}
+                  onPress={() => {
+                    setPhone(acc.phone);
+                    setPassword('password123');
+                    handleLogin(acc.phone, 'password123');
+                  }}
+                  disabled={isLoading}
+                >
+                  <Ionicons name={acc.icon} size={16} color="#ea580c" />
+                  <View style={{ flex: 1, marginLeft: 6 }}>
+                    <Text style={styles.demoChipName} numberOfLines={1}>
+                      {acc.name}
+                    </Text>
+                    <Text style={styles.demoChipPhone}>{acc.phone}</Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </GlassCard>
       </ScrollView>
     </View>
   );
@@ -166,304 +218,161 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8fafc'
   },
   scrollContent: {
-    padding: 24,
-    alignItems: 'center',
-    paddingBottom: 40
+    paddingHorizontal: 16
   },
   header: {
     alignItems: 'center',
-    marginTop: 20,
-    marginBottom: 24
+    marginBottom: 20
   },
-  logoCircle: {
-    width: 84,
-    height: 84,
-    borderRadius: 22,
-    backgroundColor: '#ffffff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: 'rgba(15, 23, 42, 0.12)',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 1,
-    shadowRadius: 14,
-    elevation: 6,
-    marginBottom: 16,
+  logoGlassGlow: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: 'rgba(234, 88, 12, 0.12)',
     borderWidth: 1.5,
-    borderColor: '#e2e8f0',
+    borderColor: 'rgba(234, 88, 12, 0.35)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10
   },
   logoImage: {
-    width: 72,
-    height: 72,
+    width: 44,
+    height: 44
   },
   brandTitle: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '800',
-    color: '#0f172a',
-    letterSpacing: -0.5
+    color: '#0f172a'
   },
   brandSub: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#64748b',
     textAlign: 'center',
-    marginTop: 6,
-    maxWidth: 320,
+    marginTop: 4,
     lineHeight: 18
   },
   card: {
-    width: '100%',
-    maxWidth: 440,
-    backgroundColor: '#ffffff',
-    borderRadius: 22,
-    padding: 24,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    shadowColor: 'rgba(15, 23, 42, 0.08)',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 1,
-    shadowRadius: 20,
-    elevation: 6
+    padding: 20,
+    marginBottom: 20
   },
   cardTitle: {
-    fontSize: 19,
+    fontSize: 18,
     fontWeight: '800',
     color: '#0f172a'
   },
   cardSub: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#64748b',
-    marginTop: 4,
-    marginBottom: 18
+    marginTop: 3,
+    marginBottom: 16
   },
   errorBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#fef2f2',
-    borderWidth: 1,
-    borderColor: '#fecaca',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 16
+    padding: 10,
+    borderRadius: 10,
+    backgroundColor: 'rgba(220, 38, 38, 0.12)',
+    marginBottom: 14
   },
   errorText: {
-    fontSize: 12.5,
+    fontSize: 12,
     color: '#b91c1c',
-    fontWeight: '600',
     flex: 1
   },
   fieldGroup: {
-    marginBottom: 16
+    marginBottom: 14
   },
   fieldLabel: {
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: '700',
     color: '#475569',
-    letterSpacing: 0.5,
-    marginBottom: 6
+    marginBottom: 6,
+    letterSpacing: 0.5
   },
   inputWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: '#e2e8f0',
-    borderRadius: 14,
-    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: 'rgba(226, 232, 240, 0.9)',
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
     overflow: 'hidden'
   },
   prefixBox: {
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    backgroundColor: '#f1f5f9',
-    borderRightWidth: 1,
-    borderRightColor: '#e2e8f0'
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingLeft: 12,
+    paddingRight: 6
   },
   prefixText: {
-    fontSize: 13.5,
+    fontSize: 13,
     fontWeight: '700',
     color: '#334155'
   },
   textInput: {
     flex: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    fontSize: 14.5,
+    height: 46,
+    paddingHorizontal: 8,
+    fontSize: 14,
     color: '#0f172a'
   },
   eyeBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 12
+    position: 'absolute',
+    right: 12
   },
-  loginBtn: {
+  submitBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: colors.primary,
+    height: 48,
     borderRadius: 14,
-    paddingVertical: 14,
+    backgroundColor: '#ea580c',
     marginTop: 8,
-    shadowColor: colors.primary,
+    shadowColor: '#ea580c',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
     elevation: 4
   },
-  loginBtnText: {
-    color: '#ffffff',
-    fontSize: 15,
-    fontWeight: '700'
+  submitText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#ffffff'
   },
   demoSection: {
-    width: '100%',
-    maxWidth: 440,
-    marginTop: 28
-  },
-  demoSectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 8
-  },
-  demoDivider: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#e2e8f0'
+    marginTop: 20,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(226, 232, 240, 0.8)'
   },
   demoSectionTitle: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#94a3b8',
-    letterSpacing: 0.6
-  },
-  demoHint: {
     fontSize: 12,
+    fontWeight: '700',
     color: '#64748b',
-    textAlign: 'center',
-    marginBottom: 14
+    marginBottom: 10
   },
-  demoList: {
-    gap: 10
+  demoGrid: {
+    gap: 8
   },
-  demoCard: {
+  demoChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1.5,
-    borderColor: '#e2e8f0',
-    shadowColor: 'rgba(15, 23, 42, 0.04)',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 1,
-    shadowRadius: 8,
-    elevation: 2
-  },
-  demoIconCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: '#f8fafc',
-    justifyContent: 'center',
-    alignItems: 'center',
+    padding: 10,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.75)',
     borderWidth: 1,
-    borderColor: '#e2e8f0'
+    borderColor: 'rgba(234, 88, 12, 0.25)'
   },
-  demoName: {
-    fontSize: 14,
+  demoChipName: {
+    fontSize: 13,
     fontWeight: '700',
     color: '#0f172a'
   },
-  demoType: {
-    fontSize: 11.5,
-    color: '#15803d',
-    fontWeight: '600',
-    marginTop: 1
-  },
-  demoPhone: {
+  demoChipPhone: {
     fontSize: 11,
-    color: '#64748b',
-    marginTop: 2
-  },
-  quickLoginBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#dcfce7',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 10
-  },
-  quickLoginText: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#15803d',
-    letterSpacing: 0.4
-  },
-  storeSwitcherContainer: {
-    width: '100%',
-    maxWidth: 440,
-    backgroundColor: '#ffffff',
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderRadius: 18,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 2
-  },
-  storeSwitcherLabel: {
-    fontSize: 10.5,
-    fontWeight: '800',
-    color: '#64748b',
-    letterSpacing: 0.8,
-    marginBottom: 10
-  },
-  storeSwitcherScroll: {
-    gap: 8,
-    paddingRight: 8
-  },
-  storeSwitchChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    minWidth: 105
-  },
-  storeSwitchChipActive: {
-    backgroundColor: '#fff7ed',
-    borderColor: '#ea580c',
-    opacity: 1
-  },
-  storeSwitchChipInactive: {
-    backgroundColor: '#f8fafc',
-    borderColor: '#e2e8f0',
-    opacity: 0.85
-  },
-  storeSwitchName: {
-    fontSize: 12.5,
-    fontWeight: '700',
-    color: '#475569'
-  },
-  storeSwitchNameActive: {
-    color: '#c2410c',
-    fontWeight: '800'
-  },
-  storeSwitchPhone: {
-    fontSize: 10,
-    color: '#94a3b8',
-    marginTop: 1
-  },
-  storeSwitchDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#ea580c',
-    marginLeft: 6
+    color: '#64748b'
   }
 });

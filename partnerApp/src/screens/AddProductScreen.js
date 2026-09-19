@@ -7,23 +7,29 @@ import {
   TouchableOpacity,
   TextInput,
   Image,
-  Alert,
   Switch,
   Platform,
   StatusBar,
   KeyboardAvoidingView,
-  ActivityIndicator
+  ActivityIndicator,
+  Modal,
+  useWindowDimensions
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { usePartner } from '../context/PartnerContext';
 import { colors } from '../theme/colors';
+import { glassTheme } from '../theme/glass';
+import { GlassCard } from '../components/GlassCard';
+import { WaterBackground } from '../components/WaterBackground';
+import { showAlert } from '../utils/alert';
 
-// High-resolution presets for merchants with complete instant-add data
+// High-resolution presets for merchants with real vector icons and complete instant-add data
 const QUICK_PRODUCT_PRESETS = [
   {
     name: 'Special Punjabi Veg Thali',
     label: 'Veg Thali',
-    icon: '🍛',
+    ionIcon: 'fast-food-outline',
     categoryMatch: ['restaurant', 'food', 'meal', 'prepared', 'cook'],
     price: '120',
     mrp: '150',
@@ -36,7 +42,7 @@ const QUICK_PRODUCT_PRESETS = [
   {
     name: 'Fresh Mixed Green Veggies',
     label: 'Green Veggies',
-    icon: '🥦',
+    ionIcon: 'leaf-outline',
     categoryMatch: ['vegetable', 'veg', 'farm', 'fresh', 'produce'],
     price: '60',
     mrp: '80',
@@ -49,7 +55,7 @@ const QUICK_PRODUCT_PRESETS = [
   {
     name: 'Organic Farm Potatoes (Aloo)',
     label: 'Potatoes',
-    icon: '🥔',
+    ionIcon: 'nutrition-outline',
     categoryMatch: ['vegetable', 'veg', 'farm', 'fresh', 'produce'],
     price: '30',
     mrp: '40',
@@ -62,7 +68,7 @@ const QUICK_PRODUCT_PRESETS = [
   {
     name: 'Kashmiri Sweet Red Apples',
     label: 'Fresh Apples',
-    icon: '🍎',
+    ionIcon: 'flower-outline',
     categoryMatch: ['fruit', 'fresh', 'produce'],
     price: '140',
     mrp: '170',
@@ -75,7 +81,7 @@ const QUICK_PRODUCT_PRESETS = [
   {
     name: 'Hot Desi Ghee Paratha (2 Pcs)',
     label: 'Hot Parathas',
-    icon: '🫓',
+    ionIcon: 'restaurant-outline',
     categoryMatch: ['restaurant', 'food', 'meal', 'bread'],
     price: '50',
     mrp: '65',
@@ -88,7 +94,7 @@ const QUICK_PRODUCT_PRESETS = [
   {
     name: 'Pure Desi Cow Milk',
     label: 'Pure Milk',
-    icon: '🥛',
+    ionIcon: 'water-outline',
     categoryMatch: ['dairy', 'milk', 'egg'],
     price: '65',
     mrp: '70',
@@ -101,7 +107,7 @@ const QUICK_PRODUCT_PRESETS = [
   {
     name: 'Pure Desi Ghee & Gulab Jamun',
     label: 'Desi Sweets',
-    icon: '🍯',
+    ionIcon: 'gift-outline',
     categoryMatch: ['dairy', 'sweet', 'dessert'],
     price: '180',
     mrp: '220',
@@ -114,7 +120,7 @@ const QUICK_PRODUCT_PRESETS = [
   {
     name: 'Farm Fresh Red Tomatoes',
     label: 'Tomatoes',
-    icon: '🍅',
+    ionIcon: 'nutrition-outline',
     categoryMatch: ['vegetable', 'veg', 'produce'],
     price: '35',
     mrp: '45',
@@ -127,7 +133,7 @@ const QUICK_PRODUCT_PRESETS = [
   {
     name: 'Fresh Red Onions (Pyaz)',
     label: 'Fresh Onions',
-    icon: '🧅',
+    ionIcon: 'leaf-outline',
     categoryMatch: ['vegetable', 'veg', 'produce'],
     price: '35',
     mrp: '45',
@@ -143,6 +149,10 @@ const UNIT_PRESETS = ['1 kg', '500 g', '250 g', '1 pc', '1 plate', '1 packet', '
 const STOCK_PRESETS = ['10', '25', '50', '100', '200'];
 
 export const AddProductScreen = ({ navigation }) => {
+  const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const isTablet = width > 600;
+
   const { addInventoryItem, categories, vendor } = usePartner();
 
   const [name, setName] = useState(QUICK_PRODUCT_PRESETS[0].name);
@@ -159,36 +169,23 @@ export const AddProductScreen = ({ navigation }) => {
   const [selectedPresetIndex, setSelectedPresetIndex] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [instantAddingIndex, setInstantAddingIndex] = useState(null);
-  const [showCustomImage, setShowCustomImage] = useState(false);
-  const [statusMessage, setStatusMessage] = useState(null);
 
-  // Auto calculate discount percentage
   const numPrice = parseFloat(price);
   const numMrp = parseFloat(mrp);
   const discountPercent =
     numPrice > 0 && numMrp > numPrice ? Math.round(((numMrp - numPrice) / numMrp) * 100) : 0;
 
   const showFeedback = (title, message, isSuccess = false) => {
-    if (Platform.OS === 'web') {
-      setStatusMessage({ title, message, isSuccess });
-      if (isSuccess) {
-        setTimeout(() => {
-          navigation.goBack();
-        }, 1200);
-      }
-    } else {
-      Alert.alert(title, message, [
-        {
-          text: 'OK',
-          onPress: () => {
-            if (isSuccess) navigation.goBack();
-          }
+    showAlert(title, message, [
+      {
+        text: 'OK',
+        onPress: () => {
+          if (isSuccess) navigation.goBack();
         }
-      ]);
-    }
+      }
+    ]);
   };
 
-  // Helper to match category by keywords
   const findMatchingCategoryId = (keywords = []) => {
     if (!categories || categories.length === 0) return '';
     for (const kw of keywords) {
@@ -200,7 +197,6 @@ export const AddProductScreen = ({ navigation }) => {
     return categories[0]._id;
   };
 
-  // Preset Selection: Pre-populates all fields cleanly without typing
   const handleSelectPreset = (preset, idx) => {
     setSelectedPresetIndex(idx);
     setName(preset.name);
@@ -216,7 +212,6 @@ export const AddProductScreen = ({ navigation }) => {
     if (matchedCat) setSelectedCatId(matchedCat);
   };
 
-  // Instant 1-Tap Publish: Directly adds preset to MongoDB with 1 tap
   const handleInstantAdd = async (preset, idx) => {
     if (isSubmitting || instantAddingIndex !== null) return;
     setInstantAddingIndex(idx);
@@ -248,44 +243,42 @@ export const AddProductScreen = ({ navigation }) => {
   };
 
   const handleSubmit = async () => {
-    if (isSubmitting) return;
-
     if (!name.trim()) {
-      showFeedback('Missing Name', 'Please enter a product or dish name.');
+      showFeedback('Validation Error', 'Please enter a product title.');
       return;
     }
-
-    if (!price || isNaN(numPrice) || numPrice <= 0) {
-      showFeedback('Invalid Price', 'Please enter a valid selling price greater than ₹0.');
+    if (!price || isNaN(price) || Number(price) <= 0) {
+      showFeedback('Validation Error', 'Please enter a valid selling price.');
+      return;
+    }
+    if (!stock || isNaN(stock) || Number(stock) < 0) {
+      showFeedback('Validation Error', 'Please enter valid stock available.');
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const catId = selectedCatId || (categories && categories.length > 0 ? categories[0]._id : null);
-      const finalMrp = numMrp && numMrp >= numPrice ? numMrp : Math.round(numPrice * 1.15);
-
+      const catId = selectedCatId || categories?.[0]?._id;
       const res = await addInventoryItem({
         name: name.trim(),
         categoryId: catId,
         category: catId,
-        price: numPrice,
-        mrp: finalMrp,
-        unit: unit.trim() || '1 pc',
-        stock: Number(stock || 25),
+        price: Number(price),
+        mrp: numMrp && numMrp > 0 ? Number(numMrp) : Number(price),
+        unit: unit.trim() || '1 kg',
+        stock: Number(stock),
         description: description.trim(),
-        image: imageUrl || QUICK_PRODUCT_PRESETS[0].url,
-        isVeg: Boolean(isVeg)
+        image: imageUrl.trim() || QUICK_PRODUCT_PRESETS[0].url,
+        isVeg: isVeg
       });
 
       if (res && res.success !== false) {
-        showFeedback('Success! 🎉', `${name.trim()} published live to MongoDB and S-farmart store!`, true);
+        showFeedback('Success! 🌟', 'New product published to customer app!', true);
       } else {
-        showFeedback('Error', res?.message || 'Could not save listing. Please try again.');
+        showFeedback('Error', res?.message || 'Could not save product.');
       }
     } catch (err) {
-      console.warn('Listing error:', err);
-      showFeedback('Error', 'An unexpected error occurred. Check connection.');
+      showFeedback('Error', 'Failed to publish product. Please check your connection.');
     } finally {
       setIsSubmitting(false);
     }
@@ -293,465 +286,292 @@ export const AddProductScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+      <WaterBackground />
 
-      {/* Header */}
-      <View style={styles.header}>
+      {/* Top Header */}
+      <View style={[styles.headerBar, { paddingTop: insets.top + 10 }]}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
-          style={styles.iconBtnCircle}
+          style={styles.glassBackBtn}
           activeOpacity={0.7}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
           <Ionicons name="arrow-back" size={20} color="#0f172a" />
         </TouchableOpacity>
-        <View style={{ alignItems: 'center' }}>
-          <Text style={styles.headerTitle}>Add Product to Store</Text>
-          <Text style={styles.headerSubtitle} numberOfLines={1}>
-            {vendor?.storeName || 'Merchant Portal'}
-          </Text>
+        <View style={{ flex: 1, marginLeft: 12 }}>
+          <Text style={styles.headerBarTitle}>Add New Listing</Text>
+          <Text style={styles.headerBarSub}>{vendor?.storeName || 'Merchant Store'}</Text>
         </View>
-        <View style={{ width: 36 }} />
       </View>
 
-      {/* Floating Status Message for Web / Mobile */}
-      {statusMessage && (
-        <View
-          style={[
-            styles.statusBanner,
-            statusMessage.isSuccess ? styles.statusBannerSuccess : styles.statusBannerError
-          ]}
-        >
-          <Ionicons
-            name={statusMessage.isSuccess ? 'checkmark-circle' : 'alert-circle'}
-            size={20}
-            color={statusMessage.isSuccess ? '#15803d' : '#b91c1c'}
-          />
-          <View style={{ flex: 1, marginLeft: 10 }}>
-            <Text
-              style={[
-                styles.statusBannerTitle,
-                { color: statusMessage.isSuccess ? '#15803d' : '#b91c1c' }
-              ]}
-            >
-              {statusMessage.title}
-            </Text>
-            <Text
-              style={[
-                styles.statusBannerSub,
-                { color: statusMessage.isSuccess ? '#166534' : '#991b1b' }
-              ]}
-            >
-              {statusMessage.message}
-            </Text>
-          </View>
-          <TouchableOpacity onPress={() => setStatusMessage(null)}>
-            <Ionicons name="close" size={18} color="#64748b" />
-          </TouchableOpacity>
-        </View>
-      )}
-
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="always"
-        keyboardDismissMode="none"
-        removeClippedSubviews={false}
-        nestedScrollEnabled={true}
-        showsVerticalScrollIndicator={false}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        {/* 🌟 1-TAP QUICK ADD CATALOG PRESETS */}
-        <View style={styles.quickAddSection}>
-          <View style={styles.quickAddHeader}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Text style={{ fontSize: 16 }}>⚡</Text>
-              <Text style={styles.quickAddTitle}>1-Tap Quick Add with Icon</Text>
+        <ScrollView
+          contentContainerStyle={[
+            styles.scrollContent,
+            {
+              paddingBottom: insets.bottom + 110,
+              maxWidth: isTablet ? 720 : '100%',
+              alignSelf: 'center',
+              width: '100%'
+            }
+          ]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* ==================== 1-TAP QUICK ADD CATALOG ==================== */}
+          <GlassCard style={styles.sectionCard} showSheen={true}>
+            <View style={styles.sectionHeaderRow}>
+              <View style={styles.boltIconOrb}>
+                <Ionicons name="flash" size={16} color="#ea580c" />
+              </View>
+              <View style={{ flex: 1, marginLeft: 10 }}>
+                <Text style={styles.sectionTitle}>1-Tap Quick Add Catalog</Text>
+                <Text style={styles.sectionSubtitle}>
+                  Tap "+ 1-Tap Add" to instantly publish with real photo & price
+                </Text>
+              </View>
             </View>
-            <Text style={styles.quickAddSub}>Tap to add immediately or customize below</Text>
-          </View>
 
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            keyboardShouldPersistTaps="always"
-            contentContainerStyle={styles.presetScrollContent}
-          >
-            {QUICK_PRODUCT_PRESETS.map((preset, idx) => {
-              const isSelected = selectedPresetIndex === idx;
-              const isAddingThis = instantAddingIndex === idx;
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.presetsRail}
+            >
+              {QUICK_PRODUCT_PRESETS.map((preset, idx) => {
+                const isSelected = selectedPresetIndex === idx;
+                const isAdding = instantAddingIndex === idx;
 
-              return (
-                <View
-                  key={idx}
-                  style={[
-                    styles.presetCard,
-                    isSelected && styles.presetCardActive
-                  ]}
-                >
-                  <TouchableOpacity
-                    activeOpacity={0.8}
-                    onPress={() => handleSelectPreset(preset, idx)}
-                    style={{ flex: 1 }}
+                return (
+                  <View
+                    key={idx}
+                    style={[styles.presetCard, isSelected && styles.presetCardSelected]}
                   >
-                    <View style={styles.presetImgWrap}>
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      onPress={() => handleSelectPreset(preset, idx)}
+                      style={{ alignItems: 'center' }}
+                    >
                       <Image source={{ uri: preset.url }} style={styles.presetImage} />
                       <View style={styles.presetIconBadge}>
-                        <Text style={{ fontSize: 16 }}>{preset.icon}</Text>
+                        <Ionicons name={preset.ionIcon} size={14} color="#ea580c" />
                       </View>
-                      <View style={[styles.vegTinyBadge, { borderColor: preset.isVeg ? '#16a34a' : '#ef4444' }]}>
-                        <View style={[styles.vegTinyDot, { backgroundColor: preset.isVeg ? '#16a34a' : '#ef4444' }]} />
-                      </View>
-                    </View>
-
-                    <View style={styles.presetBody}>
                       <Text style={styles.presetLabel} numberOfLines={1}>
                         {preset.label}
                       </Text>
-                      <Text style={styles.presetPrice}>
-                        ₹{preset.price}{' '}
-                        <Text style={styles.presetUnit}>/{preset.unit}</Text>
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
+                      <Text style={styles.presetPrice}>₹{preset.price} / {preset.unit}</Text>
+                    </TouchableOpacity>
 
-                  {/* Direct 1-Tap Publish Button */}
-                  <TouchableOpacity
-                    style={[
-                      styles.instantAddBtn,
-                      isAddingThis && { opacity: 0.6 }
-                    ]}
-                    onPress={() => handleInstantAdd(preset, idx)}
-                    disabled={isAddingThis}
-                    activeOpacity={0.8}
-                  >
-                    {isAddingThis ? (
-                      <ActivityIndicator size="small" color="#ffffff" />
-                    ) : (
-                      <>
-                        <Ionicons name="flash" size={13} color="#ffffff" />
-                        <Text style={styles.instantAddBtnText}>1-Tap Add</Text>
-                      </>
-                    )}
-                  </TouchableOpacity>
-                </View>
-              );
-            })}
-          </ScrollView>
-        </View>
-
-        {/* 📝 DETAILED LISTING FORM */}
-        <View style={styles.formCard}>
-          <View style={styles.cardHeader}>
-            <View>
-              <Text style={styles.cardHeaderTitle}>CUSTOM LISTING DETAILS</Text>
-              <Text style={styles.cardHeaderSub}>
-                Publishing to store:{' '}
-                <Text style={{ fontWeight: '700', color: colors.primaryDark }}>
-                  {vendor?.storeName || 'Merchant Store'}
-                </Text>
-              </Text>
-            </View>
-            <View style={styles.liveTag}>
-              <View style={styles.livePulse} />
-              <Text style={styles.liveTagText}>DIRECT SAVE</Text>
-            </View>
-          </View>
-
-          {/* 1. Product / Dish Name */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Product / Dish Name *</Text>
-            <View style={styles.inputWrap}>
-              <Ionicons
-                name="pricetag-outline"
-                size={18}
-                color={colors.primary}
-                style={styles.inputIcon}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="e.g. Special Punjabi Thali, Organic Carrots"
-                placeholderTextColor="#94a3b8"
-                value={name}
-                onChangeText={setName}
-                autoCorrect={false}
-              />
-            </View>
-          </View>
-
-          {/* 2. Live Preview Card */}
-          <View style={styles.previewBox}>
-            <Image source={{ uri: imageUrl }} style={styles.previewImage} />
-            <View style={styles.previewInfo}>
-              <Text style={styles.previewBadge}>PREVIEW IN USER APP</Text>
-              <Text style={styles.previewName} numberOfLines={1}>
-                {name || 'Sample Product Name'}
-              </Text>
-              <Text style={styles.previewPrice}>
-                ₹{price || '0'}{' '}
-                <Text style={styles.previewUnit}>/ {unit || '1 pc'}</Text>
-                {discountPercent > 0 ? ` (${discountPercent}% OFF)` : ''}
-              </Text>
-            </View>
-          </View>
-
-          {/* 3. Veg / Non-Veg Toggle */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Classification</Text>
-            <View style={styles.vegToggleRow}>
-              <TouchableOpacity
-                style={[styles.vegBtn, isVeg && styles.vegBtnActive]}
-                onPress={() => setIsVeg(true)}
-                activeOpacity={0.8}
-              >
-                <View style={styles.vegBadgeGreen}>
-                  <View style={styles.vegDotGreen} />
-                </View>
-                <Text style={[styles.vegBtnText, isVeg && styles.vegBtnTextActive]}>
-                  100% Pure Veg / Farm Fresh
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.vegBtn, !isVeg && styles.nonVegBtnActive]}
-                onPress={() => setIsVeg(false)}
-                activeOpacity={0.8}
-              >
-                <View style={styles.vegBadgeRed}>
-                  <View style={styles.vegDotRed} />
-                </View>
-                <Text style={[styles.vegBtnText, !isVeg && styles.nonVegBtnTextActive]}>
-                  Non-Veg
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* 4. Select Category */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Select Category</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              keyboardShouldPersistTaps="always"
-              contentContainerStyle={styles.catChipRow}
-            >
-              {categories?.map((cat) => {
-                const isSelected = (selectedCatId || categories[0]?._id) === cat._id;
-                return (
-                  <TouchableOpacity
-                    key={cat._id}
-                    style={[styles.catChip, isSelected && styles.catChipSelected]}
-                    onPress={() => setSelectedCatId(cat._id)}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={{ marginRight: 4 }}>{cat.icon || '🥦'}</Text>
-                    <Text
-                      style={[
-                        styles.catChipText,
-                        isSelected && styles.catChipTextSelected
-                      ]}
+                    {/* 1-Tap Add Action */}
+                    <TouchableOpacity
+                      style={styles.oneTapAddBtn}
+                      onPress={() => handleInstantAdd(preset, idx)}
+                      disabled={isAdding}
+                      activeOpacity={0.8}
                     >
-                      {cat.name}
-                    </Text>
-                  </TouchableOpacity>
+                      {isAdding ? (
+                        <ActivityIndicator size="small" color="#ffffff" />
+                      ) : (
+                        <Text style={styles.oneTapBtnText}>+ 1-Tap Add</Text>
+                      )}
+                    </TouchableOpacity>
+                  </View>
                 );
               })}
             </ScrollView>
-          </View>
+          </GlassCard>
 
-          {/* 5. Price & MRP Row */}
-          <View style={styles.row}>
-            <View style={{ flex: 1, marginRight: 10 }}>
-              <Text style={styles.label}>Selling Price (₹) *</Text>
-              <View style={styles.inputWrap}>
-                <Text style={styles.currencyPrefix}>₹</Text>
+          {/* ==================== CUSTOM PRODUCT FORM ==================== */}
+          <GlassCard style={styles.sectionCard} showSheen={true}>
+            <View style={styles.sectionHeaderRow}>
+              <View style={styles.formIconOrb}>
+                <Ionicons name="create-outline" size={16} color="#16a34a" />
+              </View>
+              <View style={{ flex: 1, marginLeft: 10 }}>
+                <Text style={styles.sectionTitle}>Custom Listing Details</Text>
+                <Text style={styles.sectionSubtitle}>Customize fields below or edit pre-filled values</Text>
+              </View>
+            </View>
+
+            {/* Product Title */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.fieldLabel}>Product Title *</Text>
+              <TextInput
+                style={styles.glassInput}
+                value={name}
+                onChangeText={setName}
+                placeholder="e.g. Kashmiri Sweet Apples"
+                placeholderTextColor={colors.textMuted}
+              />
+            </View>
+
+            {/* Category Chips */}
+            {categories && categories.length > 0 && (
+              <View style={styles.inputGroup}>
+                <Text style={styles.fieldLabel}>Category</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.catChipsRow}>
+                  {categories.map((c) => {
+                    const isSelected = selectedCatId === c._id;
+                    return (
+                      <TouchableOpacity
+                        key={c._id}
+                        style={[styles.catChip, isSelected && styles.catChipActive]}
+                        onPress={() => setSelectedCatId(c._id)}
+                      >
+                        <Text style={[styles.catChipText, isSelected && styles.catChipTextActive]}>
+                          {c.name}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            )}
+
+            {/* Price & MRP */}
+            <View style={styles.rowTwoCols}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.fieldLabel}>Selling Price (₹) *</Text>
                 <TextInput
-                  style={styles.input}
-                  placeholder="120"
-                  placeholderTextColor="#94a3b8"
-                  keyboardType="numeric"
+                  style={styles.glassInput}
                   value={price}
                   onChangeText={setPrice}
+                  placeholder="120"
+                  placeholderTextColor={colors.textMuted}
+                  keyboardType="numeric"
                 />
               </View>
-            </View>
-
-            <View style={{ flex: 1 }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Text style={styles.label}>MRP (₹)</Text>
-                {discountPercent > 0 && (
-                  <View style={styles.discountBadge}>
-                    <Text style={styles.discountBadgeText}>{discountPercent}% OFF</Text>
-                  </View>
-                )}
-              </View>
-              <View style={styles.inputWrap}>
-                <Text style={styles.currencyPrefix}>₹</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.fieldLabel}>MRP (₹)</Text>
                 <TextInput
-                  style={styles.input}
-                  placeholder="150"
-                  placeholderTextColor="#94a3b8"
-                  keyboardType="numeric"
+                  style={styles.glassInput}
                   value={mrp}
                   onChangeText={setMrp}
+                  placeholder="150"
+                  placeholderTextColor={colors.textMuted}
+                  keyboardType="numeric"
                 />
               </View>
             </View>
-          </View>
-
-          {/* 6. Unit of Measurement */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Unit of Measurement</Text>
-            <View style={[styles.inputWrap, { marginBottom: 8 }]}>
-              <Ionicons
-                name="cube-outline"
-                size={18}
-                color={colors.primary}
-                style={styles.inputIcon}
-              />
-              <TextInput
-                style={styles.input}
-                value={unit}
-                onChangeText={setUnit}
-                placeholder="e.g. 1 kg, 500 g, 1 plate"
-                placeholderTextColor="#94a3b8"
-              />
-            </View>
-
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              keyboardShouldPersistTaps="always"
-              contentContainerStyle={styles.quickChipRow}
-            >
-              {UNIT_PRESETS.map((u, i) => (
-                <TouchableOpacity
-                  key={i}
-                  style={[styles.quickChip, unit === u && styles.quickChipActive]}
-                  onPress={() => setUnit(u)}
-                >
-                  <Text style={[styles.quickChipText, unit === u && styles.quickChipTextActive]}>
-                    {u}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-
-          {/* 7. Available Stock */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Available Stock (Units)</Text>
-            <View style={[styles.inputWrap, { marginBottom: 8 }]}>
-              <Ionicons
-                name="layers-outline"
-                size={18}
-                color={colors.primary}
-                style={styles.inputIcon}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="25"
-                placeholderTextColor="#94a3b8"
-                keyboardType="numeric"
-                value={stock}
-                onChangeText={setStock}
-              />
-            </View>
-
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              keyboardShouldPersistTaps="always"
-              contentContainerStyle={styles.quickChipRow}
-            >
-              {STOCK_PRESETS.map((s, i) => (
-                <TouchableOpacity
-                  key={i}
-                  style={[styles.quickChip, stock === s && styles.quickChipActive]}
-                  onPress={() => setStock(s)}
-                >
-                  <Text style={[styles.quickChipText, stock === s && styles.quickChipTextActive]}>
-                    {s} units
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-
-          {/* 8. Custom Image Toggle */}
-          <View style={styles.inputGroup}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Text style={styles.label}>Product Image URL</Text>
-              <TouchableOpacity
-                onPress={() => setShowCustomImage(!showCustomImage)}
-                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-              >
-                <Text style={styles.toggleCustomText}>
-                  {showCustomImage ? 'Hide Custom URL' : 'Custom Image Link +'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {showCustomImage && (
-              <View style={[styles.inputWrap, { marginTop: 6 }]}>
-                <Ionicons
-                  name="image-outline"
-                  size={18}
-                  color={colors.primary}
-                  style={styles.inputIcon}
-                />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Paste image link (https://...)"
-                  placeholderTextColor="#94a3b8"
-                  value={imageUrl}
-                  onChangeText={setImageUrl}
-                  autoCapitalize="none"
-                />
+            {discountPercent > 0 && (
+              <View style={styles.discountBadge}>
+                <Ionicons name="pricetag" size={12} color="#16a34a" />
+                <Text style={styles.discountText}>{discountPercent}% OFF Customer Discount</Text>
               </View>
             )}
-          </View>
 
-          {/* 9. Product Description */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Product Description / Highlights</Text>
-            <View style={[styles.inputWrap, { height: 75, alignItems: 'flex-start', paddingTop: 10 }]}>
+            {/* Unit Selector */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.fieldLabel}>Unit of Sale</Text>
+              <View style={styles.pillsWrap}>
+                {UNIT_PRESETS.map((u) => (
+                  <TouchableOpacity
+                    key={u}
+                    style={[styles.presetPill, unit === u && styles.presetPillActive]}
+                    onPress={() => setUnit(u)}
+                  >
+                    <Text style={[styles.presetPillText, unit === u && styles.presetPillTextActive]}>
+                      {u}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Initial Stock */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.fieldLabel}>Initial Stock Available *</Text>
+              <View style={styles.pillsWrap}>
+                {STOCK_PRESETS.map((s) => (
+                  <TouchableOpacity
+                    key={s}
+                    style={[styles.presetPill, stock === s && styles.presetPillActive]}
+                    onPress={() => setStock(s)}
+                  >
+                    <Text style={[styles.presetPillText, stock === s && styles.presetPillTextActive]}>
+                      {s} units
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Veg / Non-Veg Toggle */}
+            <View style={styles.switchRow}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <View style={[styles.vegDot, { backgroundColor: isVeg ? '#16a34a' : '#dc2626' }]} />
+                <Text style={styles.switchLabel}>
+                  {isVeg ? 'Vegetarian Item' : 'Non-Vegetarian Item'}
+                </Text>
+              </View>
+              <Switch
+                value={isVeg}
+                onValueChange={setIsVeg}
+                trackColor={{ false: '#fca5a5', true: '#bbf7d0' }}
+                thumbColor={isVeg ? '#16a34a' : '#dc2626'}
+              />
+            </View>
+
+            {/* Image Preview & URL */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.fieldLabel}>Product Image URL</Text>
               <TextInput
-                style={[styles.input, { height: 55 }]}
-                placeholder="Freshness details, organic origin, or serving style..."
-                placeholderTextColor="#94a3b8"
-                multiline
+                style={styles.glassInput}
+                value={imageUrl}
+                onChangeText={setImageUrl}
+                placeholder="https://images.unsplash.com/..."
+                placeholderTextColor={colors.textMuted}
+              />
+              {imageUrl ? (
+                <View style={styles.imagePreviewWrap}>
+                  <Image source={{ uri: imageUrl }} style={styles.imagePreview} />
+                </View>
+              ) : null}
+            </View>
+
+            {/* Description */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.fieldLabel}>Description</Text>
+              <TextInput
+                style={[styles.glassInput, { height: 74, textAlignVertical: 'top', paddingTop: 8 }]}
                 value={description}
                 onChangeText={setDescription}
+                placeholder="Brief description of quality, harvest or taste..."
+                placeholderTextColor={colors.textMuted}
+                multiline
               />
             </View>
-          </View>
 
-          {/* Submit Button */}
-          <TouchableOpacity
-            style={[styles.submitBtn, isSubmitting && styles.submitBtnDisabled]}
-            onPress={handleSubmit}
-            disabled={isSubmitting}
-            activeOpacity={0.85}
-          >
-            {isSubmitting ? (
-              <>
+            {/* Publish Button */}
+            <TouchableOpacity
+              style={styles.publishBtn}
+              onPress={handleSubmit}
+              disabled={isSubmitting}
+              activeOpacity={0.8}
+            >
+              {isSubmitting ? (
                 <ActivityIndicator size="small" color="#ffffff" />
-                <Text style={styles.submitBtnText}>Publishing to MongoDB...</Text>
-              </>
-            ) : (
-              <>
-                <Ionicons name="cloud-upload" size={20} color="#ffffff" />
-                <Text style={styles.submitBtnText}>Publish Listing to Store</Text>
-              </>
-            )}
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
+              ) : (
+                <>
+                  <Ionicons name="cloud-upload-outline" size={20} color="#ffffff" />
+                  <Text style={styles.publishBtnText}>Publish to Customer Feed</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </GlassCard>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 };
 
 export const InventoryScreen = ({ navigation }) => {
+  const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const isTablet = width > 600;
+
   const {
     inventory,
     toggleItemAvailability,
@@ -759,6 +579,7 @@ export const InventoryScreen = ({ navigation }) => {
     addStockToItem,
     vendor
   } = usePartner();
+
   const [activeTab, setActiveTab] = useState('ALL');
   const [replenishingId, setReplenishingId] = useState(null);
   const [stockModalItem, setStockModalItem] = useState(null);
@@ -784,15 +605,12 @@ export const InventoryScreen = ({ navigation }) => {
     const qty = parseInt(stockInputVal, 10);
     if (isNaN(qty) || qty < 0) return;
 
-    setReplenishingId(stockModalItem.id || stockModalItem._id || stockModalItem.productId);
+    const targetId = stockModalItem.id || stockModalItem._id || stockModalItem.productId;
+    setReplenishingId(targetId);
     try {
-      // Calculate diff or set stock directly
       const current = stockModalItem.stock ?? stockModalItem.stockQty ?? 0;
       const diff = qty - current;
-      await addStockToItem(
-        stockModalItem.id || stockModalItem._id || stockModalItem.productId,
-        diff
-      );
+      await addStockToItem(targetId, diff);
       setStockModalItem(null);
     } finally {
       setReplenishingId(null);
@@ -801,13 +619,14 @@ export const InventoryScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+      <WaterBackground />
 
       {/* Header */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.headerTitle}>My Store Catalog ({inventory.length})</Text>
-          <Text style={styles.headerSubtitle}>{vendor?.storeName || 'Merchant Store'}</Text>
+      <View style={[styles.headerBar, { paddingTop: insets.top + 10 }]}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.headerBarTitle}>My Store Catalog ({inventory.length})</Text>
+          <Text style={styles.headerBarSub}>{vendor?.storeName || 'Merchant Store'}</Text>
         </View>
         <TouchableOpacity
           onPress={() => navigation.navigate('AddProduct')}
@@ -820,301 +639,263 @@ export const InventoryScreen = ({ navigation }) => {
       </View>
 
       {/* Filter Tabs */}
-      <View style={styles.filterTabBar}>
-        <TouchableOpacity
-          style={[styles.filterTab, activeTab === 'ALL' && styles.filterTabActive]}
-          onPress={() => setActiveTab('ALL')}
-        >
-          <Text style={[styles.filterTabText, activeTab === 'ALL' && styles.filterTabTextActive]}>
-            All ({inventory.length})
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.filterTab, activeTab === 'IN_STOCK' && styles.filterTabActive]}
-          onPress={() => setActiveTab('IN_STOCK')}
-        >
-          <Text
-            style={[
-              styles.filterTabText,
-              activeTab === 'IN_STOCK' && styles.filterTabTextActive
-            ]}
-          >
-            In Stock ({inventory.filter((i) => i.isAvailable && (i.stock ?? i.stockQty) > 0).length})
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.filterTab, activeTab === 'OUT_OF_STOCK' && styles.filterTabActive]}
-          onPress={() => setActiveTab('OUT_OF_STOCK')}
-        >
-          <Text
-            style={[
-              styles.filterTabText,
-              activeTab === 'OUT_OF_STOCK' && styles.filterTabTextActive
-            ]}
-          >
-            Out / Low ({inventory.filter((i) => !i.isAvailable || (i.stock ?? i.stockQty) <= 0).length})
-          </Text>
-        </TouchableOpacity>
+      <View style={styles.filterTabsContainer}>
+        <GlassCard style={styles.filterGlassBar} showSheen={false} borderRadius={16}>
+          <View style={styles.filterTabsRow}>
+            {['ALL', 'IN_STOCK', 'OUT_OF_STOCK'].map((tab) => {
+              const isActive = activeTab === tab;
+              const label =
+                tab === 'ALL'
+                  ? `All (${inventory.length})`
+                  : tab === 'IN_STOCK'
+                  ? `In Stock (${inventory.filter((i) => i.isAvailable && (i.stock ?? i.stockQty) > 0).length})`
+                  : `Out of Stock (${inventory.filter((i) => !i.isAvailable || (i.stock ?? i.stockQty) <= 0).length})`;
+              return (
+                <TouchableOpacity
+                  key={tab}
+                  style={[styles.filterTabChip, isActive && styles.filterTabChipActive]}
+                  onPress={() => setActiveTab(tab)}
+                >
+                  <Text style={[styles.filterTabChipText, isActive && styles.filterTabChipTextActive]}>
+                    {label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </GlassCard>
       </View>
 
+      {/* Catalog Items List */}
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={[
+          styles.scrollContent,
+          {
+            paddingBottom: insets.bottom + 110,
+            maxWidth: isTablet ? 720 : '100%',
+            alignSelf: 'center',
+            width: '100%'
+          }
+        ]}
         showsVerticalScrollIndicator={false}
       >
         {filteredItems.length === 0 ? (
-          <View style={styles.emptyBox}>
-            <Ionicons name="bag-remove-outline" size={44} color="#94a3b8" />
-            <Text style={styles.emptyTitle}>No Products Found</Text>
-            <Text style={styles.emptySub}>
-              Tap "Add Listing" to publish produce or dishes to your catalog.
+          <GlassCard style={styles.emptyInventoryCard}>
+            <Ionicons name="cube-outline" size={44} color="#94a3b8" />
+            <Text style={styles.emptyInvTitle}>No items in this category</Text>
+            <Text style={styles.emptyInvSub}>
+              Use "+ Add Listing" to publish farm produce or kitchen meals.
             </Text>
-            <TouchableOpacity
-              style={styles.emptyAddBtn}
-              onPress={() => navigation.navigate('AddProduct')}
-            >
-              <Ionicons name="add-circle-outline" size={18} color="#ffffff" />
-              <Text style={styles.emptyAddBtnText}>Add First Product</Text>
-            </TouchableOpacity>
-          </View>
+          </GlassCard>
         ) : (
           filteredItems.map((item) => {
-            const currentStock = item.stock ?? item.stockQty ?? 0;
-            const isZeroStock = currentStock <= 0;
-            const itemId = item.id || item.productId || item._id;
+            const itemId = item.id || item._id || item.productId;
+            const stockQty = item.stock ?? item.stockQty ?? 0;
+            const isAvailable = item.isAvailable && stockQty > 0;
             const isBusy = replenishingId === itemId;
 
             return (
-              <View key={itemId} style={styles.itemCard}>
-                <Image
-                  source={{
-                    uri:
-                      item.image ||
-                      'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=200&auto=format&fit=crop&q=60'
-                  }}
-                  style={styles.itemImage}
-                />
+              <GlassCard key={itemId} style={styles.inventoryCard} showSheen={true}>
+                <View style={styles.invCardRow}>
+                  {item.image ? (
+                    <Image source={{ uri: item.image }} style={styles.invThumb} />
+                  ) : (
+                    <View style={styles.invThumbFallback}>
+                      <Ionicons name="basket-outline" size={24} color="#94a3b8" />
+                    </View>
+                  )}
 
-                <View style={{ flex: 1, paddingHorizontal: 12 }}>
-                  <Text style={styles.itemTitle} numberOfLines={1}>
-                    {item.name}
-                  </Text>
-                  <Text style={styles.itemCategory}>
-                    {item.category} •{' '}
-                    <Text style={{ color: '#16a34a', fontWeight: '700' }}>₹{item.price}</Text> /{' '}
-                    {item.unit}
-                  </Text>
-
-                  {/* Stock Display & Quick Add Chips */}
-                  <View style={{ marginTop: 4 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Text style={styles.itemStock}>
-                        Stock:{' '}
-                        <Text
-                          style={{
-                            fontWeight: '800',
-                            color: isZeroStock ? '#ef4444' : '#0f172a'
-                          }}
-                        >
-                          {currentStock} units
-                        </Text>
+                  <View style={{ flex: 1, marginLeft: 12 }}>
+                    <Text style={styles.invName} numberOfLines={1}>
+                      {item.name}
+                    </Text>
+                    <Text style={styles.invPrice}>
+                      ₹{item.price} <Text style={styles.invUnit}>/ {item.unit || '1 kg'}</Text>
+                    </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                      <Text
+                        style={[
+                          styles.stockBadgeText,
+                          { color: stockQty > 0 ? '#16a34a' : '#dc2626' }
+                        ]}
+                      >
+                        Stock: {stockQty} {item.unit || 'units'}
                       </Text>
-                      {isZeroStock && (
-                        <View style={styles.soldOutPill}>
-                          <Text style={styles.soldOutPillText}>SOLD OUT</Text>
-                        </View>
-                      )}
                     </View>
+                  </View>
 
-                    {/* ➕ Quick Add Stock Chips */}
-                    <View style={styles.stockActionRow}>
-                      <TouchableOpacity
-                        style={[styles.addStockMiniBtn, isBusy && { opacity: 0.5 }]}
-                        onPress={() => handleQuickAdd(itemId, 10)}
-                        disabled={isBusy}
-                        activeOpacity={0.7}
-                      >
-                        <Text style={styles.addStockMiniText}>+10</Text>
-                      </TouchableOpacity>
-
-                      <TouchableOpacity
-                        style={[styles.addStockMiniBtn, isBusy && { opacity: 0.5 }]}
-                        onPress={() => handleQuickAdd(itemId, 25)}
-                        disabled={isBusy}
-                        activeOpacity={0.7}
-                      >
-                        <Text style={styles.addStockMiniText}>+25</Text>
-                      </TouchableOpacity>
-
-                      <TouchableOpacity
-                        style={[styles.editStockMiniBtn, isBusy && { opacity: 0.5 }]}
-                        onPress={() => {
-                          setStockModalItem(item);
-                          setStockInputVal(String(currentStock));
-                        }}
-                        disabled={isBusy}
-                        activeOpacity={0.7}
-                      >
-                        <Ionicons name="create-outline" size={12} color="#15803d" />
-                        <Text style={styles.editStockMiniText}>Set Stock</Text>
-                      </TouchableOpacity>
-                    </View>
+                  {/* One-Tap Availability Toggle */}
+                  <View style={{ alignItems: 'flex-end', gap: 4 }}>
+                    <Switch
+                      value={item.isAvailable}
+                      onValueChange={() => toggleItemAvailability(itemId)}
+                      trackColor={{ false: '#cbd5e1', true: '#bbf7d0' }}
+                      thumbColor={item.isAvailable ? '#16a34a' : '#94a3b8'}
+                    />
+                    <Text
+                      style={[
+                        styles.availLabel,
+                        { color: item.isAvailable ? '#16a34a' : '#64748b' }
+                      ]}
+                    >
+                      {item.isAvailable ? 'In Stock' : 'Hidden'}
+                    </Text>
                   </View>
                 </View>
 
-                {/* Right side Toggle Switch & Delete */}
-                <View style={styles.toggleSection}>
-                  <Text
-                    style={[
-                      styles.toggleText,
-                      { color: item.isAvailable && !isZeroStock ? '#15803d' : '#94a3b8' }
-                    ]}
-                  >
-                    {item.isAvailable && !isZeroStock ? 'IN STOCK' : 'OUT'}
-                  </Text>
-                  <Switch
-                    value={item.isAvailable && !isZeroStock}
-                    onValueChange={() => toggleItemAvailability(itemId)}
-                    trackColor={{ false: '#cbd5e1', true: '#bbf7d0' }}
-                    thumbColor={item.isAvailable && !isZeroStock ? '#16a34a' : '#94a3b8'}
-                  />
-
-                  {deleteInventoryItem && (
+                {/* Stock Controls & Actions Bar */}
+                <View style={styles.invActionsRow}>
+                  <View style={styles.quickStockRow}>
+                    <Text style={styles.quickStockLabel}>+Add:</Text>
+                    {[10, 25, 50].map((amt) => (
+                      <TouchableOpacity
+                        key={amt}
+                        style={styles.quickAddChip}
+                        onPress={() => handleQuickAdd(itemId, amt)}
+                        disabled={isBusy}
+                      >
+                        <Text style={styles.quickAddText}>+{amt}</Text>
+                      </TouchableOpacity>
+                    ))}
                     <TouchableOpacity
-                      onPress={() => deleteInventoryItem(itemId)}
-                      style={styles.deleteBtn}
-                      activeOpacity={0.7}
-                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      style={styles.editStockChip}
+                      onPress={() => {
+                        setStockModalItem(item);
+                        setStockInputVal(String(stockQty));
+                      }}
                     >
-                      <Ionicons name="trash-outline" size={16} color="#ef4444" />
+                      <Ionicons name="pencil" size={12} color="#0284c7" />
                     </TouchableOpacity>
-                  )}
+                  </View>
+
+                  <TouchableOpacity
+                    style={styles.deleteListingBtn}
+                    onPress={() => {
+                      showAlert('Remove Product', `Delete "${item.name}" from store catalog?`, [
+                        { text: 'Cancel', style: 'cancel' },
+                        { text: 'Delete', style: 'destructive', onPress: () => deleteInventoryItem(itemId) }
+                      ]);
+                    }}
+                  >
+                    <Ionicons name="trash-outline" size={16} color="#ef4444" />
+                  </TouchableOpacity>
                 </View>
-              </View>
+              </GlassCard>
             );
           })
         )}
       </ScrollView>
 
-      {/* Stock Replenish Modal */}
-      {stockModalItem && (
+      {/* Custom Stock Modal */}
+      <Modal
+        visible={!!stockModalItem}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setStockModalItem(null)}
+      >
         <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalHeader}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.modalTitle}>Update Product Stock</Text>
-                <Text style={styles.modalSub} numberOfLines={1}>
-                  {stockModalItem.name}
-                </Text>
-              </View>
-              <TouchableOpacity onPress={() => setStockModalItem(null)}>
-                <Ionicons name="close" size={22} color="#64748b" />
+          <GlassCard style={styles.stockModalCard}>
+            <Text style={styles.stockModalTitle}>Set Stock Quantity</Text>
+            <Text style={styles.stockModalSub}>{stockModalItem?.name}</Text>
+
+            <TextInput
+              style={styles.stockModalInput}
+              value={stockInputVal}
+              onChangeText={setStockInputVal}
+              keyboardType="numeric"
+              placeholder="e.g. 50"
+            />
+
+            <View style={styles.stockModalBtnsRow}>
+              <TouchableOpacity
+                style={styles.modalCancelBtn}
+                onPress={() => setStockModalItem(null)}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modalSaveBtn}
+                onPress={handleSaveModalStock}
+              >
+                <Text style={styles.modalSaveText}>Save Stock</Text>
               </TouchableOpacity>
             </View>
-
-            <Text style={styles.modalLabel}>Current Stock in MongoDB:</Text>
-            <View style={styles.modalInputWrap}>
-              <Ionicons name="layers-outline" size={20} color={colors.primary} style={{ marginRight: 8 }} />
-              <TextInput
-                style={styles.modalInput}
-                keyboardType="numeric"
-                value={stockInputVal}
-                onChangeText={setStockInputVal}
-                autoFocus
-              />
-              <Text style={styles.modalInputUnit}>units</Text>
-            </View>
-
-            {/* Quick Increment Buttons */}
-            <Text style={[styles.modalLabel, { marginTop: 12 }]}>Or Add More Quantity:</Text>
-            <View style={{ flexDirection: 'row', gap: 8, marginTop: 6, marginBottom: 16 }}>
-              {[10, 25, 50, 100].map((amt) => (
-                <TouchableOpacity
-                  key={amt}
-                  style={styles.modalQuickChip}
-                  onPress={() => {
-                    const cur = parseInt(stockInputVal, 10) || 0;
-                    setStockInputVal(String(cur + amt));
-                  }}
-                >
-                  <Text style={styles.modalQuickChipText}>+{amt}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <TouchableOpacity
-              style={styles.modalSaveBtn}
-              onPress={handleSaveModalStock}
-              disabled={replenishingId !== null}
-            >
-              <Ionicons name="checkmark-circle-outline" size={18} color="#ffffff" />
-              <Text style={styles.modalSaveBtnText}>
-                {replenishingId ? 'Saving in MongoDB...' : 'Save Stock Quantity'}
-              </Text>
-            </TouchableOpacity>
-          </View>
+          </GlassCard>
         </View>
-      )}
+      </Modal>
     </View>
   );
 };
 
 export const SettlementsScreen = () => {
+  const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const isTablet = width > 600;
   const { stats } = usePartner();
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-      <View style={styles.header}>
-        <Text style={styles.headerTitleLarge}>Wednesdays Settlements</Text>
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+      <WaterBackground />
+
+      <View style={[styles.headerBar, { paddingTop: insets.top + 10 }]}>
+        <Text style={styles.headerBarTitle}>Wednesday Settlements</Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={styles.wedCard}>
-          <View style={styles.wedIconBox}>
-            <Ionicons name="calendar-outline" size={30} color="#16a34a" />
-          </View>
-          <View style={{ flex: 1, paddingLeft: 14 }}>
-            <Text style={styles.wedTitle}>Upcoming Wednesday Payout</Text>
-            <Text style={styles.wedAmount}>
-              ₹{stats.todaySales ? stats.todaySales + 1250 : 1850}
-            </Text>
-            <View style={styles.bankTag}>
-              <Ionicons name="checkmark-circle" size={13} color="#15803d" />
-              <Text style={styles.bankTagText}>Direct Transfer to SBI A/c (*4321)</Text>
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          {
+            paddingBottom: insets.bottom + 110,
+            maxWidth: isTablet ? 720 : '100%',
+            alignSelf: 'center',
+            width: '100%'
+          }
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Upcoming Wednesday Payout Hero Card */}
+        <GlassCard style={styles.wedHeroCard} showSheen={true} tint="green">
+          <View style={styles.wedHeroRow}>
+            <View style={styles.wedIconOrb}>
+              <Ionicons name="calendar-outline" size={26} color="#16a34a" />
+            </View>
+            <View style={{ flex: 1, marginLeft: 14 }}>
+              <Text style={styles.wedHeroTitle}>Upcoming Wednesday Payout</Text>
+              <Text style={styles.wedHeroAmount}>
+                ₹{stats.todaySales ? stats.todaySales + 1250 : 1850}
+              </Text>
+              <View style={styles.bankDirectTag}>
+                <Ionicons name="checkmark-circle" size={13} color="#15803d" />
+                <Text style={styles.bankDirectText}>Direct Transfer to SBI A/c (*4321)</Text>
+              </View>
             </View>
           </View>
-        </View>
+        </GlassCard>
 
-        <Text style={styles.sectionTitle}>Previous Weekly Payouts</Text>
+        {/* Previous Weekly Payouts Ledger */}
+        <Text style={styles.sectionHeaderTitle}>Previous Weekly Payouts</Text>
         {[
           { date: 'Wednesday, Sep 10, 2026', total: 4280, status: 'PAID TO BANK', ref: 'FARM-PAY-88231' },
           { date: 'Wednesday, Sep 03, 2026', total: 3950, status: 'PAID TO BANK', ref: 'FARM-PAY-87109' },
           { date: 'Wednesday, Aug 27, 2026', total: 5120, status: 'PAID TO BANK', ref: 'FARM-PAY-86043' }
         ].map((item, idx) => (
-          <View key={idx} style={styles.settleCard}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <GlassCard key={idx} style={styles.settleCard} showSheen={false}>
+            <View style={styles.settleRowTop}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <Ionicons name="arrow-down-circle" size={20} color="#16a34a" />
                 <Text style={styles.settleDate}>{item.date}</Text>
               </View>
-              <Text style={styles.settleTotal}>+₹{item.total}</Text>
+              <Text style={styles.settleAmount}>+₹{item.total}</Text>
             </View>
 
-            <View
-              style={{
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                marginTop: 10,
-                alignItems: 'center'
-              }}
-            >
+            <View style={styles.settleRowBottom}>
               <View style={styles.settleStatusBadge}>
                 <Text style={styles.settleStatusText}>{item.status}</Text>
               </View>
-              <Text style={styles.settleRef}>Ref: {item.ref}</Text>
+              <Text style={styles.settleRefText}>Ref: {item.ref}</Text>
             </View>
-          </View>
+          </GlassCard>
         ))}
       </ScrollView>
     </View>
@@ -1126,905 +907,575 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8fafc'
   },
-  header: {
+  headerBar: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#0f172a',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.04,
-        shadowRadius: 6
-      },
-      android: { elevation: 3 }
-    })
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingBottom: 12
   },
-  iconBtnCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: '#f1f5f9',
-    justifyContent: 'center',
-    alignItems: 'center'
-  },
-  headerTitle: {
-    fontSize: 16.5,
-    fontWeight: '700',
-    color: '#0f172a',
-    textAlign: 'center'
-  },
-  headerSubtitle: {
-    fontSize: 11.5,
-    color: '#64748b',
-    textAlign: 'center',
-    marginTop: 1
-  },
-  headerTitleLarge: {
-    fontSize: 20,
-    fontWeight: '700',
+  headerBarTitle: {
+    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
+    fontSize: 22,
+    fontWeight: '800',
     color: '#0f172a'
   },
-  statusBanner: {
+  headerBarSub: {
+    fontSize: 12,
+    color: '#64748b'
+  },
+  glassBackBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    borderWidth: 1,
+    borderColor: 'rgba(226, 232, 240, 0.8)',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  addNavBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginHorizontal: 16,
-    marginTop: 12,
-    padding: 12,
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
     borderRadius: 12,
-    borderWidth: 1
-  },
-  statusBannerSuccess: {
-    backgroundColor: '#f0fdf4',
-    borderColor: '#bbf7d0'
-  },
-  statusBannerError: {
-    backgroundColor: '#fef2f2',
-    borderColor: '#fecaca'
-  },
-  statusBannerTitle: {
-    fontSize: 13,
-    fontWeight: '700'
-  },
-  statusBannerSub: {
-    fontSize: 12,
-    marginTop: 1
-  },
-  scrollContent: {
-    padding: 16,
-    paddingBottom: 40,
-    maxWidth: 580,
-    width: '100%',
-    alignSelf: 'center'
-  },
-  quickAddSection: {
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    shadowColor: 'rgba(15, 23, 42, 0.05)',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 1,
-    shadowRadius: 10,
+    backgroundColor: '#ea580c',
+    shadowColor: '#ea580c',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
     elevation: 3
   },
-  quickAddHeader: {
-    marginBottom: 12
+  addNavBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#ffffff'
   },
-  quickAddTitle: {
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingTop: 6
+  },
+  sectionCard: {
+    marginBottom: 16,
+    padding: 18
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 14
+  },
+  boltIconOrb: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(234, 88, 12, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  formIconOrb: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(22, 163, 74, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  sectionTitle: {
     fontSize: 15,
     fontWeight: '800',
     color: '#0f172a'
   },
-  quickAddSub: {
-    fontSize: 11.5,
-    color: '#64748b',
-    marginTop: 2
+  sectionSubtitle: {
+    fontSize: 11,
+    color: '#64748b'
   },
-  presetScrollContent: {
+  presetsRail: {
     gap: 12,
-    paddingVertical: 4,
-    paddingRight: 10
+    paddingVertical: 4
   },
   presetCard: {
-    width: 140,
+    width: 130,
     borderRadius: 16,
+    padding: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.65)',
     borderWidth: 1.5,
-    borderColor: '#e2e8f0',
-    backgroundColor: '#f8fafc',
-    overflow: 'hidden',
-    justifyContent: 'space-between',
-    paddingBottom: 8
+    borderColor: 'rgba(226, 232, 240, 0.8)',
+    alignItems: 'center'
   },
-  presetCardActive: {
-    borderColor: '#16a34a',
-    backgroundColor: '#f0fdf4',
-    shadowColor: '#16a34a',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 3
-  },
-  presetImgWrap: {
-    width: '100%',
-    height: 85,
-    position: 'relative'
+  presetCardSelected: {
+    borderColor: '#ea580c',
+    backgroundColor: 'rgba(254, 243, 199, 0.5)'
   },
   presetImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover'
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    marginBottom: 6
   },
   presetIconBadge: {
     position: 'absolute',
-    top: 6,
-    left: 6,
+    top: 38,
+    right: 32,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     backgroundColor: '#ffffff',
-    borderRadius: 8,
-    padding: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2
-  },
-  vegTinyBadge: {
-    position: 'absolute',
-    top: 6,
-    right: 6,
-    width: 16,
-    height: 16,
-    backgroundColor: '#ffffff',
-    borderRadius: 3,
-    borderWidth: 1.5,
-    justifyContent: 'center',
-    alignItems: 'center'
-  },
-  vegTinyDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4
-  },
-  presetBody: {
-    paddingHorizontal: 8,
-    paddingTop: 8,
-    paddingBottom: 6
+    borderWidth: 1,
+    borderColor: 'rgba(234, 88, 12, 0.3)',
+    alignItems: 'center',
+    justifyContent: 'center'
   },
   presetLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#1e293b'
+    color: '#0f172a',
+    textAlign: 'center'
   },
   presetPrice: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: '#16a34a',
+    fontSize: 11,
+    color: '#64748b',
     marginTop: 2
   },
-  presetUnit: {
-    fontSize: 10,
-    fontWeight: '500',
-    color: '#64748b'
+  oneTapAddBtn: {
+    marginTop: 8,
+    width: '100%',
+    paddingVertical: 5,
+    borderRadius: 8,
+    backgroundColor: '#ea580c',
+    alignItems: 'center'
   },
-  instantAddBtn: {
-    marginHorizontal: 8,
-    marginTop: 4,
-    backgroundColor: '#16a34a',
-    borderRadius: 10,
-    paddingVertical: 6,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4
-  },
-  instantAddBtnText: {
-    color: '#ffffff',
+  oneTapBtnText: {
     fontSize: 11,
-    fontWeight: '800'
-  },
-  formCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 22,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    shadowColor: 'rgba(15, 23, 42, 0.06)',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 1,
-    shadowRadius: 18,
-    elevation: 4
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 16,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9'
-  },
-  cardHeaderTitle: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: colors.primary,
-    letterSpacing: 0.8
-  },
-  cardHeaderSub: {
-    fontSize: 12.5,
-    color: '#64748b',
-    marginTop: 3,
-    lineHeight: 16
-  },
-  liveTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f0fdf4',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#bbf7d0',
-    gap: 5
-  },
-  livePulse: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#16a34a'
-  },
-  liveTagText: {
-    fontSize: 9.5,
-    fontWeight: '800',
-    color: '#15803d'
+    fontWeight: '700',
+    color: '#ffffff'
   },
   inputGroup: {
-    marginBottom: 14
+    marginBottom: 12
   },
-  label: {
-    fontSize: 12.5,
-    fontWeight: '600',
-    color: '#334155',
-    marginBottom: 6
-  },
-  inputWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f8fafc',
-    borderWidth: 1.5,
-    borderColor: '#e2e8f0',
-    borderRadius: 14,
-    paddingHorizontal: 12,
-    height: 48
-  },
-  inputWrapFocused: {
-    borderColor: colors.primary,
-    backgroundColor: '#ffffff',
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    elevation: 2
-  },
-  inputIcon: {
-    marginRight: 8
-  },
-  currencyPrefix: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.primary,
-    marginRight: 6
-  },
-  input: {
-    flex: 1,
-    fontSize: 14.5,
-    color: '#0f172a',
-    fontWeight: '500'
-  },
-  vegToggleRow: {
-    flexDirection: 'row',
-    gap: 10
-  },
-  vegBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: '#e2e8f0',
-    backgroundColor: '#f8fafc',
-    gap: 8
-  },
-  vegBtnActive: {
-    borderColor: '#16a34a',
-    backgroundColor: '#f0fdf4'
-  },
-  nonVegBtnActive: {
-    borderColor: '#ef4444',
-    backgroundColor: '#fef2f2'
-  },
-  vegBadgeGreen: {
-    width: 16,
-    height: 16,
-    borderWidth: 1.5,
-    borderColor: '#16a34a',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 3
-  },
-  vegDotGreen: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#16a34a'
-  },
-  vegBadgeRed: {
-    width: 16,
-    height: 16,
-    borderWidth: 1.5,
-    borderColor: '#ef4444',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 3
-  },
-  vegDotRed: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#ef4444'
-  },
-  vegBtnText: {
+  fieldLabel: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#64748b'
+    fontWeight: '700',
+    color: '#334155',
+    marginBottom: 4
   },
-  vegBtnTextActive: {
-    color: '#15803d',
-    fontWeight: '700'
+  glassInput: {
+    height: 46,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(226, 232, 240, 0.85)',
+    backgroundColor: 'rgba(255, 255, 255, 0.75)',
+    paddingHorizontal: 12,
+    fontSize: 14,
+    color: '#0f172a'
   },
-  nonVegBtnTextActive: {
-    color: '#b91c1c',
-    fontWeight: '700'
+  rowTwoCols: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 8
   },
-  catChipRow: {
+  discountBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    backgroundColor: 'rgba(22, 163, 74, 0.12)',
+    alignSelf: 'flex-start',
+    marginBottom: 12
+  },
+  discountText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#16a34a'
+  },
+  catChipsRow: {
     gap: 8,
-    paddingVertical: 2
+    paddingVertical: 4
   },
   catChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f1f5f9',
     paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 14,
+    paddingVertical: 6,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.7)',
     borderWidth: 1,
-    borderColor: '#e2e8f0'
+    borderColor: 'rgba(226, 232, 240, 0.8)'
   },
-  catChipSelected: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary
+  catChipActive: {
+    backgroundColor: 'rgba(234, 88, 12, 0.12)',
+    borderColor: '#ea580c'
   },
   catChipText: {
     fontSize: 12,
     fontWeight: '600',
     color: '#475569'
   },
-  catChipTextSelected: {
-    color: '#ffffff',
+  catChipTextActive: {
+    color: '#ea580c',
     fontWeight: '700'
   },
-  toggleCustomText: {
-    fontSize: 11.5,
-    fontWeight: '700',
-    color: colors.primary
-  },
-  imagePresetRow: {
-    gap: 8,
-    paddingVertical: 4
-  },
-  imagePresetCard: {
-    width: 90,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: '#e2e8f0',
-    backgroundColor: '#f8fafc',
-    overflow: 'hidden',
-    position: 'relative'
-  },
-  imagePresetCardSelected: {
-    borderColor: colors.primary,
-    backgroundColor: '#f0fdf4'
-  },
-  imagePresetThumb: {
-    width: '100%',
-    height: 55,
-    resizeMode: 'cover'
-  },
-  imagePresetMeta: {
-    paddingVertical: 4,
-    paddingHorizontal: 4,
-    alignItems: 'center'
-  },
-  imagePresetLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#334155'
-  },
-  presetCheckmark: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-    backgroundColor: '#ffffff',
-    borderRadius: 8
-  },
-  previewBox: {
+  pillsWrap: {
     flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f8fafc',
-    borderRadius: 14,
-    padding: 10,
-    marginTop: 10,
-    borderWidth: 1,
-    borderColor: '#e2e8f0'
+    flexWrap: 'wrap',
+    gap: 8
   },
-  previewImage: {
-    width: 52,
-    height: 52,
+  presetPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 10,
-    backgroundColor: '#e2e8f0'
-  },
-  previewInfo: {
-    flex: 1,
-    marginLeft: 12
-  },
-  previewBadge: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: colors.primaryDark,
-    letterSpacing: 0.5
-  },
-  previewName: {
-    fontSize: 13.5,
-    fontWeight: '700',
-    color: '#0f172a',
-    marginTop: 2
-  },
-  previewPrice: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#16a34a',
-    marginTop: 2
-  },
-  previewUnit: {
-    fontSize: 11,
-    fontWeight: '500',
-    color: '#64748b'
-  },
-  row: {
-    flexDirection: 'row',
-    marginBottom: 12
-  },
-  discountBadge: {
-    backgroundColor: '#dcfce7',
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderRadius: 6
-  },
-  discountBadgeText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#15803d'
-  },
-  quickChipRow: {
-    gap: 6,
-    paddingVertical: 2
-  },
-  quickChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 10,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: 'rgba(255, 255, 255, 0.7)',
     borderWidth: 1,
-    borderColor: '#e2e8f0'
+    borderColor: 'rgba(226, 232, 240, 0.8)'
   },
-  quickChipActive: {
-    backgroundColor: '#dcfce7',
-    borderColor: '#16a34a'
+  presetPillActive: {
+    backgroundColor: 'rgba(217, 119, 6, 0.15)',
+    borderColor: '#d97706'
   },
-  quickChipText: {
-    fontSize: 11,
+  presetPillText: {
+    fontSize: 12,
     fontWeight: '600',
     color: '#475569'
   },
-  quickChipTextActive: {
-    color: '#15803d',
+  presetPillTextActive: {
+    color: '#b45309',
     fontWeight: '700'
   },
-  submitBtn: {
+  switchRow: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.primary,
-    borderRadius: 16,
-    height: 52,
-    marginTop: 8,
-    gap: 8,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    elevation: 5
-  },
-  submitBtnDisabled: {
-    opacity: 0.7
-  },
-  submitBtnText: {
-    color: '#ffffff',
-    fontSize: 15.5,
-    fontWeight: '700'
-  },
-  addNavBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 12,
-    gap: 4
-  },
-  addNavBtnText: {
-    color: '#ffffff',
-    fontSize: 12.5,
-    fontWeight: '700'
-  },
-  filterTabBar: {
-    flexDirection: 'row',
-    backgroundColor: '#ffffff',
-    paddingHorizontal: 16,
     paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
-    gap: 8
+    marginBottom: 10
   },
-  filterTab: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-    backgroundColor: '#f1f5f9'
+  vegDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5
   },
-  filterTabActive: {
-    backgroundColor: '#dcfce7'
-  },
-  filterTabText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#64748b'
-  },
-  filterTabTextActive: {
-    color: '#15803d',
-    fontWeight: '700'
-  },
-  emptyBox: {
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
-    padding: 32,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    marginTop: 20
-  },
-  emptyTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#0f172a',
-    marginTop: 12
-  },
-  emptySub: {
-    fontSize: 12.5,
-    color: '#64748b',
-    textAlign: 'center',
-    marginTop: 4,
-    maxWidth: 280
-  },
-  emptyAddBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.primary,
-    paddingHorizontal: 16,
-    paddingVertical: 9,
-    borderRadius: 14,
-    marginTop: 16,
-    gap: 6
-  },
-  emptyAddBtnText: {
-    color: '#ffffff',
+  switchLabel: {
     fontSize: 13,
-    fontWeight: '700'
-  },
-  itemCard: {
-    flexDirection: 'row',
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 12,
-    marginBottom: 10,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    shadowColor: 'rgba(15, 23, 42, 0.03)',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 1,
-    shadowRadius: 8,
-    elevation: 2
-  },
-  itemImage: {
-    width: 52,
-    height: 52,
-    borderRadius: 12,
-    backgroundColor: '#f1f5f9'
-  },
-  itemTitle: {
-    fontSize: 14.5,
-    fontWeight: '700',
-    color: '#0f172a'
-  },
-  itemCategory: {
-    fontSize: 12,
-    color: '#64748b',
-    marginTop: 2,
-    fontWeight: '500'
-  },
-  itemStock: {
-    fontSize: 11.5,
-    color: '#94a3b8',
-    marginTop: 1
-  },
-  soldOutPill: {
-    backgroundColor: '#fee2e2',
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderRadius: 6
-  },
-  soldOutPillText: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: '#b91c1c'
-  },
-  stockActionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 6
-  },
-  addStockMiniBtn: {
-    backgroundColor: '#f0fdf4',
-    borderWidth: 1,
-    borderColor: '#bbf7d0',
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 8
-  },
-  addStockMiniText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#15803d'
-  },
-  editStockMiniBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f1f5f9',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-    gap: 3
-  },
-  editStockMiniText: {
-    fontSize: 11,
     fontWeight: '600',
     color: '#334155'
   },
-  modalBackdrop: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(15, 23, 42, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-    zIndex: 999
-  },
-  modalCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
-    padding: 20,
-    width: '100%',
-    maxWidth: 380,
-    shadowColor: '#0f172a',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.15,
-    shadowRadius: 20,
-    elevation: 8
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 14
-  },
-  modalTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#0f172a'
-  },
-  modalSub: {
-    fontSize: 12.5,
-    color: '#64748b',
-    marginTop: 2
-  },
-  modalLabel: {
-    fontSize: 12.5,
-    fontWeight: '600',
-    color: '#334155',
-    marginBottom: 6
-  },
-  modalInputWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f8fafc',
-    borderWidth: 1.5,
-    borderColor: colors.primary,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    height: 48
-  },
-  modalInput: {
-    flex: 1,
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#0f172a'
-  },
-  modalInputUnit: {
-    fontSize: 13,
-    color: '#64748b',
-    fontWeight: '600'
-  },
-  modalQuickChip: {
-    flex: 1,
-    backgroundColor: '#f0fdf4',
-    borderWidth: 1,
-    borderColor: '#bbf7d0',
-    paddingVertical: 8,
-    borderRadius: 10,
+  imagePreviewWrap: {
+    marginTop: 8,
     alignItems: 'center'
   },
-  modalQuickChipText: {
-    fontSize: 12.5,
-    fontWeight: '700',
-    color: '#15803d'
+  imagePreview: {
+    width: '100%',
+    height: 120,
+    borderRadius: 12
   },
-  modalSaveBtn: {
+  publishBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.primary,
+    gap: 8,
+    paddingVertical: 14,
     borderRadius: 14,
-    height: 48,
-    gap: 6
-  },
-  modalSaveBtnText: {
-    color: '#ffffff',
-    fontSize: 14.5,
-    fontWeight: '700'
-  },
-  toggleSection: {
-    alignItems: 'center',
-    gap: 3
-  },
-  toggleText: {
-    fontSize: 9.5,
-    fontWeight: '800',
-    letterSpacing: 0.5
-  },
-  deleteBtn: {
-    padding: 4,
-    marginTop: 2
-  },
-  wedCard: {
-    flexDirection: 'row',
-    backgroundColor: '#ffffff',
-    borderRadius: 22,
-    padding: 18,
-    marginBottom: 20,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#bbf7d0',
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.1,
-    shadowRadius: 16,
+    backgroundColor: '#ea580c',
+    marginTop: 8,
+    shadowColor: '#ea580c',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
     elevation: 4
   },
-  wedIconBox: {
-    width: 54,
-    height: 54,
-    borderRadius: 18,
-    backgroundColor: '#f0fdf4',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#bbf7d0'
+  publishBtnText: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#ffffff'
   },
-  wedTitle: {
-    fontSize: 12.5,
-    fontWeight: '500',
+
+  // INVENTORY STYLES
+  filterTabsContainer: {
+    paddingHorizontal: 16,
+    marginBottom: 12
+  },
+  filterGlassBar: {
+    padding: 6
+  },
+  filterTabsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between'
+  },
+  filterTabChip: {
+    flex: 1,
+    paddingVertical: 8,
+    alignItems: 'center',
+    borderRadius: 12
+  },
+  filterTabChipActive: {
+    backgroundColor: '#ffffff',
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 2
+  },
+  filterTabChipText: {
+    fontSize: 11,
+    fontWeight: '600',
     color: '#64748b'
   },
-  wedAmount: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#15803d',
-    marginTop: 2
+  filterTabChipTextActive: {
+    color: '#0f172a',
+    fontWeight: '800'
   },
-  bankTag: {
-    flexDirection: 'row',
+  emptyInventoryCard: {
     alignItems: 'center',
-    gap: 4,
-    marginTop: 4
+    padding: 32,
+    marginTop: 20
   },
-  bankTagText: {
-    fontSize: 11,
-    color: '#15803d',
-    fontWeight: '600'
-  },
-  sectionTitle: {
+  emptyInvTitle: {
     fontSize: 16,
     fontWeight: '700',
     color: '#0f172a',
-    marginBottom: 12
+    marginTop: 10
   },
-  settleCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: '#e2e8f0'
+  emptyInvSub: {
+    fontSize: 12,
+    color: '#64748b',
+    marginTop: 4,
+    textAlign: 'center'
   },
-  settleDate: {
-    fontSize: 13.5,
-    fontWeight: '600',
+  inventoryCard: {
+    marginBottom: 12,
+    padding: 14
+  },
+  invCardRow: {
+    flexDirection: 'row',
+    alignItems: 'center'
+  },
+  invThumb: {
+    width: 54,
+    height: 54,
+    borderRadius: 12
+  },
+  invThumbFallback: {
+    width: 54,
+    height: 54,
+    borderRadius: 12,
+    backgroundColor: 'rgba(226, 232, 240, 0.6)',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  invName: {
+    fontSize: 14,
+    fontWeight: '700',
     color: '#0f172a'
   },
-  settleTotal: {
-    fontSize: 15,
+  invPrice: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#0f172a',
+    marginTop: 2
+  },
+  invUnit: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: '#64748b'
+  },
+  stockBadgeText: {
+    fontSize: 11,
+    fontWeight: '700'
+  },
+  availLabel: {
+    fontSize: 10,
+    fontWeight: '700'
+  },
+  invActionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 10,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(226, 232, 240, 0.7)'
+  },
+  quickStockRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6
+  },
+  quickStockLabel: {
+    fontSize: 11,
     fontWeight: '700',
+    color: '#64748b'
+  },
+  quickAddChip: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    backgroundColor: 'rgba(22, 163, 74, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(22, 163, 74, 0.3)'
+  },
+  quickAddText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#16a34a'
+  },
+  editStockChip: {
+    padding: 5,
+    borderRadius: 8,
+    backgroundColor: 'rgba(2, 132, 199, 0.12)'
+  },
+  deleteListingBtn: {
+    padding: 6,
+    borderRadius: 8,
+    backgroundColor: 'rgba(239, 68, 68, 0.1)'
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20
+  },
+  stockModalCard: {
+    width: '100%',
+    maxWidth: 380,
+    padding: 20
+  },
+  stockModalTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0f172a'
+  },
+  stockModalSub: {
+    fontSize: 12,
+    color: '#64748b',
+    marginTop: 2,
+    marginBottom: 12
+  },
+  stockModalInput: {
+    height: 46,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(226, 232, 240, 0.9)',
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    paddingHorizontal: 12,
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0f172a',
+    marginBottom: 16
+  },
+  stockModalBtnsRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 10
+  },
+  modalCancelBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: 'rgba(100, 116, 139, 0.1)'
+  },
+  modalCancelText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#475569'
+  },
+  modalSaveBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: '#16a34a'
+  },
+  modalSaveText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#ffffff'
+  },
+
+  // SETTLEMENTS STYLES
+  wedHeroCard: {
+    marginBottom: 16,
+    padding: 18
+  },
+  wedHeroRow: {
+    flexDirection: 'row',
+    alignItems: 'center'
+  },
+  wedIconOrb: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: 'rgba(22, 163, 74, 0.15)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(22, 163, 74, 0.35)',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  wedHeroTitle: {
+    fontSize: 13,
+    fontWeight: '600',
     color: '#15803d'
+  },
+  wedHeroAmount: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#0f172a',
+    marginTop: 2
+  },
+  bankDirectTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 4
+  },
+  bankDirectText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#15803d'
+  },
+  sectionHeaderTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#0f172a',
+    marginBottom: 10
+  },
+  settleCard: {
+    marginBottom: 10,
+    padding: 14
+  },
+  settleRowTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center'
+  },
+  settleDate: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#0f172a'
+  },
+  settleAmount: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#16a34a'
+  },
+  settleRowBottom: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8
   },
   settleStatusBadge: {
-    backgroundColor: '#dcfce7',
     paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6
+    paddingVertical: 3,
+    borderRadius: 8,
+    backgroundColor: 'rgba(22, 163, 74, 0.12)'
   },
   settleStatusText: {
-    fontSize: 10.5,
+    fontSize: 10,
     fontWeight: '700',
-    color: '#15803d'
+    color: '#16a34a'
   },
-  settleRef: {
-    fontSize: 11.5,
-    color: '#64748b',
-    fontWeight: '500'
+  settleRefText: {
+    fontSize: 11,
+    color: '#64748b'
   }
 });

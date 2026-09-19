@@ -12,19 +12,34 @@ import {
   ActivityIndicator,
   Modal,
   TextInput,
-  Image
+  Image,
+  useWindowDimensions
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { usePartner } from '../context/PartnerContext';
 import { useSocket } from '../context/SocketContext';
 import { colors } from '../theme/colors';
-import { TactileButton } from '../components/common/TactileButton';
+import { glassTheme } from '../theme/glass';
+import { GlassCard } from '../components/GlassCard';
+import { WaterBackground } from '../components/WaterBackground';
 import { AnimatedNumber } from '../components/common/AnimatedNumber';
+import { showAlert } from '../utils/alert';
 
 const LOGO = require('../../assets/farmart_logo.png');
 
+const DEMO_PARTNERS = [
+  { name: 'Shimla Fresh Orchards', phone: '9876543214', owner: 'Manpreet Singh', icon: 'leaf-outline' },
+  { name: 'Sunita Home Restro & Sweets', phone: '9876543211', owner: 'Sunita Sharma', icon: 'restaurant-outline' },
+  { name: 'Sukhwinder Organic Farms', phone: '9876543212', owner: 'Sukhwinder Singh', icon: 'flower-outline' },
+  { name: 'Gurpreet Fresh Orchards', phone: '9876543213', owner: 'Gurpreet Singh', icon: 'nutrition-outline' }
+];
 
-export const VendorDashboardScreen = ({ navigation }) => {
+export const VendorDashboardScreen = ({ navigation, initialSection }) => {
+  const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const isTablet = width > 600;
+
   const {
     vendor,
     toggleStoreStatus,
@@ -39,54 +54,30 @@ export const VendorDashboardScreen = ({ navigation }) => {
 
   const { connectionMode } = useSocket();
 
-  // Action Idempotency Lock
   const [processingOrderId, setProcessingOrderId] = useState(null);
-
-  // Partner Login / Switch Modal
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginPhoneInput, setLoginPhoneInput] = useState('');
   const [loginPasswordInput, setLoginPasswordInput] = useState('password123');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [loginError, setLoginError] = useState('');
 
-  const switchModalAnim = useRef(new Animated.Value(100)).current;
-  const switchFadeAnim = useRef(new Animated.Value(0)).current;
+  const scrollRef = useRef(null);
+  const ordersSectionRef = useRef(null);
 
-  useEffect(() => {
-    if (showLoginModal) {
-      switchModalAnim.setValue(100);
-      switchFadeAnim.setValue(0);
-      Animated.parallel([
-        Animated.spring(switchModalAnim, {
-          toValue: 0,
-          friction: 6,
-          tension: 180,
-          useNativeDriver: Platform.OS !== 'web'
-        }),
-        Animated.timing(switchFadeAnim, {
-          toValue: 1,
-          duration: 220,
-          useNativeDriver: Platform.OS !== 'web'
-        })
-      ]).start();
-    }
-  }, [showLoginModal]);
-
-  // Classic Zomato-Style Breathing Pulse Animation
+  // Breathing Pulse Animation (Zomato-Style Status Glow)
   const pulseAnim = useRef(new Animated.Value(1)).current;
-
   useEffect(() => {
     const pulseLoop = Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
           toValue: 1.28,
           duration: 900,
-          useNativeDriver: Platform.OS !== 'web'
+          useNativeDriver: false
         }),
         Animated.timing(pulseAnim, {
           toValue: 1.0,
           duration: 900,
-          useNativeDriver: Platform.OS !== 'web'
+          useNativeDriver: false
         })
       ])
     );
@@ -96,12 +87,11 @@ export const VendorDashboardScreen = ({ navigation }) => {
 
   const isStoreOpen = vendor?.isOpen ?? true;
 
-  // Identify in-flight active orders
+  // Active in-flight orders
   const inFlightOrders = orders.filter((o) =>
     ['NEW_ORDER', 'ACCEPTED', 'PREPARING', 'READY_FOR_RIDER', 'OUT_FOR_DELIVERY'].includes(o.status)
   );
 
-  // Single-Execution Action Handler (prevents duplicate clicks in same cycle)
   const handleUpdateStatus = async (orderId, newStatus, reason = '') => {
     if (processingOrderId === orderId) return;
     setProcessingOrderId(orderId);
@@ -109,6 +99,7 @@ export const VendorDashboardScreen = ({ navigation }) => {
       await updateOrderStatus(orderId, newStatus, reason);
     } catch (err) {
       console.warn('Action failed:', err);
+      showAlert('Notice', 'Could not update order status. Please verify connection.');
     } finally {
       setProcessingOrderId(null);
     }
@@ -137,608 +128,445 @@ export const VendorDashboardScreen = ({ navigation }) => {
     }
   };
 
-  // If merchant is logged out, show mandatory Partner Login screen
+  // If merchant is logged out, show glass login screen
   if (!vendor) {
     return (
       <View style={styles.container}>
-        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-        <View style={styles.unauthCard}>
-          <View style={styles.storeBadgeCircleLarge}>
-            <Image source={LOGO} style={{ width: 68, height: 68 }} resizeMode="contain" />
-          </View>
-          <Text style={styles.unauthTitle}>S-farmart Partner Portal</Text>
-          <Text style={styles.unauthSub}>
-            Please log in with your Partner ID or Phone number to manage orders and open your store.
-          </Text>
+        <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+        <WaterBackground />
+        <View style={[styles.unauthContainer, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 20 }]}>
+          <GlassCard style={styles.unauthGlassCard}>
+            <View style={styles.unauthHeader}>
+              <View style={styles.logoGlassGlow}>
+                <Image source={LOGO} style={{ width: 56, height: 56 }} resizeMode="contain" />
+              </View>
+              <Text style={styles.unauthTitle}>Farmart Partner Console</Text>
+              <Text style={styles.unauthSub}>
+                Please log in with your verified Partner Phone number to access your store orders.
+              </Text>
+            </View>
 
-          <View style={styles.loginForm}>
-            <Text style={styles.inputLabel}>Partner Phone / ID</Text>
-            <TextInput
-              style={styles.textInput}
-              placeholder="e.g. 9876543211"
-              value={loginPhoneInput}
-              onChangeText={setLoginPhoneInput}
-              keyboardType="phone-pad"
-            />
+            <View style={styles.loginForm}>
+              <Text style={styles.inputLabel}>Partner Mobile / Store ID</Text>
+              <TextInput
+                style={styles.glassInput}
+                placeholder="e.g. 9876543213"
+                placeholderTextColor={colors.textMuted}
+                value={loginPhoneInput}
+                onChangeText={setLoginPhoneInput}
+                keyboardType="phone-pad"
+              />
 
-            {loginError ? <Text style={styles.errorText}>{loginError}</Text> : null}
+              {loginError ? <Text style={styles.errorText}>{loginError}</Text> : null}
 
-            <TouchableOpacity
-              style={[styles.loginSubmitBtn, isLoggingIn && { opacity: 0.7 }]}
-              onPress={() => handleCustomLogin()}
-              disabled={isLoggingIn}
-            >
-              {isLoggingIn ? (
-                <ActivityIndicator size="small" color="#ffffff" />
-              ) : (
-                <>
-                  <Text style={styles.loginSubmitText}>Log In to Store</Text>
-                  <Ionicons name="log-in-outline" size={18} color="#ffffff" />
-                </>
-              )}
-            </TouchableOpacity>
-          </View>
+              <TouchableOpacity
+                style={styles.loginBtn}
+                onPress={() => handleCustomLogin()}
+                disabled={isLoggingIn}
+                activeOpacity={0.8}
+              >
+                {isLoggingIn ? (
+                  <ActivityIndicator size="small" color="#ffffff" />
+                ) : (
+                  <>
+                    <Text style={styles.loginBtnText}>Log In to Store</Text>
+                    <Ionicons name="arrow-forward" size={18} color="#ffffff" />
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
+
+            {/* Quick Demo Accounts */}
+            <View style={styles.demoPartnersBox}>
+              <Text style={styles.demoPartnersTitle}>Instant Test Merchant Access:</Text>
+              <View style={styles.demoChipsGrid}>
+                {DEMO_PARTNERS.map((p, idx) => (
+                  <TouchableOpacity
+                    key={idx}
+                    style={styles.demoChip}
+                    onPress={() => handleCustomLogin(p.phone)}
+                  >
+                    <Ionicons name={p.icon} size={15} color="#ea580c" />
+                    <Text style={styles.demoChipText}>{p.name.split(' ')[0]}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          </GlassCard>
         </View>
       </View>
     );
   }
 
+  // Render Dashboard
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+      <WaterBackground />
 
-      {/* Top Header Bar */}
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <View style={styles.storeBadgeCircle}>
-            <Image source={LOGO} style={{ width: 38, height: 38, borderRadius: 8 }} resizeMode="contain" />
-          </View>
-          <View style={styles.storeTextContainer}>
-            <Text style={styles.storeName} numberOfLines={1}>
-              {vendor?.storeName || 'Partner Store'}
+      <ScrollView
+        ref={scrollRef}
+        contentContainerStyle={[
+          styles.scrollContent,
+          {
+            paddingTop: insets.top + 12,
+            paddingBottom: insets.bottom + 110
+          }
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* ==================== 1. TOP HEADER ==================== */}
+        <View style={styles.topHeader}>
+          {/* Store Name: Serif-style bold title on the left */}
+          <View style={styles.headerLeftWrap}>
+            <Text style={styles.headerStoreTitle} numberOfLines={1} ellipsizeMode="tail">
+              {vendor?.storeName || 'Merchant Store'}
             </Text>
-            <Text style={styles.ownerText}>
-              👤 {vendor?.ownerName || 'Merchant'} • ID: VEN-{vendor?.phone || '9876543211'}
+            <Text style={styles.headerStoreSub} numberOfLines={1}>
+              {vendor?.ownerName || 'Verified Merchant'} • {vendor?.phone || '+91 98765 43210'}
             </Text>
           </View>
-        </View>
 
-        {/* Zomato-Style Status Box with Breathing Glow */}
-        <View style={styles.statusBox}>
-          <Animated.View
-            style={[
-              styles.statusPulseRing,
-              {
-                transform: [{ scale: isStoreOpen ? pulseAnim : 1 }],
-                backgroundColor: isStoreOpen ? 'rgba(16, 185, 129, 0.25)' : 'transparent'
-              }
-            ]}
-          >
+          {/* Right: Glass Status Pill + Store Switcher */}
+          <View style={styles.headerRightWrap}>
+            {/* Online / Offline Glass Pill */}
             <View
               style={[
-                styles.statusDot,
-                { backgroundColor: isStoreOpen ? '#10b981' : '#ef4444' }
-              ]}
-            />
-          </Animated.View>
-
-          <Text
-            style={[
-              styles.statusText,
-              { color: isStoreOpen ? '#15803d' : '#b91c1c' }
-            ]}
-          >
-            {isStoreOpen ? 'ONLINE' : 'OFFLINE'}
-          </Text>
-
-          <Switch
-            value={isStoreOpen}
-            onValueChange={toggleStoreStatus}
-            disabled={isTogglingStore}
-            trackColor={{ false: '#cbd5e1', true: '#bbf7d0' }}
-            thumbColor={isStoreOpen ? '#16a34a' : '#94a3b8'}
-          />
-        </View>
-      </View>
-
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Store Online / Offline State Announcement Banner */}
-        <View
-          style={[
-            styles.storeStateBanner,
-            {
-              backgroundColor: isStoreOpen ? '#f0fdf4' : '#fef2f2',
-              borderColor: isStoreOpen ? '#bbf7d0' : '#fecaca'
-            }
-          ]}
-        >
-          <Ionicons
-            name={isStoreOpen ? 'radio-button-on' : 'alert-circle'}
-            size={18}
-            color={isStoreOpen ? '#16a34a' : '#dc2626'}
-          />
-          <View style={{ flex: 1 }}>
-            <Text
-              style={[
-                styles.storeStateTitle,
-                { color: isStoreOpen ? '#15803d' : '#991b1b' }
+                styles.statusGlassPill,
+                isStoreOpen ? styles.statusPillOnline : styles.statusPillOffline
               ]}
             >
-              {isStoreOpen ? 'STORE IS ONLINE' : 'STORE IS OFFLINE (CLOSED)'}
-            </Text>
-            <Text
-              style={[
-                styles.storeStateSub,
-                { color: isStoreOpen ? '#166534' : '#7f1d1d' }
-              ]}
-            >
-              {isStoreOpen
-                ? 'Your products are live. Customers can order and you will receive orders here.'
-                : 'Customers can browse your catalog, but new orders are paused until you switch ONLINE.'}
-            </Text>
-          </View>
-        </View>
-
-        {/* ⚠️ FULFILLING LAST ORDER BANNER (Triggered when store is offline but active orders exist) */}
-        {!isStoreOpen && inFlightOrders.length > 0 && (
-          <View style={styles.lastOrderBanner}>
-            <View style={styles.lastOrderHeaderRow}>
-              <View style={styles.flameCircle}>
-                <Ionicons name="flame" size={18} color="#ffffff" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.lastOrderTitle}>
-                  FULFILLING LAST ORDER • STORE OFFLINE
-                </Text>
-                <Text style={styles.lastOrderSub}>
-                  Your store is closed to new customer orders. Please complete your active accepted order below as your last order before resting.
-                </Text>
-              </View>
-            </View>
-          </View>
-        )}
-
-        {/* Connection Status & Vendor Switcher Bar */}
-        <View style={styles.connectionBar}>
-          <View style={styles.connIndicator}>
-            <View
-              style={[
-                styles.livePulse,
-                {
-                  backgroundColor:
-                    connectionMode === 'REALTIME'
-                      ? '#10b981'
-                      : connectionMode === 'POLLING'
-                      ? '#f59e0b'
-                      : '#ef4444'
-                }
-              ]}
-            />
-            <Text style={styles.connText}>
-              {connectionMode === 'REALTIME'
-                ? '⚡ Live Real-Time Socket'
-                : connectionMode === 'POLLING'
-                ? '🔄 10s Live Polling Sync'
-                : '🔴 Offline'}
-            </Text>
-          </View>
-
-          <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
-            <TouchableOpacity
-              style={styles.switchAccountBtn}
-              onPress={() => setShowLoginModal(true)}
-            >
-              <Ionicons name="swap-horizontal" size={14} color="#475569" />
-              <Text style={styles.switchAccountText}>Switch ID</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.switchAccountBtn, { borderColor: '#fecaca', backgroundColor: '#fef2f2' }]}
-              onPress={() => logoutVendor()}
-            >
-              <Ionicons name="log-out-outline" size={14} color="#ef4444" />
-              <Text style={[styles.switchAccountText, { color: '#ef4444', fontWeight: '700' }]}>Log Out</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.refreshBtn}
-              onPress={() => fetchOrders(vendor?._id)}
-            >
-              <Ionicons name="refresh" size={14} color="#475569" />
-              <Text style={styles.refreshText}>Sync</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Quick Metrics Grid */}
-        <View style={styles.statsGrid}>
-          <View style={[styles.statCard, { backgroundColor: '#f0fdf4', borderColor: '#bbf7d0' }]}>
-            <View style={styles.statIconBox}>
-              <Ionicons name="wallet-outline" size={18} color="#16a34a" />
-            </View>
-            <AnimatedNumber value={stats.todaySales || 0} prefix="₹" style={styles.statVal} />
-            <Text style={styles.statLabel}>Today's Sales</Text>
-          </View>
-
-          <View style={[styles.statCard, { backgroundColor: '#eff6ff', borderColor: '#bfdbfe' }]}>
-            <View style={styles.statIconBox}>
-              <Ionicons name="receipt-outline" size={18} color="#2563eb" />
-            </View>
-            <AnimatedNumber value={inFlightOrders.length} style={[styles.statVal, { color: '#1d4ed8' }]} />
-            <Text style={styles.statLabel}>Active Orders</Text>
-          </View>
-
-          <View style={[styles.statCard, { backgroundColor: '#fffbeb', borderColor: '#fde68a' }]}>
-            <View style={styles.statIconBox}>
-              <Ionicons name="star" size={18} color="#d97706" />
-            </View>
-            <AnimatedNumber value={vendor?.rating || 4.8} prefix="★ " style={[styles.statVal, { color: '#b45309' }]} />
-            <Text style={styles.statLabel}>Store Rating</Text>
-          </View>
-        </View>
-
-        {/* Add Product Action Button */}
-        <TouchableOpacity
-          style={styles.addProdBtn}
-          onPress={() => navigation.navigate('AddProduct')}
-          activeOpacity={0.85}
-        >
-          <View style={styles.addProdIconCircle}>
-            <Ionicons name="add" size={20} color="#0f172a" />
-          </View>
-          <Text style={styles.addProdText}>Add New Product / Dish</Text>
-          <Ionicons name="chevron-forward" size={18} color="#ffffff" style={{ marginLeft: 'auto' }} />
-        </TouchableOpacity>
-
-        {/* Incoming Customer Orders Section */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Live Orders Queue</Text>
-          <View style={styles.orderCountBadge}>
-            <Text style={styles.orderCountText}>{orders.length} Total</Text>
-          </View>
-        </View>
-
-        {orders.length === 0 ? (
-          <View style={styles.emptyBox}>
-            <View style={styles.emptyIconCircle}>
-              <Ionicons name="receipt-outline" size={38} color="#94a3b8" />
-            </View>
-            <Text style={styles.emptyTitle}>No Orders in Queue</Text>
-            <Text style={styles.emptySub}>
-              {isStoreOpen
-                ? 'Store is ONLINE. Orders placed in customer app will trigger instant audio chime.'
-                : 'Store is OFFLINE. Toggle switch to ONLINE above when ready to receive orders.'}
-            </Text>
-          </View>
-        ) : (
-          orders.map((order) => {
-            const isNew = order.status === 'NEW_ORDER';
-            const isAccepted = order.status === 'ACCEPTED';
-            const isPreparing = order.status === 'PREPARING';
-            const isReady = order.status === 'READY_FOR_RIDER';
-            const isOut = order.status === 'OUT_FOR_DELIVERY';
-            const isDelivered = order.status === 'DELIVERED';
-            const isCancelled = ['CANCELLED', 'REJECTED'].includes(order.status);
-            const isInFlight = ['NEW_ORDER', 'ACCEPTED', 'PREPARING', 'READY_FOR_RIDER', 'OUT_FOR_DELIVERY'].includes(order.status);
-
-            const isSubmittingThis = processingOrderId === order._id;
-            const cust = order.customer || order.address || {};
-
-            return (
-              <View
-                key={order._id || order.orderId}
+              <Animated.View
                 style={[
-                  styles.orderCard,
-                  !isStoreOpen && isInFlight && styles.inFlightCardHighlight
+                  styles.statusPillDot,
+                  isStoreOpen ? styles.dotOnline : styles.dotOffline,
+                  {
+                    transform: [{ scale: isStoreOpen ? pulseAnim : 1 }]
+                  }
+                ]}
+              />
+              <Text
+                style={[
+                  styles.statusPillText,
+                  isStoreOpen ? styles.textOnline : styles.textOffline
                 ]}
               >
-                {/* Highlight banner if this is an in-flight order while store is offline */}
-                {!isStoreOpen && isInFlight && (
-                  <View style={styles.inFlightBadgeRow}>
-                    <Ionicons name="flame" size={13} color="#ea580c" />
-                    <Text style={styles.inFlightBadgeText}>
-                      LAST IN-FLIGHT ORDER • FULFILLMENT REQUIRED
-                    </Text>
-                  </View>
-                )}
+                {isStoreOpen ? 'ONLINE' : 'OFFLINE'}
+              </Text>
+            </View>
 
-                <View style={styles.orderHeader}>
-                  <View>
-                    <View style={styles.orderIdRow}>
-                      <Text style={styles.orderId}>#{order.orderNumber || order.orderId}</Text>
-                      <View style={styles.typeBadge}>
-                        <Ionicons name="flash-outline" size={11} color="#6366f1" />
-                        <Text style={styles.typeBadgeText}>Express</Text>
-                      </View>
-                    </View>
-                    <Text style={styles.orderTime}>
-                      👤 {cust.name || 'Customer'} • 📞 {cust.phone || 'N/A'}
-                    </Text>
-                  </View>
+            {/* Quick Switch Store Icon Button */}
+            <TouchableOpacity
+              style={styles.switchIconBtn}
+              onPress={() => setShowLoginModal(true)}
+              activeOpacity={0.7}
+              accessibilityLabel="Switch Partner Store"
+            >
+              <Ionicons name="swap-horizontal" size={18} color="#ea580c" />
+            </TouchableOpacity>
+          </View>
+        </View>
 
+        {/* ==================== RESPONSIVE LAYOUT CONTAINER ==================== */}
+        {/* On tablet/web (>600px): 2 columns. On mobile portrait: single column */}
+        <View style={isTablet ? styles.tabletColumnsRow : styles.singleColumn}>
+
+          {/* LEFT COLUMN (or Top Section on mobile) */}
+          <View style={isTablet ? styles.tabletLeftCol : styles.fullWidthBlock}>
+
+            {/* ==================== 2. STORE STATUS GLASS CARD ==================== */}
+            <GlassCard style={styles.storeStatusCard} showSheen={true}>
+              <View style={styles.storeStatusContent}>
+                <View style={styles.statusLeftSection}>
                   <View
                     style={[
-                      styles.statusPill,
-                      {
-                        backgroundColor: isNew
-                          ? '#fef3c7'
-                          : isAccepted
-                          ? '#e0e7ff'
-                          : isPreparing
-                          ? '#ffedd5'
-                          : isReady
-                          ? '#dcfce7'
-                          : isOut
-                          ? '#cffafe'
-                          : isDelivered
-                          ? '#dcfce7'
-                          : '#fee2e2'
-                      }
+                      styles.checkCircleGlow,
+                      isStoreOpen ? styles.checkGlowOnline : styles.checkGlowOffline
                     ]}
                   >
-                    <Text
-                      style={[
-                        styles.statusPillText,
-                        {
-                          color: isNew
-                            ? '#b45309'
-                            : isAccepted
-                            ? '#4338ca'
-                            : isPreparing
-                            ? '#c2410c'
-                            : isReady
-                            ? '#15803d'
-                            : isOut
-                            ? '#0e7490'
-                            : isDelivered
-                            ? '#15803d'
-                            : '#b91c1c'
-                        }
-                      ]}
-                    >
-                      {(order.status || 'NEW_ORDER').replace(/_/g, ' ')}
+                    <Ionicons
+                      name={isStoreOpen ? 'checkmark-circle' : 'pause-circle'}
+                      size={28}
+                      color={isStoreOpen ? '#16a34a' : '#94a3b8'}
+                    />
+                  </View>
+                  <View style={{ marginLeft: 12, flex: 1 }}>
+                    <Text style={styles.storeStatusTitle}>
+                      {isStoreOpen ? 'Store: Online' : 'Store: Offline'}
+                    </Text>
+                    <Text style={styles.storeStatusSub}>
+                      {isStoreOpen
+                        ? 'Customers can place orders.'
+                        : 'Store is paused. New orders are paused.'}
                     </Text>
                   </View>
                 </View>
 
-                {/* Items Box */}
-                <View style={styles.itemsContainer}>
-                  {order.items?.map((item, idx) => {
-                    const qty = item.qty ?? item.quantity ?? 1;
-                    const price = item.price || 0;
+                {/* Duty Switch with breathing glow wrapper */}
+                <View style={styles.switchWrapper}>
+                  <Switch
+                    value={isStoreOpen}
+                    onValueChange={toggleStoreStatus}
+                    disabled={isTogglingStore}
+                    trackColor={{ false: '#cbd5e1', true: '#bbf7d0' }}
+                    thumbColor={isStoreOpen ? '#16a34a' : '#94a3b8'}
+                  />
+                </View>
+              </View>
+            </GlassCard>
+
+            {/* ==================== 3. THREE STAT GLASS TILES IN A ROW ==================== */}
+            <View style={styles.statsTilesRow}>
+              {/* Tile 1: Today's Sales */}
+              <GlassCard style={styles.statTile}>
+                <View style={styles.statIconWrapAmber}>
+                  <Ionicons name="wallet-outline" size={18} color="#d97706" />
+                </View>
+                <Text style={styles.statLabel} numberOfLines={1}>Today's Sales</Text>
+                <Text style={styles.statValue} numberOfLines={1} adjustsFontSizeToFit>
+                  ₹<AnimatedNumber value={stats.todaySales || 0} />
+                </Text>
+              </GlassCard>
+
+              {/* Tile 2: Active Orders */}
+              <GlassCard style={styles.statTile}>
+                <View style={styles.statIconWrapOrange}>
+                  <Ionicons name="receipt-outline" size={18} color="#ea580c" />
+                </View>
+                <Text style={styles.statLabel} numberOfLines={1}>Active Orders</Text>
+                <Text style={styles.statValue} numberOfLines={1} adjustsFontSizeToFit>
+                  <AnimatedNumber value={inFlightOrders.length} />
+                </Text>
+              </GlassCard>
+
+              {/* Tile 3: Store Rating */}
+              <GlassCard style={styles.statTile}>
+                <View style={styles.statIconWrapGold}>
+                  <Ionicons name="star" size={18} color="#f59e0b" />
+                </View>
+                <Text style={styles.statLabel} numberOfLines={1}>Store Rating</Text>
+                <Text style={styles.statValue} numberOfLines={1} adjustsFontSizeToFit>
+                  {vendor?.rating || '4.9'} ★
+                </Text>
+              </GlassCard>
+            </View>
+
+            {/* ==================== 4. TWO GLASS BUTTONS ==================== */}
+            <View style={styles.actionButtonsRow}>
+              {/* Button 1: Add New Item */}
+              <GlassCard
+                style={styles.actionGlassBtn}
+                onPress={() => navigation.navigate('AddProduct')}
+                showSheen={true}
+              >
+                <View style={styles.actionBtnInner}>
+                  <View style={styles.btnIconOrbAmber}>
+                    <Ionicons name="add-circle-outline" size={20} color="#ea580c" />
+                  </View>
+                  <View style={{ marginLeft: 10, flex: 1 }}>
+                    <Text style={styles.actionBtnTitle}>Add New Item</Text>
+                    <Text style={styles.actionBtnSub}>1-Tap catalog listing</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color="#94a3b8" />
+                </View>
+              </GlassCard>
+
+              {/* Button 2: Detailed Analytics */}
+              <GlassCard
+                style={styles.actionGlassBtn}
+                onPress={() => navigation.navigate('Reports')}
+                showSheen={true}
+              >
+                <View style={styles.actionBtnInner}>
+                  <View style={styles.btnIconOrbGreen}>
+                    <Ionicons name="bar-chart-outline" size={20} color="#16a34a" />
+                  </View>
+                  <View style={{ marginLeft: 10, flex: 1 }}>
+                    <Text style={styles.actionBtnTitle}>Detailed Analytics</Text>
+                    <Text style={styles.actionBtnSub}>Wednesday payouts ledger</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color="#94a3b8" />
+                </View>
+              </GlassCard>
+            </View>
+          </View>
+
+          {/* RIGHT COLUMN (or Bottom Section on mobile) */}
+          <View style={isTablet ? styles.tabletRightCol : styles.fullWidthBlock}>
+
+            {/* ==================== 5. PENDING ORDERS GLASS CARD ==================== */}
+            <GlassCard style={styles.pendingOrdersCard} showSheen={true}>
+              <View style={styles.ordersCardHeader}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Ionicons name="time-outline" size={20} color="#0284c7" />
+                  <Text style={styles.ordersCardTitle}>Pending Orders</Text>
+                </View>
+                <View style={styles.orderCountBadge}>
+                  <Text style={styles.orderCountText}>{inFlightOrders.length}</Text>
+                </View>
+              </View>
+
+              {/* Order Rows */}
+              {inFlightOrders.length === 0 ? (
+                <View style={styles.emptyOrdersBox}>
+                  <Ionicons name="checkmark-done-circle-outline" size={44} color="#94a3b8" />
+                  <Text style={styles.emptyOrdersTitle}>No pending orders right now</Text>
+                  <Text style={styles.emptyOrdersSub}>
+                    Incoming orders will appear here in real-time with instant audio & vibration alerts.
+                  </Text>
+                </View>
+              ) : (
+                <View style={styles.ordersListContainer}>
+                  {inFlightOrders.map((o) => {
+                    const orderIdDisplay = `#${o.orderNumber || o._id?.slice(-6) || 'ORD-101'}`;
+                    const itemCount = o.items?.length || 1;
+                    const primaryItemName =
+                      o.items?.[0]?.product?.name || o.items?.[0]?.name || 'Special Menu Item';
+                    const grandTotal = o.pricing?.grandTotal || o.totalAmount || 180;
+                    const isProcessing = processingOrderId === o._id;
+
                     return (
-                      <View key={idx} style={styles.itemRow}>
-                        <View style={styles.itemQtyBadge}>
-                          <Text style={styles.itemQtyText}>{qty}x</Text>
+                      <View key={o._id} style={styles.orderRowCard}>
+                        <View style={styles.orderRowTop}>
+                          <View style={{ flex: 1, paddingRight: 8 }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                              <Text style={styles.orderRowId}>{orderIdDisplay}</Text>
+                              <View style={styles.itemCountPill}>
+                                <Text style={styles.itemCountText}>{itemCount} item(s)</Text>
+                              </View>
+                            </View>
+                            <Text style={styles.orderRowSummary} numberOfLines={1}>
+                              {primaryItemName}
+                            </Text>
+                            <Text style={styles.orderRowCustomer}>
+                              👤 {o.customer?.name || o.address?.name || 'Rajesh Kumar'}
+                            </Text>
+                          </View>
+
+                          {/* Order Price & Action */}
+                          <View style={styles.orderRowRight}>
+                            <Text style={styles.orderRowTotal}>₹{grandTotal}</Text>
+
+                            {/* Blue ACCEPT Button for NEW_ORDER, or state step action */}
+                            {o.status === 'NEW_ORDER' ? (
+                              <TouchableOpacity
+                                style={styles.acceptBlueBtn}
+                                onPress={() => handleUpdateStatus(o._id, 'ACCEPTED')}
+                                disabled={isProcessing}
+                                activeOpacity={0.8}
+                              >
+                                {isProcessing ? (
+                                  <ActivityIndicator size="small" color="#ffffff" />
+                                ) : (
+                                  <Text style={styles.acceptBlueBtnText}>ACCEPT</Text>
+                                )}
+                              </TouchableOpacity>
+                            ) : o.status === 'ACCEPTED' ? (
+                              <TouchableOpacity
+                                style={styles.prepOrangeBtn}
+                                onPress={() => handleUpdateStatus(o._id, 'PREPARING')}
+                                disabled={isProcessing}
+                                activeOpacity={0.8}
+                              >
+                                <Text style={styles.prepBtnText}>START PREP</Text>
+                              </TouchableOpacity>
+                            ) : o.status === 'PREPARING' ? (
+                              <TouchableOpacity
+                                style={styles.readyGreenBtn}
+                                onPress={() => handleUpdateStatus(o._id, 'READY_FOR_RIDER')}
+                                disabled={isProcessing}
+                                activeOpacity={0.8}
+                              >
+                                <Text style={styles.readyBtnText}>READY</Text>
+                              </TouchableOpacity>
+                            ) : (
+                              <TouchableOpacity
+                                style={styles.deliverSlateBtn}
+                                onPress={() => handleUpdateStatus(o._id, 'OUT_FOR_DELIVERY')}
+                                disabled={isProcessing}
+                                activeOpacity={0.8}
+                              >
+                                <Text style={styles.deliverBtnText}>DISPATCH</Text>
+                              </TouchableOpacity>
+                            )}
+                          </View>
                         </View>
-                        <Text style={styles.itemRowText} numberOfLines={1}>
-                          {item.name || 'Item'}
-                        </Text>
-                        <Text style={styles.itemPrice}>
-                          ₹{item.lineTotal || price * qty}
-                        </Text>
                       </View>
                     );
                   })}
                 </View>
-
-                {/* Order Footer */}
-                <View style={styles.orderFooter}>
-                  <View>
-                    <Text style={styles.totalLabel}>Bill Amount</Text>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Text style={styles.totalText}>
-                        ₹{order.pricing?.grandTotal || order.totalAmount || 0}
-                      </Text>
-                      <View
-                        style={{
-                          backgroundColor:
-                            order.payment?.method === 'COD' || order.paymentMethod === 'COD'
-                              ? '#fee2e2'
-                              : '#dcfce7',
-                          paddingHorizontal: 6,
-                          paddingVertical: 2,
-                          borderRadius: 6
-                        }}
-                      >
-                        <Text
-                          style={{
-                            fontSize: 10,
-                            color:
-                              order.payment?.method === 'COD' || order.paymentMethod === 'COD'
-                                ? '#991b1b'
-                                : '#16a34a',
-                            fontWeight: '600'
-                          }}
-                        >
-                          {order.payment?.method || 'COD'}
-                        </Text>
-                      </View>
-                    </View>
-                  </View>
-
-                  {/* Progressive Action Workflow with Single-Execution Lock */}
-                  <View style={styles.btnRow}>
-                    {isNew && (
-                      <>
-                        <TouchableOpacity
-                          style={[styles.rejectSmallBtn, isSubmittingThis && { opacity: 0.5 }]}
-                          onPress={() => handleUpdateStatus(order._id, 'REJECTED', 'Kitchen is busy')}
-                          disabled={isSubmittingThis}
-                        >
-                          <Text style={styles.rejectSmallText}>Reject</Text>
-                        </TouchableOpacity>
-                        <TactileButton
-                          style={[styles.acceptBtn, isSubmittingThis && { opacity: 0.7 }]}
-                          onPress={() => handleUpdateStatus(order._id, 'ACCEPTED')}
-                          disabled={isSubmittingThis}
-                          rippleColor="rgba(255, 255, 255, 0.35)"
-                        >
-                          {isSubmittingThis ? (
-                            <ActivityIndicator size="small" color="#ffffff" />
-                          ) : (
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                              <Text style={styles.btnText}>Accept</Text>
-                              <Ionicons name="checkmark-circle" size={16} color="#ffffff" />
-                            </View>
-                          )}
-                        </TactileButton>
-                      </>
-                    )}
-
-                    {isAccepted && (
-                      <TactileButton
-                        style={[styles.acceptBtn, { backgroundColor: '#ea580c' }, isSubmittingThis && { opacity: 0.7 }]}
-                        onPress={() => handleUpdateStatus(order._id, 'PREPARING')}
-                        disabled={isSubmittingThis}
-                        rippleColor="rgba(255, 255, 255, 0.35)"
-                      >
-                        {isSubmittingThis ? (
-                          <ActivityIndicator size="small" color="#ffffff" />
-                        ) : (
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                            <Text style={styles.btnText}>Start Cooking & Packing</Text>
-                            <Ionicons name="flame" size={16} color="#ffffff" />
-                          </View>
-                        )}
-                      </TactileButton>
-                    )}
-
-                    {isPreparing && (
-                      <TactileButton
-                        style={[styles.acceptBtn, { backgroundColor: '#16a34a' }, isSubmittingThis && { opacity: 0.7 }]}
-                        onPress={() => handleUpdateStatus(order._id, 'READY_FOR_RIDER')}
-                        disabled={isSubmittingThis}
-                        rippleColor="rgba(255, 255, 255, 0.35)"
-                      >
-                        {isSubmittingThis ? (
-                          <ActivityIndicator size="small" color="#ffffff" />
-                        ) : (
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                            <Text style={styles.btnText}>Order is Packed</Text>
-                            <Ionicons name="cube" size={16} color="#ffffff" />
-                          </View>
-                        )}
-                      </TactileButton>
-                    )}
-
-                    {isReady && (
-                      <TactileButton
-                        style={[styles.acceptBtn, { backgroundColor: '#0284c7' }, isSubmittingThis && { opacity: 0.7 }]}
-                        onPress={() => handleUpdateStatus(order._id, 'OUT_FOR_DELIVERY')}
-                        disabled={isSubmittingThis}
-                        rippleColor="rgba(255, 255, 255, 0.35)"
-                      >
-                        {isSubmittingThis ? (
-                          <ActivityIndicator size="small" color="#ffffff" />
-                        ) : (
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                            <Text style={styles.btnText}>Handover to Rider</Text>
-                            <Ionicons name="paper-plane" size={16} color="#ffffff" />
-                          </View>
-                        )}
-                      </TactileButton>
-                    )}
-
-                    {isOut && (
-                      <TactileButton
-                        style={[styles.acceptBtn, { backgroundColor: '#15803d' }, isSubmittingThis && { opacity: 0.7 }]}
-                        onPress={() => handleUpdateStatus(order._id, 'DELIVERED')}
-                        disabled={isSubmittingThis}
-                        rippleColor="rgba(255, 255, 255, 0.35)"
-                      >
-                        {isSubmittingThis ? (
-                          <ActivityIndicator size="small" color="#ffffff" />
-                        ) : (
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                            <Text style={styles.btnText}>Mark Delivered</Text>
-                            <Ionicons name="checkmark-done" size={16} color="#ffffff" />
-                          </View>
-                        )}
-                      </TactileButton>
-                    )}
-
-                    {isDelivered && (
-                      <View style={styles.completedBadge}>
-                        <Ionicons name="checkmark-circle" size={16} color="#16a34a" />
-                        <Text style={styles.completedText}>Delivered</Text>
-                      </View>
-                    )}
-
-                    {isCancelled && (
-                      <View style={styles.cancelledBadge}>
-                        <Ionicons name="close-circle" size={16} color="#ef4444" />
-                        <Text style={styles.cancelledText}>
-                          {order.status === 'REJECTED' ? 'Rejected' : 'Cancelled'}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                </View>
-              </View>
-            );
-          })
-        )}
+              )}
+            </GlassCard>
+          </View>
+        </View>
       </ScrollView>
 
-      {/* Switch / Login Partner Modal */}
-      <Modal visible={showLoginModal} transparent animationType="none" onRequestClose={() => setShowLoginModal(false)}>
-        <Animated.View style={[styles.modalOverlay, { opacity: switchFadeAnim }]}>
-          <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={() => setShowLoginModal(false)} />
-          <Animated.View
-            style={[
-              styles.switchModalCard,
-              { transform: [{ translateY: switchModalAnim }] }
-            ]}
-          >
+      {/* ==================== PARTNER SWITCHER MODAL ==================== */}
+      <Modal
+        visible={showLoginModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowLoginModal(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <GlassCard style={styles.switchModalCard}>
             <View style={styles.switchModalHeader}>
-              <Text style={styles.switchModalTitle}>Switch Partner Account</Text>
-              <TouchableOpacity onPress={() => setShowLoginModal(false)}>
-                <Ionicons name="close" size={22} color="#64748b" />
-              </TouchableOpacity>
-            </View>
-
-            {/* Switch Account Section */}
-            <View style={styles.modalCustomLoginSection}>
-              <Text style={styles.modalCustomLabel}>ENTER REGISTERED PARTNER PHONE NUMBER:</Text>
-              <View style={styles.modalInputRow}>
-                <TextInput
-                  style={styles.modalTextInput}
-                  placeholder="e.g. 9876543212"
-                  placeholderTextColor="#94a3b8"
-                  value={loginPhoneInput}
-                  onChangeText={setLoginPhoneInput}
-                  keyboardType="phone-pad"
-                />
-                <TouchableOpacity
-                  style={[styles.modalSubmitBtn, isLoggingIn && { opacity: 0.7 }]}
-                  onPress={() => handleCustomLogin()}
-                  disabled={isLoggingIn}
-                >
-                  {isLoggingIn ? (
-                    <ActivityIndicator size="small" color="#ffffff" />
-                  ) : (
-                    <Text style={styles.modalSubmitBtnText}>Log In</Text>
-                  )}
-                </TouchableOpacity>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Ionicons name="swap-horizontal" size={22} color="#ea580c" />
+                <Text style={styles.switchModalTitle}>Switch Partner Store</Text>
               </View>
-              {loginError ? <Text style={styles.errorText}>{loginError}</Text> : null}
-            </View>
-
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={styles.logoutBtn}
-                onPress={() => {
-                  logoutVendor();
-                  setShowLoginModal(false);
-                }}
-              >
-                <Ionicons name="log-out-outline" size={16} color="#ef4444" />
-                <Text style={styles.logoutBtnText}>Log Out Completely</Text>
+              <TouchableOpacity onPress={() => setShowLoginModal(false)} style={styles.modalCloseBtn}>
+                <Ionicons name="close" size={20} color="#64748b" />
               </TouchableOpacity>
             </View>
-          </Animated.View>
-        </Animated.View>
+
+            <Text style={styles.switchModalSub}>
+              Select a verified test store to immediately switch views:
+            </Text>
+
+            {isLoggingIn && (
+              <View style={{ paddingVertical: 12, alignItems: 'center' }}>
+                <ActivityIndicator size="small" color={colors.primary} />
+              </View>
+            )}
+
+            <View style={{ gap: 8, marginTop: 10 }}>
+              {DEMO_PARTNERS.map((p, idx) => {
+                const isCurrent = vendor?.phone === p.phone || vendor?.storeName === p.name;
+                return (
+                  <TouchableOpacity
+                    key={idx}
+                    style={[styles.partnerSelectChip, isCurrent && styles.partnerSelectChipActive]}
+                    onPress={() => handleCustomLogin(p.phone)}
+                    disabled={isLoggingIn || isCurrent}
+                  >
+                    <Ionicons
+                      name={p.icon}
+                      size={20}
+                      color={isCurrent ? '#ea580c' : colors.textSecondary}
+                    />
+                    <View style={{ flex: 1, marginLeft: 10 }}>
+                      <Text
+                        style={[styles.selectChipName, isCurrent && styles.selectChipNameActive]}
+                        numberOfLines={1}
+                      >
+                        {p.name}
+                      </Text>
+                      <Text style={styles.selectChipSub}>{p.owner} • {p.phone}</Text>
+                    </View>
+                    {isCurrent ? (
+                      <View style={styles.currentBadge}>
+                        <Text style={styles.currentBadgeText}>Current</Text>
+                      </View>
+                    ) : (
+                      <Ionicons name="arrow-forward" size={16} color="#94a3b8" />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </GlassCard>
+        </View>
       </Modal>
     </View>
   );
@@ -749,682 +577,395 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8fafc'
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
-    ...Platform.select({
-      ios: { shadowColor: '#0f172a', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 6 },
-      android: { elevation: 3 }
-    })
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    flex: 1
-  },
-  storeBadgeCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: '#ffffff',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: 'rgba(0,0,0,0.06)',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 1,
-    shadowRadius: 4,
-    elevation: 2
-  },
-  storeBadgeCircleLarge: {
-    width: 80,
-    height: 80,
-    borderRadius: 20,
-    backgroundColor: '#ffffff',
-    borderWidth: 1.5,
-    borderColor: '#e2e8f0',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-    shadowColor: 'rgba(0,0,0,0.08)',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 1,
-    shadowRadius: 10,
-    elevation: 4
-  },
-  storeTextContainer: {
-    flex: 1
-  },
-  storeName: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#0f172a'
-  },
-  ownerText: {
-    fontSize: 12,
-    color: '#64748b',
-    marginTop: 2,
-    fontWeight: '500'
-  },
-  statusBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f1f5f9',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 20,
-    gap: 6
-  },
-  statusPulseRing: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    justifyContent: 'center',
-    alignItems: 'center'
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4
-  },
-  statusText: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.4
-  },
   scrollContent: {
-    padding: 20,
-    paddingBottom: 40
+    paddingHorizontal: 16
   },
-  storeStateBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 14,
-    borderRadius: 14,
-    borderWidth: 1,
-    marginBottom: 14
-  },
-  storeStateTitle: {
-    fontSize: 13,
-    fontWeight: '800',
-    letterSpacing: 0.4
-  },
-  storeStateSub: {
-    fontSize: 12,
-    marginTop: 2,
-    lineHeight: 16
-  },
-  lastOrderBanner: {
-    backgroundColor: '#fff7ed',
-    borderWidth: 1.5,
-    borderColor: '#fed7aa',
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 14,
-    shadowColor: '#ea580c',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3
-  },
-  lastOrderHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12
-  },
-  flameCircle: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: '#ea580c',
-    justifyContent: 'center',
-    alignItems: 'center'
-  },
-  lastOrderTitle: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: '#9a3412',
-    letterSpacing: 0.5
-  },
-  lastOrderSub: {
-    fontSize: 12,
-    color: '#c2410c',
-    marginTop: 3,
-    lineHeight: 16
-  },
-  inFlightCardHighlight: {
-    borderColor: '#fed7aa',
-    borderWidth: 2,
-    backgroundColor: '#fffcf9'
-  },
-  inFlightBadgeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: '#ffedd5',
-    alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-    marginBottom: 10
-  },
-  inFlightBadgeText: {
-    fontSize: 10.5,
-    fontWeight: '800',
-    color: '#c2410c',
-    letterSpacing: 0.4
-  },
-  connectionBar: {
+  topHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 12,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: '#e2e8f0'
+    marginBottom: 16
   },
-  storeSwitcherContainer: {
-    backgroundColor: '#ffffff',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 14,
-    marginBottom: 14,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
-    shadowRadius: 3,
-    elevation: 1
-  },
-  storeSwitcherLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#64748b',
-    letterSpacing: 0.8,
-    marginBottom: 8
-  },
-  storeSwitcherScroll: {
-    gap: 8
-  },
-  storeSwitchChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    minWidth: 100
-  },
-  storeSwitchChipActive: {
-    backgroundColor: '#fff7ed',
-    borderColor: '#ea580c',
-    opacity: 1
-  },
-  storeSwitchChipInactive: {
-    backgroundColor: '#f8fafc',
-    borderColor: '#e2e8f0',
-    opacity: 0.72
-  },
-  storeSwitchName: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#475569'
-  },
-  storeSwitchNameActive: {
-    color: '#c2410c',
-    fontWeight: '800'
-  },
-  storeSwitchPhone: {
-    fontSize: 9.5,
-    color: '#94a3b8'
-  },
-  storeSwitchDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#ea580c',
-    marginLeft: 6
-  },
-  connIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8
-  },
-  livePulse: {
-    width: 8,
-    height: 8,
-    borderRadius: 4
-  },
-  connText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#334155'
-  },
-  switchAccountBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    backgroundColor: '#f1f5f9',
-    borderWidth: 1,
-    borderColor: '#e2e8f0'
-  },
-  switchAccountText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#475569'
-  },
-  refreshBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    backgroundColor: '#f1f5f9'
-  },
-  refreshText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#475569'
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 18
-  },
-  statCard: {
+  headerLeftWrap: {
     flex: 1,
-    borderRadius: 18,
-    padding: 14,
-    alignItems: 'center',
-    borderWidth: 1.5
+    paddingRight: 10
   },
-  statIconBox: {
-    marginBottom: 6
-  },
-  statVal: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: colors.primaryDark
-  },
-  statLabel: {
-    fontSize: 11,
-    color: '#64748b',
-    marginTop: 2,
-    fontWeight: '500',
-    textAlign: 'center'
-  },
-  addProdBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#0f172a',
-    borderRadius: 18,
-    paddingHorizontal: 18,
-    paddingVertical: 14,
-    marginBottom: 22,
-    gap: 12,
-    shadowColor: '#0f172a',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 6
-  },
-  addProdIconCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#ffffff',
-    justifyContent: 'center',
-    alignItems: 'center'
-  },
-  addProdText: {
-    color: '#ffffff',
-    fontSize: 15,
-    fontWeight: '600'
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 14
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#0f172a',
-    letterSpacing: -0.3
-  },
-  orderCountBadge: {
-    backgroundColor: '#dcfce7',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12
-  },
-  orderCountText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#15803d'
-  },
-  emptyBox: {
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
-    padding: 36,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#e2e8f0'
-  },
-  emptyIconCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: '#f1f5f9',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 14
-  },
-  emptyTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#0f172a'
-  },
-  emptySub: {
-    fontSize: 13,
-    color: '#64748b',
-    textAlign: 'center',
-    marginTop: 6,
-    lineHeight: 18
-  },
-  orderCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
-    padding: 18,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    shadowColor: 'rgba(15, 23, 42, 0.06)',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 1,
-    shadowRadius: 16,
-    elevation: 4
-  },
-  orderHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 14
-  },
-  orderIdRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8
-  },
-  orderId: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#0f172a'
-  },
-  typeBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#e0e7ff',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 10,
-    gap: 3
-  },
-  typeBadgeText: {
-    fontSize: 10.5,
-    fontWeight: '600',
-    color: '#4338ca'
-  },
-  orderTime: {
-    fontSize: 12.5,
-    color: '#64748b',
-    marginTop: 4,
-    fontWeight: '500'
-  },
-  statusPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 12
-  },
-  statusPillText: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.3
-  },
-  itemsContainer: {
-    backgroundColor: '#f8fafc',
-    padding: 14,
-    borderRadius: 14,
-    marginBottom: 14,
-    gap: 8,
-    borderWidth: 1,
-    borderColor: '#f1f5f9'
-  },
-  itemRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8
-  },
-  itemQtyBadge: {
-    backgroundColor: '#eff6ff',
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 8
-  },
-  itemQtyText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#2563eb'
-  },
-  itemRowText: {
-    flex: 1,
-    fontSize: 13.5,
-    color: '#1e293b',
-    fontWeight: '500'
-  },
-  itemPrice: {
-    fontSize: 13.5,
-    fontWeight: '700',
-    color: '#0f172a'
-  },
-  orderFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: '#f1f5f9',
-    paddingTop: 14
-  },
-  totalLabel: {
-    fontSize: 11,
-    color: '#64748b',
-    fontWeight: '500'
-  },
-  totalText: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#0f172a',
-    marginTop: 2
-  },
-  btnRow: {
-    flexDirection: 'row',
-    gap: 8,
-    alignItems: 'center'
-  },
-  rejectSmallBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#fca5a5',
-    backgroundColor: '#fff1f2'
-  },
-  rejectSmallText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#ef4444'
-  },
-  acceptBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.primary,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    gap: 6
-  },
-  btnText: {
-    color: '#ffffff',
-    fontSize: 12.5,
-    fontWeight: '700'
-  },
-  completedBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#f0fdf4',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 10
-  },
-  completedText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#16a34a'
-  },
-  cancelledBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#fef2f2',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 10
-  },
-  cancelledText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#ef4444'
-  },
-  // Unauth Login Screen Styles
-  unauthCard: {
-    flex: 1,
-    padding: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#ffffff'
-  },
-  unauthTitle: {
+  headerStoreTitle: {
+    // Serif-style bold title on the left as specified in reference image
+    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
     fontSize: 22,
     fontWeight: '800',
     color: '#0f172a',
-    marginBottom: 6
+    letterSpacing: -0.3
   },
-  unauthSub: {
-    fontSize: 13.5,
-    color: '#64748b',
-    textAlign: 'center',
-    marginBottom: 24,
-    lineHeight: 19
-  },
-  loginForm: {
-    width: '100%',
-    maxWidth: 360,
-    marginBottom: 24
-  },
-  inputLabel: {
+  headerStoreSub: {
     fontSize: 12,
-    fontWeight: '700',
-    color: '#475569',
-    marginBottom: 6
+    color: '#64748b',
+    marginTop: 2
   },
-  textInput: {
-    borderWidth: 1.5,
-    borderColor: '#e2e8f0',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    fontSize: 14,
-    color: '#0f172a',
-    backgroundColor: '#f8fafc',
-    marginBottom: 12
-  },
-  loginSubmitBtn: {
-    backgroundColor: colors.primary,
+  headerRightWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    borderRadius: 12,
-    paddingVertical: 12
+    gap: 8
   },
-  loginSubmitText: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '700'
+  statusGlassPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 9999,
+    borderWidth: 1
   },
-  errorText: {
-    color: '#ef4444',
-    fontSize: 12,
-    marginBottom: 8,
-    fontWeight: '600'
+  statusPillOnline: {
+    backgroundColor: 'rgba(220, 252, 231, 0.75)',
+    borderColor: 'rgba(22, 163, 74, 0.45)'
   },
-  quickAccountsSection: {
-    width: '100%',
-    maxWidth: 360,
-    borderTopWidth: 1,
-    borderTopColor: '#f1f5f9',
-    paddingTop: 16
+  statusPillOffline: {
+    backgroundColor: 'rgba(254, 226, 226, 0.75)',
+    borderColor: 'rgba(220, 38, 38, 0.45)'
   },
-  quickAccountsTitle: {
+  statusPillDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 6
+  },
+  dotOnline: {
+    backgroundColor: '#16a34a'
+  },
+  dotOffline: {
+    backgroundColor: '#dc2626'
+  },
+  statusPillText: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#94a3b8',
-    letterSpacing: 0.5,
-    marginBottom: 10
+    letterSpacing: 0.5
   },
-  quickAccountBtn: {
+  textOnline: {
+    color: '#15803d'
+  },
+  textOffline: {
+    color: '#b91c1c'
+  },
+  switchIconBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(255, 255, 255, 0.85)',
+    borderWidth: 1,
+    borderColor: 'rgba(234, 88, 12, 0.35)',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  singleColumn: {
+    width: '100%'
+  },
+  tabletColumnsRow: {
+    flexDirection: 'row',
+    gap: 16,
+    alignItems: 'flex-start'
+  },
+  tabletLeftCol: {
+    flex: 1
+  },
+  tabletRightCol: {
+    flex: 1
+  },
+  fullWidthBlock: {
+    width: '100%'
+  },
+
+  // STORE STATUS CARD
+  storeStatusCard: {
+    marginBottom: 14,
+    padding: 16
+  },
+  storeStatusContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f8fafc',
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: '#e2e8f0'
+    justifyContent: 'space-between'
   },
-  quickAccountName: {
-    fontSize: 13,
+  statusLeftSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    paddingRight: 12
+  },
+  checkCircleGlow: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5
+  },
+  checkGlowOnline: {
+    backgroundColor: 'rgba(22, 163, 74, 0.12)',
+    borderColor: 'rgba(22, 163, 74, 0.35)'
+  },
+  checkGlowOffline: {
+    backgroundColor: 'rgba(148, 163, 184, 0.12)',
+    borderColor: 'rgba(148, 163, 184, 0.35)'
+  },
+  storeStatusTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0f172a'
+  },
+  storeStatusSub: {
+    fontSize: 12,
+    color: '#64748b',
+    marginTop: 2
+  },
+  switchWrapper: {
+    transform: [{ scale: Platform.OS === 'ios' ? 0.9 : 1.0 }]
+  },
+
+  // THREE STAT TILES
+  statsTilesRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 14
+  },
+  statTile: {
+    flex: 1,
+    paddingVertical: 14,
+    paddingHorizontal: 10,
+    alignItems: 'center'
+  },
+  statIconWrapAmber: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(217, 119, 6, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6
+  },
+  statIconWrapOrange: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(234, 88, 12, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6
+  },
+  statIconWrapGold: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(245, 158, 11, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6
+  },
+  statLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#64748b',
+    textAlign: 'center'
+  },
+  statValue: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0f172a',
+    marginTop: 2,
+    textAlign: 'center'
+  },
+
+  // TWO ACTION BUTTONS
+  actionButtonsRow: {
+    gap: 10,
+    marginBottom: 16
+  },
+  actionGlassBtn: {
+    padding: 14
+  },
+  actionBtnInner: {
+    flexDirection: 'row',
+    alignItems: 'center'
+  },
+  btnIconOrbAmber: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(234, 88, 12, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  btnIconOrbGreen: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(22, 163, 74, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  actionBtnTitle: {
+    fontSize: 14,
     fontWeight: '700',
-    color: '#1e293b'
+    color: '#0f172a'
   },
-  quickAccountPhone: {
+  actionBtnSub: {
+    fontSize: 11,
+    color: '#64748b'
+  },
+
+  // PENDING ORDERS CARD
+  pendingOrdersCard: {
+    padding: 16,
+    marginBottom: 16
+  },
+  ordersCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 14,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(226, 232, 240, 0.7)'
+  },
+  ordersCardTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0f172a'
+  },
+  orderCountBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 12,
+    backgroundColor: 'rgba(2, 132, 199, 0.14)'
+  },
+  orderCountText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#0284c7'
+  },
+  emptyOrdersBox: {
+    alignItems: 'center',
+    paddingVertical: 28,
+    paddingHorizontal: 16
+  },
+  emptyOrdersTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#0f172a',
+    marginTop: 10
+  },
+  emptyOrdersSub: {
+    fontSize: 12,
+    color: '#64748b',
+    textAlign: 'center',
+    marginTop: 4,
+    lineHeight: 18
+  },
+  ordersListContainer: {
+    gap: 10
+  },
+  orderRowCard: {
+    padding: 12,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255, 255, 255, 0.65)',
+    borderWidth: 1,
+    borderColor: 'rgba(226, 232, 240, 0.8)'
+  },
+  orderRowTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center'
+  },
+  orderRowId: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#0f172a'
+  },
+  itemCountPill: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+    backgroundColor: 'rgba(100, 116, 139, 0.12)'
+  },
+  itemCountText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#475569'
+  },
+  orderRowSummary: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#334155',
+    marginTop: 3
+  },
+  orderRowCustomer: {
     fontSize: 11,
     color: '#64748b',
     marginTop: 2
   },
-  // Modal Styles
-  modalOverlay: {
+  orderRowRight: {
+    alignItems: 'flex-end',
+    gap: 6
+  },
+  orderRowTotal: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#0f172a'
+  },
+  acceptBlueBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 10,
+    backgroundColor: '#2563eb',
+    shadowColor: '#2563eb',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.35,
+    shadowRadius: 6,
+    elevation: 3
+  },
+  acceptBlueBtnText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#ffffff',
+    letterSpacing: 0.5
+  },
+  prepOrangeBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+    backgroundColor: '#ea580c'
+  },
+  prepBtnText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#ffffff'
+  },
+  readyGreenBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+    backgroundColor: '#16a34a'
+  },
+  readyBtnText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#ffffff'
+  },
+  deliverSlateBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+    backgroundColor: '#475569'
+  },
+  deliverBtnText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#ffffff'
+  },
+
+  // MODAL
+  modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    backgroundColor: 'rgba(15, 23, 42, 0.45)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20
@@ -1432,123 +973,175 @@ const styles = StyleSheet.create({
   switchModalCard: {
     width: '100%',
     maxWidth: 420,
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
     padding: 20
   },
   switchModalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 6
+    alignItems: 'center'
   },
   switchModalTitle: {
     fontSize: 17,
     fontWeight: '800',
     color: '#0f172a'
   },
+  modalCloseBtn: {
+    padding: 4
+  },
   switchModalSub: {
-    fontSize: 12.5,
+    fontSize: 12,
     color: '#64748b',
-    marginBottom: 16,
-    lineHeight: 17
+    marginTop: 4
   },
-  demoAccountsList: {
-    gap: 8,
-    marginBottom: 18
-  },
-  demoAccountRow: {
+  partnerSelectChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f8fafc',
     padding: 12,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: '#e2e8f0'
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.65)',
+    borderWidth: 1,
+    borderColor: 'rgba(226, 232, 240, 0.8)'
   },
-  demoAccountRowActive: {
-    borderColor: colors.primary,
-    backgroundColor: '#f0fdf4'
+  partnerSelectChipActive: {
+    backgroundColor: 'rgba(234, 88, 12, 0.08)',
+    borderColor: 'rgba(234, 88, 12, 0.35)'
   },
-  demoName: {
-    fontSize: 13.5,
+  selectChipName: {
+    fontSize: 13,
     fontWeight: '700',
     color: '#0f172a'
   },
-  demoPhone: {
-    fontSize: 11,
-    color: '#64748b',
-    marginTop: 2
+  selectChipNameActive: {
+    color: '#ea580c'
   },
-  activePill: {
-    backgroundColor: '#dcfce7',
+  selectChipSub: {
+    fontSize: 11,
+    color: '#64748b'
+  },
+  currentBadge: {
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 8
+    borderRadius: 8,
+    backgroundColor: 'rgba(234, 88, 12, 0.15)'
   },
-  activePillText: {
+  currentBadgeText: {
     fontSize: 10,
-    fontWeight: '800',
-    color: '#15803d'
+    fontWeight: '700',
+    color: '#ea580c'
   },
-  modalCustomLoginSection: {
-    borderTopWidth: 1,
-    borderTopColor: '#f1f5f9',
-    paddingTop: 14,
-    marginBottom: 14
-  },
-  modalCustomLabel: {
-    fontSize: 10.5,
-    fontWeight: '800',
-    color: '#64748b',
-    letterSpacing: 0.4,
-    marginBottom: 8
-  },
-  modalInputRow: {
-    flexDirection: 'row',
-    gap: 8,
-    alignItems: 'center'
-  },
-  modalTextInput: {
+
+  // UNAUTH / LOGGED OUT VIEW
+  unauthContainer: {
     flex: 1,
-    borderWidth: 1.5,
-    borderColor: '#e2e8f0',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    fontSize: 13.5,
-    color: '#0f172a',
-    backgroundColor: '#f8fafc'
-  },
-  modalSubmitBtn: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 12,
     justifyContent: 'center',
-    alignItems: 'center'
+    alignItems: 'center',
+    paddingHorizontal: 20
   },
-  modalSubmitBtnText: {
-    color: '#ffffff',
+  unauthGlassCard: {
+    width: '100%',
+    maxWidth: 440,
+    padding: 24
+  },
+  unauthHeader: {
+    alignItems: 'center',
+    marginBottom: 20
+  },
+  logoGlassGlow: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: 'rgba(234, 88, 12, 0.12)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(234, 88, 12, 0.35)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12
+  },
+  unauthTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#0f172a'
+  },
+  unauthSub: {
     fontSize: 13,
-    fontWeight: '700'
+    color: '#64748b',
+    textAlign: 'center',
+    marginTop: 4,
+    lineHeight: 19
   },
-  modalActions: {
-    borderTopWidth: 1,
-    borderTopColor: '#f1f5f9',
-    paddingTop: 12,
-    alignItems: 'flex-start'
+  loginForm: {
+    gap: 10
   },
-  logoutBtn: {
+  inputLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#334155'
+  },
+  glassInput: {
+    height: 48,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(226, 232, 240, 0.8)',
+    backgroundColor: 'rgba(255, 255, 255, 0.75)',
+    paddingHorizontal: 14,
+    fontSize: 15,
+    color: '#0f172a'
+  },
+  errorText: {
+    fontSize: 12,
+    color: '#ef4444'
+  },
+  loginBtn: {
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: '#ea580c',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingVertical: 6,
-    paddingHorizontal: 8
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 6,
+    shadowColor: '#ea580c',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 4
   },
-  logoutBtnText: {
-    fontSize: 13,
+  loginBtnText: {
+    fontSize: 15,
     fontWeight: '700',
-    color: '#ef4444'
+    color: '#ffffff'
+  },
+  demoPartnersBox: {
+    marginTop: 20,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(226, 232, 240, 0.7)'
+  },
+  demoPartnersTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#64748b',
+    marginBottom: 8
+  },
+  demoChipsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8
+  },
+  demoChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.75)',
+    borderWidth: 1,
+    borderColor: 'rgba(234, 88, 12, 0.25)'
+  },
+  demoChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#0f172a'
   }
 });

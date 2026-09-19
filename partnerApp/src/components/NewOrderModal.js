@@ -10,6 +10,8 @@ import {
   ActivityIndicator,
   Animated
 } from 'react-native';
+import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { soundAlert } from '../utils/soundAlert';
@@ -149,7 +151,7 @@ export const NewOrderModal = ({ order, onAccept, onReject, onClose }) => {
 
   const pulseBorderColor = pulseBorderAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: ['rgba(220, 38, 38, 0.4)', 'rgba(234, 88, 12, 0.95)']
+    outputRange: ['rgba(220, 38, 38, 0.45)', 'rgba(234, 88, 12, 0.95)']
   });
 
   return (
@@ -165,6 +167,23 @@ export const NewOrderModal = ({ order, onAccept, onReject, onClose }) => {
             }
           ]}
         >
+          {/* Native Blur Layer */}
+          <BlurView
+            intensity={65}
+            tint="light"
+            style={StyleSheet.absoluteFill}
+            {...(Platform.OS === 'android' ? { experimentalBlurMethod: 'dimezisBlurView' } : {})}
+          />
+
+          {/* Water Sheen Gradient */}
+          <LinearGradient
+            colors={['rgba(255,255,255,0.55)', 'rgba(255,255,255,0.05)']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={styles.modalSheen}
+            pointerEvents="none"
+          />
+
           {/* Header Banner */}
           <View style={styles.header}>
             <View style={styles.headerLeft}>
@@ -174,7 +193,7 @@ export const NewOrderModal = ({ order, onAccept, onReject, onClose }) => {
             <TouchableOpacity style={styles.muteBtn} onPress={toggleMute}>
               <Ionicons
                 name={isMuted ? 'volume-mute' : 'volume-high'}
-                size={20}
+                size={18}
                 color="#ffffff"
               />
               <Text style={styles.muteText}>{isMuted ? 'Unmute' : 'Mute'}</Text>
@@ -194,7 +213,7 @@ export const NewOrderModal = ({ order, onAccept, onReject, onClose }) => {
             />
           </View>
           <View style={styles.timerInfo}>
-            <Ionicons name="time-outline" size={15} color={timerColor} />
+            <Ionicons name="time-outline" size={16} color={timerColor} />
             <Text style={[styles.timerLabel, { color: timerColor }]}>
               {timeLeft > 0
                 ? 'Auto-accepts for preparation in:'
@@ -214,10 +233,13 @@ export const NewOrderModal = ({ order, onAccept, onReject, onClose }) => {
 
           {/* Order Details Header */}
           <View style={styles.orderSummary}>
-            <View>
+            <View style={{ flex: 1, paddingRight: 10 }}>
               <Text style={styles.orderNum}>#{order.orderNumber || 'ORD-NEW'}</Text>
-              <Text style={styles.custName}>
-                👤 {order.customer?.fullName || order.customer?.name || order.address?.name || 'Customer'} ({order.customer?.phone || order.address?.phone || 'N/A'})
+              <Text style={styles.custName} numberOfLines={1}>
+                👤 {order.customer?.fullName || order.customer?.name || order.address?.name || 'Customer'}
+              </Text>
+              <Text style={styles.custPhone}>
+                📞 {order.customer?.phone || order.address?.phone || '+91 98765 43210'}
               </Text>
             </View>
             <View style={styles.amountBox}>
@@ -238,7 +260,7 @@ export const NewOrderModal = ({ order, onAccept, onReject, onClose }) => {
                     <Text style={styles.itemQtyText}>{qty}x</Text>
                   </View>
                   <View style={styles.itemMeta}>
-                    <Text style={styles.itemName}>{item.name || 'Item'}</Text>
+                    <Text style={styles.itemName} numberOfLines={1}>{item.name || 'Item'}</Text>
                     <Text style={styles.itemUnit}>{item.unit || 'unit'}</Text>
                   </View>
                   <Text style={styles.itemPrice}>₹{item.lineTotal || (price * qty)}</Text>
@@ -296,7 +318,7 @@ export const NewOrderModal = ({ order, onAccept, onReject, onClose }) => {
                 disabled={isSubmitting}
                 activeOpacity={0.8}
               >
-                <Ionicons name="close-circle-outline" size={20} color="#ef4444" />
+                <Ionicons name="close-circle-outline" size={18} color="#ef4444" />
                 <Text style={styles.rejectBtnText}>Reject</Text>
               </TouchableOpacity>
 
@@ -306,8 +328,10 @@ export const NewOrderModal = ({ order, onAccept, onReject, onClose }) => {
                 disabled={isSubmitting}
                 activeOpacity={0.85}
               >
-                <Ionicons name="checkmark-circle" size={22} color="#ffffff" />
-                <Text style={styles.acceptBtnText}>{isSubmitting ? 'ACCEPTING...' : 'ACCEPT ORDER'}</Text>
+                <Ionicons name="checkmark-circle" size={20} color="#ffffff" />
+                <Text style={styles.acceptBtnText}>
+                  {isSubmitting ? 'ACCEPTING...' : 'ACCEPT ORDER'}
+                </Text>
               </TouchableOpacity>
             </View>
           )}
@@ -320,7 +344,7 @@ export const NewOrderModal = ({ order, onAccept, onReject, onClose }) => {
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.75)',
+    backgroundColor: 'rgba(15, 23, 42, 0.65)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 16
@@ -328,21 +352,34 @@ const styles = StyleSheet.create({
   modalCard: {
     width: '100%',
     maxWidth: 480,
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.88)',
+    borderRadius: 24,
     overflow: 'hidden',
-    shadowColor: '#000',
+    shadowColor: '#ea580c',
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.25,
     shadowRadius: 20,
-    elevation: 12
+    elevation: 12,
+    ...(Platform.OS === 'web'
+      ? {
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)'
+        }
+      : {})
+  },
+  modalSheen: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 48
   },
   header: {
-    backgroundColor: '#dc2626',
+    backgroundColor: '#ea580c',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    paddingHorizontal: 18,
     paddingVertical: 14
   },
   headerLeft: {
@@ -359,13 +396,13 @@ const styles = StyleSheet.create({
   headerTitle: {
     color: '#ffffff',
     fontWeight: '800',
-    fontSize: 16,
+    fontSize: 15,
     letterSpacing: 0.5
   },
   muteBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: 'rgba(255,255,255,0.22)',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12
@@ -373,115 +410,110 @@ const styles = StyleSheet.create({
   muteText: {
     color: '#ffffff',
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
     marginLeft: 4
   },
   timerBarWrapper: {
-    height: 6,
-    backgroundColor: '#fee2e2'
+    height: 5,
+    backgroundColor: 'rgba(226, 232, 240, 0.8)',
+    width: '100%'
   },
   timerBarFill: {
-    height: '100%',
-    backgroundColor: '#ef4444'
+    height: '100%'
   },
   timerInfo: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    justifyContent: 'center',
     paddingVertical: 8,
-    backgroundColor: '#fff1f2',
-    borderBottomWidth: 1,
-    borderBottomColor: '#fecdd3'
+    backgroundColor: 'rgba(255, 255, 255, 0.65)',
+    gap: 6
   },
   timerLabel: {
     fontSize: 12,
-    color: '#9f1239',
-    fontWeight: '500'
+    fontWeight: '600'
   },
   timerSeconds: {
-    fontSize: 14,
-    color: '#e11d48',
+    fontSize: 15,
     fontWeight: '800'
   },
   orderSummary: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9'
+    borderBottomColor: 'rgba(226, 232, 240, 0.7)'
   },
   orderNum: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '800',
     color: '#0f172a'
   },
   custName: {
     fontSize: 13,
-    color: '#64748b',
-    marginTop: 4
+    color: '#334155',
+    marginTop: 2
+  },
+  custPhone: {
+    fontSize: 12,
+    color: '#64748b'
   },
   amountBox: {
-    alignItems: 'flex-end',
-    backgroundColor: '#f0fdf4',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#bbf7d0'
+    alignItems: 'flex-end'
   },
   amountLabel: {
     fontSize: 11,
-    color: '#166534',
+    color: '#64748b',
     fontWeight: '600'
   },
   amountVal: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '800',
-    color: '#15803d'
+    color: '#0f172a'
   },
   sectionTitle: {
     fontSize: 11,
-    fontWeight: '700',
-    color: '#94a3b8',
-    letterSpacing: 0.5,
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 6
+    fontWeight: '800',
+    color: '#64748b',
+    paddingHorizontal: 18,
+    marginTop: 12,
+    marginBottom: 6,
+    letterSpacing: 0.5
   },
   itemsList: {
     maxHeight: 180,
-    paddingHorizontal: 16
+    paddingHorizontal: 18
   },
   itemRow: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#f8fafc'
+    borderBottomColor: 'rgba(241, 245, 249, 0.9)'
   },
   itemQtyBadge: {
-    backgroundColor: '#eff6ff',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#bfdbfe',
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: 'rgba(234, 88, 12, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
     marginRight: 10
   },
   itemQtyText: {
-    color: '#2563eb',
-    fontWeight: '700',
-    fontSize: 13
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#ea580c'
   },
   itemMeta: {
     flex: 1
   },
   itemName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1e293b'
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#0f172a'
   },
   itemUnit: {
     fontSize: 11,
@@ -494,90 +526,92 @@ const styles = StyleSheet.create({
   },
   actionsRow: {
     flexDirection: 'row',
-    padding: 16,
     gap: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#f1f5f9'
+    paddingHorizontal: 18,
+    paddingVertical: 14
   },
   rejectBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 14,
+    gap: 6,
+    height: 48,
     borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: '#fca5a5',
-    backgroundColor: '#fff1f2'
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.3)'
   },
   rejectBtnText: {
-    color: '#ef4444',
-    fontWeight: '700',
     fontSize: 14,
-    marginLeft: 6
+    fontWeight: '700',
+    color: '#ef4444'
   },
   acceptBtn: {
     flex: 2,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 14,
+    gap: 8,
+    height: 48,
     borderRadius: 14,
-    backgroundColor: '#16a34a'
+    backgroundColor: '#2563eb',
+    shadowColor: '#2563eb',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 4
   },
   acceptBtnText: {
-    color: '#ffffff',
+    fontSize: 14,
     fontWeight: '800',
-    fontSize: 15,
-    letterSpacing: 0.5,
-    marginLeft: 6
+    color: '#ffffff',
+    letterSpacing: 0.5
   },
   rejectBox: {
-    padding: 16,
-    backgroundColor: '#f8fafc',
-    borderTopWidth: 1,
-    borderTopColor: '#e2e8f0'
+    paddingHorizontal: 18,
+    paddingVertical: 12
   },
   rejectLabel: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#334155',
+    color: '#0f172a',
     marginBottom: 8
   },
   reasonButtons: {
-    gap: 6,
-    marginBottom: 12
+    gap: 8
   },
   reasonOption: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
+    padding: 10,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#cbd5e1',
-    backgroundColor: '#ffffff'
+    borderColor: 'rgba(226, 232, 240, 0.8)',
+    backgroundColor: 'rgba(255, 255, 255, 0.7)'
   },
   reasonOptionActive: {
     borderColor: '#ef4444',
-    backgroundColor: '#fef2f2'
+    backgroundColor: 'rgba(239, 68, 68, 0.08)'
   },
   reasonText: {
-    fontSize: 13,
-    color: '#475569'
+    fontSize: 12,
+    color: '#475569',
+    fontWeight: '600'
   },
   reasonTextActive: {
-    color: '#b91c1c',
+    color: '#dc2626',
     fontWeight: '700'
   },
   rejectActions: {
     flexDirection: 'row',
-    gap: 10
+    justifyContent: 'flex-end',
+    gap: 10,
+    marginTop: 12
   },
   cancelRejectBtn: {
-    flex: 1,
-    paddingVertical: 10,
-    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     borderRadius: 10,
-    backgroundColor: '#e2e8f0'
+    backgroundColor: 'rgba(100, 116, 139, 0.1)'
   },
   cancelRejectText: {
     fontSize: 13,
@@ -585,9 +619,8 @@ const styles = StyleSheet.create({
     color: '#475569'
   },
   confirmRejectBtn: {
-    flex: 2,
-    paddingVertical: 10,
-    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     borderRadius: 10,
     backgroundColor: '#ef4444'
   },

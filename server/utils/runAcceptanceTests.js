@@ -85,7 +85,7 @@ async function runTests() {
       `Sunita: ${sunitaProds.count} items, Sukhwinder: ${sukhwinderProds.count} items`
     );
 
-    const sunitaItem = sunitaProds.products.find(p => p.price >= 60) || sunitaProds.products[0];
+    const sunitaItem = sunitaProds.products.find(p => p.price >= 60 && p.stockQty >= 5) || sunitaProds.products.find(p => p.stockQty >= 5) || sunitaProds.products[0];
     const sukhwinderItem = sukhwinderProds.products[0];
 
     // 6. 🔴 STRICT RULE: Single-Vendor Cart Enforcement on Server
@@ -248,7 +248,7 @@ async function runTests() {
     );
 
     // 11. Stock Rollback on Order Rejection
-    const rollItem = sunitaProds.products.find((p) => p.price >= 60) || sunitaProds.products[0];
+    const rollItem = sunitaItem;
     const freshRollItem = (await fetch(`${API_BASE}/products/${rollItem._id}`).then((r) => r.json())).product;
     const stockBefore = freshRollItem.stockQty;
 
