@@ -7,7 +7,8 @@ import {
   TouchableOpacity,
   ScrollView,
   Platform,
-  ActivityIndicator
+  ActivityIndicator,
+  Animated
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';

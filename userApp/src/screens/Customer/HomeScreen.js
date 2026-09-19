@@ -47,6 +47,7 @@ export const HomeScreen = ({ navigation }) => {
         apiService.getCategories(),
         apiService.getVendors()
       ]);
+      console.log('HomeScreen loadHomeData:', { catSuccess: catRes?.success, vendSuccess: vendRes?.success, vendCount: vendRes?.vendors?.length });
       if (catRes.success && Array.isArray(catRes.categories)) {
         setCategories(catRes.categories);
       }

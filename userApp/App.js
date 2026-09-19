@@ -66,6 +66,29 @@ class ErrorBoundary extends Component {
 
 import { AuthGateProvider } from './src/hooks/useAuthGate';
 
+const linking = {
+  prefixes: ['/'],
+  config: {
+    screens: {
+      MainTabs: {
+        path: '',
+        screens: {
+          Home: '',
+          Catalog: 'catalog',
+          HomeRestro: 'home-restro',
+          OrderTracking: 'track',
+          ProfileWallet: 'profile'
+        }
+      },
+      Login: 'login',
+      Signup: 'signup',
+      Cart: 'cart',
+      Checkout: 'checkout',
+      OrderTracking: 'order-tracking'
+    }
+  }
+};
+
 // Inner container that passes customer auth token and userId to SocketProvider
 function UserAppContainer() {
   const { userProfile, token } = useApp();
@@ -76,7 +99,7 @@ function UserAppContainer() {
         <AuthGateProvider>
           <View style={styles.container}>
             <StatusBar barStyle="dark-content" backgroundColor={colors.card} />
-            <NavigationContainer>
+            <NavigationContainer linking={linking}>
               <RootNavigator />
             </NavigationContainer>
           </View>

@@ -132,6 +132,15 @@ export const ProfileWalletScreen = ({ navigation }) => {
               <Text style={styles.guestLoginBtnText}>Phone / OTP Se Log In Karein</Text>
               <Ionicons name="arrow-forward" size={16} color="#15803d" />
             </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.guestLoginBtn, { backgroundColor: '#f0fdf4', borderColor: '#86efac', marginTop: 10 }]}
+              onPress={() => navigation.navigate('Login')}
+              activeOpacity={0.85}
+            >
+              <Text style={[styles.guestLoginBtnText, { color: '#16a34a', fontWeight: '700' }]}>Password Login / Naya Account</Text>
+              <Ionicons name="person-add-outline" size={16} color="#16a34a" />
+            </TouchableOpacity>
           </View>
         ) : (
           <>

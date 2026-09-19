@@ -18,6 +18,8 @@ import { colors } from "../../theme/colors";
 import { useApp } from "../../context/AppContext";
 import { API_BASE_URL } from "../../config/env";
 import { showAlert } from "../../utils/alert";
+import storage from "../../services/storage";
+import { setAuthToken } from "../../services/api";
 
 export const SignupScreen = ({ navigation }) => {
   const [name, setName] = useState("");
@@ -61,20 +63,26 @@ export const SignupScreen = ({ navigation }) => {
       setLoading(false);
 
       if (data.success || data.ok) {
+        if (data.accessToken || data.token) {
+          const tok = data.accessToken || data.token;
+          await storage.setAccessToken(tok);
+          setAuthToken(tok);
+          if (data.refreshToken) await storage.setRefreshToken(data.refreshToken);
+        }
         if (data.user) {
           await loginUser(data.user);
         } else {
           await loginUser(phone, password);
         }
+        if (navigation && typeof navigation.navigate === 'function') {
+          navigation.navigate("MainTabs");
+        } else if (navigation && typeof navigation.canGoBack === 'function' && navigation.canGoBack()) {
+          navigation.goBack();
+        }
         showAlert(
           "Welcome to Farmart! 🎉",
           `Hi ${name}, your account is active with ₹250 wallet balance!`
         );
-        if (navigation && typeof navigation.canGoBack === 'function' && navigation.canGoBack()) {
-          navigation.goBack();
-        } else if (navigation && typeof navigation.navigate === 'function') {
-          navigation.navigate("MainTabs");
-        }
       } else {
         showAlert(
           "Registration Note",

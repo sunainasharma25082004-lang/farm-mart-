@@ -30,10 +30,10 @@ export const LoginScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
 
   const navigateAfterLogin = () => {
-    if (navigation && typeof navigation.canGoBack === 'function' && navigation.canGoBack()) {
-      navigation.goBack();
-    } else if (navigation && typeof navigation.navigate === 'function') {
+    if (navigation && typeof navigation.navigate === 'function') {
       navigation.navigate("MainTabs");
+    } else if (navigation && typeof navigation.canGoBack === 'function' && navigation.canGoBack()) {
+      navigation.goBack();
     }
   };
 

@@ -9,8 +9,16 @@ export const showAlert = (title, message = '') => {
     const safeTitle = typeof title === 'string' ? title : String(title || 'Notice');
     const safeMessage = message ? String(message) : '';
 
-    if (Platform.OS === 'web' && typeof window !== 'undefined' && typeof window.alert === 'function') {
-      window.alert(safeMessage ? `${safeTitle}\n\n${safeMessage}` : safeTitle);
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      console.log(`[Alert] ${safeTitle}: ${safeMessage}`);
+      // Show non-blocking web alert after unrolling execution stack
+      setTimeout(() => {
+        try {
+          if (typeof window.alert === 'function') {
+            window.alert(safeMessage ? `${safeTitle}\n\n${safeMessage}` : safeTitle);
+          }
+        } catch (e) {}
+      }, 50);
       return;
     }
 
