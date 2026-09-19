@@ -18,6 +18,17 @@
 
 ---
 
+## 📲 Direct Standalone APK Downloads (Install Directly on Android)
+
+You can download and install the production-ready standalone APKs directly onto any Android phone:
+
+| Application | Direct APK Download Link | EAS Build Dashboard | Status |
+| :--- | :--- | :--- | :--- |
+| **🏪 Partner Portal (`partnerApp`)** | [⬇️ **Download Partner APK (v1.0.0)**](https://expo.dev/artifacts/eas/308ruSGs-6RbNi2kbOgWj_1pyy8wY4J17Nw1T2pmNDg.apk) | [EAS Partner Dashboard](https://expo.dev/accounts/sfarmart/projects/sfarmart-partner/builds/25f2b536-404a-4d05-bfed-1e254a4e6ed5) | `FINISHED (Verified)` |
+| **🛒 Consumer App (`userApp`)** | [⬇️ **Download User APK (v1.0.0)**](https://expo.dev/artifacts/eas/vmnDnyLaiaguyEPAwb5YzZehXOMkgrXGxx_sfO948oo.apk) | [EAS User Dashboard](https://expo.dev/accounts/sfarmart/projects/userApp/builds/89c35192-9ccc-474b-a900-f8283866bdd6) | `FINISHED (Verified)` |
+
+---
+
 ## 🏛️ Ecosystem Architecture & System Flow
 
 ```
@@ -127,7 +138,7 @@ The Customer App delivers an ultra-fast, frictionless shopping experience for gr
 
 ## 🏪 Partner App (`partnerApp`) — UI Design & Functionality
 
-The Partner App is designed for busy store owners, home chefs, and farmers managing high order volumes:
+The Partner App is designed as a mission-critical operating console for busy store owners, home chefs, and farmers:
 
 ### 1. Merchant Dashboard & Multi-Store Switcher
 * **Store Switcher Bar:** 1-tap fast switching between verified merchant accounts:
@@ -135,21 +146,38 @@ The Partner App is designed for busy store owners, home chefs, and farmers manag
   - **Sunita Home Restro & Sweets:** Sunita Sharma (`9876543211`)
   - **Sukhwinder Organic Farms:** Sukhwinder Singh (`9876543212`)
   - **Gurpreet Fresh Orchards:** Gurpreet Singh (`9876543213`)
-* **Real-time Metrics:** Today's Sales (₹), Active In-Flight Orders count, and Store Rating.
+* **Real-time Metrics:** Today's Sales with rolling counter (`AnimatedNumber`), Active In-Flight Orders count, and Store Rating.
+* **Persistent Session Storage:** Uses `@react-native-async-storage/async-storage` to ensure partner logins survive app restarts and reboots.
 
 ### 2. Store Online / Offline Duty Switch
-* **Breathing Glow Pulse:** Animated pulsing glow ring indicating live store status.
+* **Breathing Glow Pulse:** Zomato-style animated pulsing glow ring (`1.0x` to `1.28x`) indicating live store status.
 * **Instant Availability Broadcast:** Toggling store status immediately syncs across all customer devices.
 * **Offline Protection:** Any order placed while store is offline is immediately blocked with `HTTP 400 VENDOR_CLOSED`.
 
-### 3. Incoming Order Alert & Modal
-* **Instant WebSocket Event (`order:new`):** Delivered in `< 600 ms` to room `vendor:{vendorId}`.
-* **Audio Chime:** Looping Web Audio API alert sound + native mobile vibration.
-* **Itemized Breakdown:** Displays order number, customer name, phone number, item list with quantities, and total bill.
+### 3. Incoming Order Alert & Modal (`NewOrderModal`)
+* **Instant WebSocket Event (`order:new`):** Delivered in `< 600 ms` to room `vendor:{vendorId}` with 5-second polling fallback.
+* **Sensory Alerts:** Looping Web Audio API dual-tone chime (G5 & C6 sine wave) + native pulsed vibration pattern `[0, 500, 300, 500]`.
+* **Zero-Crash Animation Drivers:** Synchronized JS-driven scale and border pulsing (`useNativeDriver: false`) eliminating Android `NativeAnimatedNodesManager` invariant crashes.
+* **60-Second Auto-Accept:** Guarantees kitchen preparation starts even if the merchant is away from the device.
 
-### 4. Catalog & Inventory Management (`AddProductScreen.js`)
-* Add new products/dishes directly into MongoDB Atlas with price, MRP, unit, stock quantity, veg/non-veg tag, and category.
-* Immediate toggle for in-stock / out-of-stock items with instant WebSocket broadcast to customers (`product:stock`).
+### 4. 1-Tap Quick Add Catalog & Inventory Management (`AddProductScreen.js`)
+* **⚡ 1-Tap Quick Add Carousel:** 9 high-resolution pre-configured merchant presets with direct 1-tap instant add:
+  - 🍛 **Veg Thali** (Punjabi Royal Thali - ₹120)
+  - 🥦 **Green Veggies** (Broccoli, Spinach, Greens - ₹60)
+  - 🥔 **Potatoes** (Mountain Crisp Aloo - ₹30)
+  - 🍎 **Kashmiri Apples** (Sweet Red Apples - ₹140)
+  - 🫓 **Hot Parathas** (Desi Ghee Paratha 2 pcs - ₹50)
+  - 🥛 **Pure Milk** (A2 Raw Cow Milk - ₹65/L)
+  - 🍯 **Desi Sweets** (Desi Ghee Gulab Jamun - ₹180)
+  - 🍅 **Tomatoes** (Farm Fresh Red Tomatoes - ₹35)
+  - 🧅 **Fresh Onions** (Firm Red Pyaz - ₹35)
+* **Jitter-Free Keyboard Layout:** Configured with `"softwareKeyboardLayoutMode": "pan"` in `app.json` to prevent input shaking or focus loss on mobile devices.
+* **Catalog Management:** Real-time stock toggle switches with instant customer sync (`product:stock`), quick +10/+25/+50 restock chips, and custom quantity modal.
+
+### 5. Wednesday Automated Settlements & Banking Hub
+* **Automated Weekly Payouts:** Every Wednesday, accumulated revenue is disbursed directly to the merchant's registered bank account (State Bank of India `*4321`).
+* **Live Projection Hero Card:** Real-time calculation of pending earnings ready for the next scheduled payout.
+* **Historical Audit Ledger:** Detailed past payout records with banking reference IDs (`FARM-PAY-XXXXX`) and `PAID TO BANK` badges.
 
 ---
 
