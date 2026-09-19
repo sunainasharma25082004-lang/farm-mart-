@@ -27,7 +27,8 @@ export function initSocket(httpServer) {
         return next();
       }
 
-      const secret = process.env.JWT_SECRET || 'farmart_super_secret_jwt_key_2026';
+      const secret =
+        process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET || 'sfarmart_jwt_access_secret_2026_super_secure_key';
       const decoded = jwt.verify(token, secret);
       socket.user = decoded;
       return next();
@@ -55,11 +56,31 @@ export function initSocket(httpServer) {
       console.log(`📢 Socket ${socket.id} joined room: customer:${uId}`);
     }
 
-    // Client explicitly joining an order room for live tracking
-    socket.on('join:order', (orderId) => {
-      if (orderId) {
-        socket.join(`order:${orderId}`);
-        console.log(`📦 Socket ${socket.id} joined room: order:${orderId}`);
+    // Client explicitly joining an order room for live tracking (with ownership check)
+    socket.on('join:order', async (orderId) => {
+      if (!orderId) return;
+      try {
+        const Order = (await import('../models/Order.js')).default;
+        const order = await Order.findById(orderId).select('customer vendor');
+        if (!order) return;
+
+        const userId = (socket.user?.sub || socket.user?.id || socket.user?._id)?.toString();
+        const userRole = socket.user?.role;
+        const vendorId = (socket.user?.vendorId || socket.user?.id)?.toString();
+
+        const isCustomer = userId && order.customer?.toString() === userId;
+        const isVendor = userRole === 'VENDOR' && vendorId && order.vendor?.toString() === vendorId;
+        const isAdminOrRider = userRole === 'ADMIN' || userRole === 'RIDER';
+
+        // Only allow joining the room if authenticated and authorized!
+        if (isCustomer || isVendor || isAdminOrRider) {
+          socket.join(`order:${orderId}`);
+          console.log(`📦 Socket ${socket.id} authorized & joined room: order:${orderId}`);
+        } else {
+          console.warn(`⛔ Socket ${socket.id} unauthorized for order:${orderId}`);
+        }
+      } catch (err) {
+        console.warn('join:order socket error:', err.message);
       }
     });
 

@@ -443,9 +443,19 @@ export const getOrderById = async (req, res) => {
 // @route   GET /api/orders/customer/my
 export const getCustomerOrders = async (req, res) => {
   try {
-    const customerId = req.user?.id;
+    const customerId = req.user?._id || req.user?.id;
+    if (!customerId) {
+      return res.status(401).json({
+        ok: false,
+        success: false,
+        code: 'AUTH_REQUIRED',
+        message: 'Authentication token required to view orders'
+      });
+    }
+
     const orders = await Order.find({ customer: customerId })
-      .populate('vendor', 'storeName phone logo address')
+      .populate('vendor', 'storeName phone logo address isOpen')
+      .populate('customer', 'name phone')
       .sort({ createdAt: -1 });
 
     res.json({
@@ -462,14 +472,47 @@ export const getCustomerOrders = async (req, res) => {
 // @route   GET /api/orders/vendor/:vendorId
 export const getVendorOrders = async (req, res) => {
   try {
-    const vendorId = req.params.vendorId || req.user?.vendorId || req.user?.id;
-    const orders = await Order.find({ vendor: vendorId })
+    const authUser = req.user;
+    if (!authUser) {
+      return res.status(401).json({
+        ok: false,
+        success: false,
+        code: 'AUTH_REQUIRED',
+        message: 'Authentication required to view store orders'
+      });
+    }
+
+    const requestedVendorId = req.params.vendorId;
+    const authenticatedVendorId = (authUser.vendorId || authUser.id || authUser._id)?.toString();
+
+    // If requester is a vendor, strictly enforce they can only see their own store
+    if (authUser.role === 'VENDOR') {
+      if (requestedVendorId && requestedVendorId.toString() !== authenticatedVendorId) {
+        return res.status(403).json({
+          ok: false,
+          success: false,
+          code: 'FORBIDDEN',
+          message: 'You can only view orders assigned to your own store.'
+        });
+      }
+    } else if (authUser.role !== 'ADMIN' && authUser.role !== 'RIDER') {
+      // Customers cannot view vendor order queues
+      return res.status(403).json({
+        ok: false,
+        success: false,
+        code: 'FORBIDDEN',
+        message: 'Customers cannot view merchant store orders.'
+      });
+    }
+
+    const targetVendorId = requestedVendorId || authenticatedVendorId;
+    const orders = await Order.find({ vendor: targetVendorId })
       .populate('customer', 'name phone')
       .sort({ createdAt: -1 });
 
     res.json({ success: true, count: orders.length, orders });
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Server Error', error });
+    res.status(500).json({ success: false, message: 'Server Error', error: error.message });
   }
 };
 

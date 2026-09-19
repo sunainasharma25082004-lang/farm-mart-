@@ -235,6 +235,14 @@ export const CartProvider = ({ children }) => {
         await syncServerCart();
       } else if (isAuthenticated) {
         await syncServerCart();
+      } else {
+        // User logged out: clear cart to prevent leakage between user accounts
+        setItems([]);
+        setVendorId(null);
+        setVendorName(null);
+        setVendorStoreType(null);
+        setVendorMinOrder(0);
+        setValidationChanges([]);
       }
       prevAuthRef.current = isAuthenticated;
     };

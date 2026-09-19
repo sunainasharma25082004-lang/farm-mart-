@@ -61,11 +61,17 @@ export const PartnerProvider = ({ children }) => {
   }, [vendor?._id]);
 
   // Fetch Vendor Orders Queue
-  const fetchOrders = useCallback(async (vId) => {
+  const fetchOrders = useCallback(async (vId, authToken) => {
     const id = vId || vendor?._id;
+    const authHeader = authToken || token;
     if (!id) return;
     try {
-      const res = await fetch(`${API_BASE_URL}/orders/vendor/${id}`);
+      const res = await fetch(`${API_BASE_URL}/orders/vendor/${id}`, {
+        headers: {
+          'Content-Type': 'application/json',
+          ...(authHeader ? { Authorization: `Bearer ${authHeader}` } : {})
+        }
+      });
       const data = await res.json();
       if (data.success && Array.isArray(data.orders)) {
         setOrders(data.orders);
@@ -73,7 +79,7 @@ export const PartnerProvider = ({ children }) => {
     } catch (e) {
       console.warn('Failed to fetch orders:', e);
     }
-  }, [vendor?._id]);
+  }, [vendor?._id, token]);
 
   // Fetch Vendor Stats
   const fetchStats = useCallback(async (authToken) => {
@@ -110,7 +116,7 @@ export const PartnerProvider = ({ children }) => {
         setOrders([]);
         setInventory([]);
         fetchInventory(data.vendor._id);
-        fetchOrders(data.vendor._id);
+        fetchOrders(data.vendor._id, data.token);
         if (data.token) fetchStats(data.token);
         return { success: true, vendor: data.vendor };
       }

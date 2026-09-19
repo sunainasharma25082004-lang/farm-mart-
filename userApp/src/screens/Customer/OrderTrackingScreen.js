@@ -115,23 +115,54 @@ const AnimatedLiveStepper = ({ steps, currentStepIdx }) => {
 };
 
 export const OrderTrackingScreen = ({ route, navigation }) => {
-  const { isAuthenticated } = useApp();
-  const initialOrder = route.params?.order;
-  const [activeOrder, setActiveOrder] = useState(initialOrder || null);
-  const [orders, setOrders] = useState(initialOrder ? [initialOrder] : []);
-  const [isLoading, setIsLoading] = useState(!initialOrder && isAuthenticated);
+  const { isAuthenticated, userProfile } = useApp();
+  const [activeOrder, setActiveOrder] = useState(null);
+  const [orders, setOrders] = useState([]);
+  const [isLoading, setIsLoading] = useState(isAuthenticated);
 
   const { activeOrderUpdate, trackOrder } = useCustomerSocket();
 
+  // Reset and synchronize orders whenever auth or current logged-in user changes
   useEffect(() => {
     if (!isAuthenticated) {
+      setOrders([]);
+      setActiveOrder(null);
       setIsLoading(false);
       return;
     }
+
+    // Immediately clear previous user's order data
+    setOrders([]);
+    setActiveOrder(null);
     fetchMyOrders();
+
     const interval = setInterval(fetchMyOrders, 8000);
     return () => clearInterval(interval);
-  }, [isAuthenticated]);
+  }, [isAuthenticated, userProfile?._id, userProfile?.id, userProfile?.phone]);
+
+  // Handle route params order safely with strict customer identity check
+  useEffect(() => {
+    const routeOrder = route.params?.order;
+    if (routeOrder && typeof routeOrder === 'object' && routeOrder._id) {
+      const currentUserId = (userProfile?._id || userProfile?.id)?.toString();
+      const currentUserPhone = userProfile?.phone?.toString();
+      const orderCustId = (routeOrder.customer?._id || routeOrder.customer)?.toString();
+      const orderCustPhone = (routeOrder.customer?.phone || routeOrder.customerPhone)?.toString();
+
+      const isMine =
+        (!orderCustId && !orderCustPhone) ||
+        (currentUserId && orderCustId === currentUserId) ||
+        (currentUserPhone && orderCustPhone === currentUserPhone);
+
+      if (isMine) {
+        setActiveOrder(routeOrder);
+        setOrders((prev) => {
+          const exists = prev.some((o) => String(o._id) === String(routeOrder._id));
+          return exists ? prev : [routeOrder, ...prev];
+        });
+      }
+    }
+  }, [route.params?.order, userProfile?._id, userProfile?.id, userProfile?.phone]);
 
   useEffect(() => {
     if (activeOrder?._id) {
@@ -170,17 +201,52 @@ export const OrderTrackingScreen = ({ route, navigation }) => {
   }, [activeOrderUpdate, activeOrder?._id, activeOrder?.orderNumber]);
 
   const fetchMyOrders = async () => {
+    if (!isAuthenticated) {
+      setOrders([]);
+      setActiveOrder(null);
+      return;
+    }
+
     try {
       setIsLoading(true);
       const res = await apiService.getCustomerOrders();
-      if (res.success && Array.isArray(res.orders) && res.orders.length > 0) {
-        setOrders(res.orders);
-        if (!activeOrder) {
-          setActiveOrder(res.orders[0]);
+      if (res && (res.success || res.ok) && Array.isArray(res.orders)) {
+        const currentUserId = (userProfile?._id || userProfile?.id)?.toString();
+        const currentUserPhone = userProfile?.phone?.toString();
+
+        // Strict customer isolation filter (flow safeguard)
+        const myOrders = res.orders.filter((o) => {
+          const orderCustId = (o.customer?._id || o.customer)?.toString();
+          const orderCustPhone = (o.customer?.phone || o.customerPhone)?.toString();
+          if (currentUserId && orderCustId) {
+            return orderCustId === currentUserId;
+          }
+          if (currentUserPhone && orderCustPhone) {
+            return orderCustPhone === currentUserPhone;
+          }
+          return true; // Already verified by backend JWT session
+        });
+
+        setOrders(myOrders);
+        if (myOrders.length > 0) {
+          setActiveOrder((prev) => {
+            if (prev) {
+              const matched = myOrders.find((o) => String(o._id) === String(prev._id));
+              if (matched) return matched;
+            }
+            return myOrders[0];
+          });
+        } else {
+          setActiveOrder(null);
         }
+      } else {
+        setOrders([]);
+        setActiveOrder(null);
       }
     } catch (e) {
       console.warn('Failed to fetch customer orders:', e);
+      setOrders([]);
+      setActiveOrder(null);
     } finally {
       setIsLoading(false);
     }
@@ -304,6 +370,38 @@ export const OrderTrackingScreen = ({ route, navigation }) => {
       <Header navigation={navigation} title="Live Order Tracker" showCart={false} showBack />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* If customer has multiple active/past orders, provide switcher pills */}
+        {orders.length > 1 && (
+          <View style={styles.orderSwitcherWrap}>
+            <Text style={styles.orderSwitcherTitle}>YOUR ACTIVE & PAST ORDERS ({orders.length})</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.orderSwitcherScroll}
+            >
+              {orders.map((ord, idx) => {
+                const isSelected = String(activeOrder?._id) === String(ord._id);
+                return (
+                  <TouchableOpacity
+                    key={ord._id || idx}
+                    style={[styles.orderPill, isSelected && styles.orderPillActive]}
+                    onPress={() => setActiveOrder(ord)}
+                    activeOpacity={0.8}
+                  >
+                    <View style={[styles.orderPillDot, isSelected && styles.orderPillDotActive]} />
+                    <Text style={[styles.orderPillText, isSelected && styles.orderPillTextActive]}>
+                      #{ord.orderNumber || ord._id?.slice(-6)}
+                    </Text>
+                    <Text style={[styles.orderPillStatus, isSelected && styles.orderPillStatusActive]}>
+                      {(ord.status || 'NEW').replace(/_/g, ' ')}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        )}
+
         {activeOrder ? (
           <View style={styles.activeCard}>
             {/* Live Header Status */}
@@ -781,5 +879,60 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 15,
     fontWeight: '700'
+  },
+  orderSwitcherWrap: {
+    marginBottom: 16
+  },
+  orderSwitcherTitle: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#64748b',
+    letterSpacing: 0.5,
+    marginBottom: 8,
+    paddingHorizontal: 4
+  },
+  orderSwitcherScroll: {
+    gap: 8
+  },
+  orderPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderWidth: 1.5,
+    borderColor: '#e2e8f0',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    gap: 6
+  },
+  orderPillActive: {
+    backgroundColor: '#ecfdf5',
+    borderColor: '#10b981'
+  },
+  orderPillDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#94a3b8'
+  },
+  orderPillDotActive: {
+    backgroundColor: '#10b981'
+  },
+  orderPillText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#334155'
+  },
+  orderPillTextActive: {
+    color: '#065f46'
+  },
+  orderPillStatus: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#64748b',
+    textTransform: 'capitalize'
+  },
+  orderPillStatusActive: {
+    color: '#047857'
   }
 });
