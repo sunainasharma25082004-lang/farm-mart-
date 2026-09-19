@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -19,131 +19,51 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { usePartner } from '../context/PartnerContext';
 import { colors } from '../theme/colors';
-import { glassTheme } from '../theme/glass';
 import { GlassCard } from '../components/GlassCard';
 import { WaterBackground } from '../components/WaterBackground';
 import { showAlert } from '../utils/alert';
 
-// High-resolution presets for merchants with real vector icons and complete instant-add data
-const QUICK_PRODUCT_PRESETS = [
-  {
-    name: 'Special Punjabi Veg Thali',
-    label: 'Veg Thali',
-    ionIcon: 'fast-food-outline',
-    categoryMatch: ['restaurant', 'food', 'meal', 'prepared', 'cook'],
-    price: '120',
-    mrp: '150',
-    unit: '1 plate',
-    stock: '25',
-    isVeg: true,
-    description: 'Fresh royal thali with 2 sabzi, dal makhani, 4 rotis, jeera rice, salad & sweet.',
-    url: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=600&auto=format&fit=crop&q=80'
-  },
-  {
-    name: 'Fresh Mixed Green Veggies',
-    label: 'Green Veggies',
-    ionIcon: 'leaf-outline',
-    categoryMatch: ['vegetable', 'veg', 'farm', 'fresh', 'produce'],
-    price: '60',
-    mrp: '80',
-    unit: '1 kg',
-    stock: '50',
-    isVeg: true,
-    description: 'Farm fresh broccoli, spinach, and leafy seasonal greens picked this morning.',
-    url: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=600&auto=format&fit=crop&q=80'
-  },
-  {
-    name: 'Organic Farm Potatoes (Aloo)',
-    label: 'Potatoes',
-    ionIcon: 'nutrition-outline',
-    categoryMatch: ['vegetable', 'veg', 'farm', 'fresh', 'produce'],
-    price: '30',
-    mrp: '40',
-    unit: '1 kg',
-    stock: '100',
-    isVeg: true,
-    description: 'Crisp, nutrient-rich soil grown mountain potatoes suitable for daily cooking.',
-    url: 'https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=600&auto=format&fit=crop&q=80'
-  },
-  {
-    name: 'Kashmiri Sweet Red Apples',
-    label: 'Fresh Apples',
-    ionIcon: 'flower-outline',
-    categoryMatch: ['fruit', 'fresh', 'produce'],
-    price: '140',
-    mrp: '170',
-    unit: '1 kg',
-    stock: '30',
-    isVeg: true,
-    description: 'Naturally sweet, juicy, and crunchy premium orchard apples.',
-    url: 'https://images.unsplash.com/photo-1619566636858-adf3ef46400b?w=600&auto=format&fit=crop&q=80'
-  },
-  {
-    name: 'Hot Desi Ghee Paratha (2 Pcs)',
-    label: 'Hot Parathas',
-    ionIcon: 'restaurant-outline',
-    categoryMatch: ['restaurant', 'food', 'meal', 'bread'],
-    price: '50',
-    mrp: '65',
-    unit: '1 plate',
-    stock: '40',
-    isVeg: true,
-    description: 'Hot, flaky tandoori / tawa parathas served with butter and fresh mint curd.',
-    url: 'https://images.unsplash.com/photo-1626074353765-517a681e40be?w=600&auto=format&fit=crop&q=80'
-  },
-  {
-    name: 'Pure Desi Cow Milk',
-    label: 'Pure Milk',
-    ionIcon: 'water-outline',
-    categoryMatch: ['dairy', 'milk', 'egg'],
-    price: '65',
-    mrp: '70',
-    unit: '1 litre',
-    stock: '50',
-    isVeg: true,
-    description: 'Unadulterated A2 raw farm cow milk delivered chilled and fresh.',
-    url: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?w=600&auto=format&fit=crop&q=80'
-  },
-  {
-    name: 'Pure Desi Ghee & Gulab Jamun',
-    label: 'Desi Sweets',
-    ionIcon: 'gift-outline',
-    categoryMatch: ['dairy', 'sweet', 'dessert'],
-    price: '180',
-    mrp: '220',
-    unit: '500 g',
-    stock: '20',
-    isVeg: true,
-    description: 'Melt-in-mouth traditional desi sweets prepared in pure churned ghee.',
-    url: 'https://images.unsplash.com/photo-1599488615731-7e5c2823ff28?w=600&auto=format&fit=crop&q=80'
-  },
-  {
-    name: 'Farm Fresh Red Tomatoes',
-    label: 'Tomatoes',
-    ionIcon: 'nutrition-outline',
-    categoryMatch: ['vegetable', 'veg', 'produce'],
-    price: '35',
-    mrp: '45',
-    unit: '1 kg',
-    stock: '60',
-    isVeg: true,
-    description: 'Firm, juicy, ripe field tomatoes packed with natural flavor.',
-    url: 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=600&auto=format&fit=crop&q=80'
-  },
-  {
-    name: 'Fresh Red Onions (Pyaz)',
-    label: 'Fresh Onions',
-    ionIcon: 'leaf-outline',
-    categoryMatch: ['vegetable', 'veg', 'produce'],
-    price: '35',
-    mrp: '45',
-    unit: '1 kg',
-    stock: '80',
-    isVeg: true,
-    description: 'Dry, firm, pungent onions selected for long shelf life and great tadka.',
-    url: 'https://images.unsplash.com/photo-1618512496248-a07fe83aa8cb?w=600&auto=format&fit=crop&q=80'
-  }
+// Standard 8 seeded categories for instant zero-latency render
+const FALLBACK_CATEGORIES = [
+  { _id: 'cat-1', name: 'Fresh Fruits & Vegetables' },
+  { _id: 'cat-2', name: 'Dairy, Bread & Eggs' },
+  { _id: 'cat-3', name: 'Atta, Rice & Dal' },
+  { _id: 'cat-4', name: 'Oil, Ghee & Masala' },
+  { _id: 'cat-5', name: 'Ghar Ka Khana / Home Thali' },
+  { _id: 'cat-6', name: 'Mithai & Bakery' },
+  { _id: 'cat-7', name: 'Snacks & Munchies' },
+  { _id: 'cat-8', name: 'Cold Drinks & Juices' }
 ];
+
+// Helper to assign real vector icons & curated colors to each category
+export const getCategoryMeta = (catName = '') => {
+  const n = (catName || '').toLowerCase();
+  if (n.includes('fruit') || n.includes('vegetable') || n.includes('veg') || n.includes('sabzi')) {
+    return { icon: 'leaf-outline', color: '#16a34a', bg: 'rgba(22, 163, 74, 0.12)' };
+  }
+  if (n.includes('dairy') || n.includes('milk') || n.includes('bread') || n.includes('egg') || n.includes('paneer')) {
+    return { icon: 'water-outline', color: '#0284c7', bg: 'rgba(2, 132, 199, 0.12)' };
+  }
+  if (n.includes('atta') || n.includes('rice') || n.includes('dal') || n.includes('grain')) {
+    return { icon: 'layers-outline', color: '#d97706', bg: 'rgba(217, 119, 6, 0.12)' };
+  }
+  if (n.includes('oil') || n.includes('ghee') || n.includes('masala')) {
+    return { icon: 'flame-outline', color: '#ea580c', bg: 'rgba(234, 88, 12, 0.12)' };
+  }
+  if (n.includes('khana') || n.includes('thali') || n.includes('home') || n.includes('meal') || n.includes('restro') || n.includes('chef')) {
+    return { icon: 'restaurant-outline', color: '#e11d48', bg: 'rgba(225, 29, 72, 0.12)' };
+  }
+  if (n.includes('mithai') || n.includes('sweet') || n.includes('bakery')) {
+    return { icon: 'gift-outline', color: '#ec4899', bg: 'rgba(236, 72, 153, 0.12)' };
+  }
+  if (n.includes('snack') || n.includes('munchies')) {
+    return { icon: 'pizza-outline', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.12)' };
+  }
+  if (n.includes('drink') || n.includes('juice') || n.includes('cold') || n.includes('beverage')) {
+    return { icon: 'wine-outline', color: '#06b6d4', bg: 'rgba(6, 182, 212, 0.12)' };
+  }
+  return { icon: 'grid-outline', color: '#64748b', bg: 'rgba(100, 116, 139, 0.12)' };
+};
 
 const UNIT_PRESETS = ['1 kg', '500 g', '250 g', '1 pc', '1 plate', '1 packet', '1 litre', '1 dozen'];
 const STOCK_PRESETS = ['10', '25', '50', '100', '200'];
@@ -155,20 +75,24 @@ export const AddProductScreen = ({ navigation }) => {
 
   const { addInventoryItem, categories, vendor } = usePartner();
 
-  const [name, setName] = useState(QUICK_PRODUCT_PRESETS[0].name);
-  const [selectedCatId, setSelectedCatId] = useState(
-    categories && categories.length > 0 ? categories[0]._id : ''
-  );
-  const [price, setPrice] = useState(QUICK_PRODUCT_PRESETS[0].price);
-  const [mrp, setMrp] = useState(QUICK_PRODUCT_PRESETS[0].mrp);
-  const [unit, setUnit] = useState(QUICK_PRODUCT_PRESETS[0].unit);
-  const [stock, setStock] = useState(QUICK_PRODUCT_PRESETS[0].stock);
-  const [description, setDescription] = useState(QUICK_PRODUCT_PRESETS[0].description);
-  const [imageUrl, setImageUrl] = useState(QUICK_PRODUCT_PRESETS[0].url);
+  const displayCategories = categories && categories.length > 0 ? categories : FALLBACK_CATEGORIES;
+
+  const [name, setName] = useState('');
+  const [selectedCatId, setSelectedCatId] = useState(displayCategories[0]?._id || '');
+  const [price, setPrice] = useState('');
+  const [mrp, setMrp] = useState('');
+  const [unit, setUnit] = useState('1 kg');
+  const [stock, setStock] = useState('50');
+  const [description, setDescription] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
   const [isVeg, setIsVeg] = useState(true);
-  const [selectedPresetIndex, setSelectedPresetIndex] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [instantAddingIndex, setInstantAddingIndex] = useState(null);
+
+  useEffect(() => {
+    if (displayCategories.length > 0 && !selectedCatId) {
+      setSelectedCatId(displayCategories[0]._id || displayCategories[0].id);
+    }
+  }, [displayCategories, selectedCatId]);
 
   const numPrice = parseFloat(price);
   const numMrp = parseFloat(mrp);
@@ -184,62 +108,6 @@ export const AddProductScreen = ({ navigation }) => {
         }
       }
     ]);
-  };
-
-  const findMatchingCategoryId = (keywords = []) => {
-    if (!categories || categories.length === 0) return '';
-    for (const kw of keywords) {
-      const match = categories.find((c) =>
-        c.name?.toLowerCase().includes(kw.toLowerCase())
-      );
-      if (match) return match._id;
-    }
-    return categories[0]._id;
-  };
-
-  const handleSelectPreset = (preset, idx) => {
-    setSelectedPresetIndex(idx);
-    setName(preset.name);
-    setPrice(preset.price);
-    setMrp(preset.mrp);
-    setUnit(preset.unit);
-    setStock(preset.stock);
-    setImageUrl(preset.url);
-    setIsVeg(preset.isVeg);
-    setDescription(preset.description);
-
-    const matchedCat = findMatchingCategoryId(preset.categoryMatch);
-    if (matchedCat) setSelectedCatId(matchedCat);
-  };
-
-  const handleInstantAdd = async (preset, idx) => {
-    if (isSubmitting || instantAddingIndex !== null) return;
-    setInstantAddingIndex(idx);
-    try {
-      const catId = findMatchingCategoryId(preset.categoryMatch) || selectedCatId || categories?.[0]?._id;
-      const res = await addInventoryItem({
-        name: preset.name,
-        categoryId: catId,
-        category: catId,
-        price: Number(preset.price),
-        mrp: Number(preset.mrp),
-        unit: preset.unit,
-        stock: Number(preset.stock),
-        description: preset.description,
-        image: preset.url,
-        isVeg: preset.isVeg
-      });
-
-      if (res && res.success !== false) {
-        showFeedback('Added to Store! 🎉', `"${preset.name}" is now live in your store catalog!`, true);
-      } else {
-        showFeedback('Error', res?.message || 'Could not save item. Try again.');
-      }
-    } catch (e) {
-      showFeedback('Error', 'Could not publish item. Please check network.');
-    } finally {
-      setInstantAddingIndex(null);
-    }
   };
 
   const handleSubmit = async () => {
@@ -258,7 +126,7 @@ export const AddProductScreen = ({ navigation }) => {
 
     setIsSubmitting(true);
     try {
-      const catId = selectedCatId || categories?.[0]?._id;
+      const catId = selectedCatId || displayCategories[0]?._id;
       const res = await addInventoryItem({
         name: name.trim(),
         categoryId: catId,
@@ -268,7 +136,9 @@ export const AddProductScreen = ({ navigation }) => {
         unit: unit.trim() || '1 kg',
         stock: Number(stock),
         description: description.trim(),
-        image: imageUrl.trim() || QUICK_PRODUCT_PRESETS[0].url,
+        image:
+          imageUrl.trim() ||
+          'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=600&auto=format&fit=crop&q=80',
         isVeg: isVeg
       });
 
@@ -321,77 +191,15 @@ export const AddProductScreen = ({ navigation }) => {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* ==================== 1-TAP QUICK ADD CATALOG ==================== */}
-          <GlassCard style={styles.sectionCard} showSheen={true}>
-            <View style={styles.sectionHeaderRow}>
-              <View style={styles.boltIconOrb}>
-                <Ionicons name="flash" size={16} color="#ea580c" />
-              </View>
-              <View style={{ flex: 1, marginLeft: 10 }}>
-                <Text style={styles.sectionTitle}>1-Tap Quick Add Catalog</Text>
-                <Text style={styles.sectionSubtitle}>
-                  Tap "+ 1-Tap Add" to instantly publish with real photo & price
-                </Text>
-              </View>
-            </View>
-
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.presetsRail}
-            >
-              {QUICK_PRODUCT_PRESETS.map((preset, idx) => {
-                const isSelected = selectedPresetIndex === idx;
-                const isAdding = instantAddingIndex === idx;
-
-                return (
-                  <View
-                    key={idx}
-                    style={[styles.presetCard, isSelected && styles.presetCardSelected]}
-                  >
-                    <TouchableOpacity
-                      activeOpacity={0.8}
-                      onPress={() => handleSelectPreset(preset, idx)}
-                      style={{ alignItems: 'center' }}
-                    >
-                      <Image source={{ uri: preset.url }} style={styles.presetImage} />
-                      <View style={styles.presetIconBadge}>
-                        <Ionicons name={preset.ionIcon} size={14} color="#ea580c" />
-                      </View>
-                      <Text style={styles.presetLabel} numberOfLines={1}>
-                        {preset.label}
-                      </Text>
-                      <Text style={styles.presetPrice}>₹{preset.price} / {preset.unit}</Text>
-                    </TouchableOpacity>
-
-                    {/* 1-Tap Add Action */}
-                    <TouchableOpacity
-                      style={styles.oneTapAddBtn}
-                      onPress={() => handleInstantAdd(preset, idx)}
-                      disabled={isAdding}
-                      activeOpacity={0.8}
-                    >
-                      {isAdding ? (
-                        <ActivityIndicator size="small" color="#ffffff" />
-                      ) : (
-                        <Text style={styles.oneTapBtnText}>+ 1-Tap Add</Text>
-                      )}
-                    </TouchableOpacity>
-                  </View>
-                );
-              })}
-            </ScrollView>
-          </GlassCard>
-
-          {/* ==================== CUSTOM PRODUCT FORM ==================== */}
+          {/* ==================== PRODUCT FORM CARD ==================== */}
           <GlassCard style={styles.sectionCard} showSheen={true}>
             <View style={styles.sectionHeaderRow}>
               <View style={styles.formIconOrb}>
                 <Ionicons name="create-outline" size={16} color="#16a34a" />
               </View>
               <View style={{ flex: 1, marginLeft: 10 }}>
-                <Text style={styles.sectionTitle}>Custom Listing Details</Text>
-                <Text style={styles.sectionSubtitle}>Customize fields below or edit pre-filled values</Text>
+                <Text style={styles.sectionTitle}>Product Listing Details</Text>
+                <Text style={styles.sectionSubtitle}>Select category and fill in product information</Text>
               </View>
             </View>
 
@@ -402,33 +210,66 @@ export const AddProductScreen = ({ navigation }) => {
                 style={styles.glassInput}
                 value={name}
                 onChangeText={setName}
-                placeholder="e.g. Kashmiri Sweet Apples"
+                placeholder="e.g. Kashmiri Sweet Apples, Fresh Thali..."
                 placeholderTextColor={colors.textMuted}
               />
             </View>
 
-            {/* Category Chips */}
-            {categories && categories.length > 0 && (
-              <View style={styles.inputGroup}>
-                <Text style={styles.fieldLabel}>Category</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.catChipsRow}>
-                  {categories.map((c) => {
-                    const isSelected = selectedCatId === c._id;
-                    return (
-                      <TouchableOpacity
-                        key={c._id}
-                        style={[styles.catChip, isSelected && styles.catChipActive]}
-                        onPress={() => setSelectedCatId(c._id)}
-                      >
-                        <Text style={[styles.catChipText, isSelected && styles.catChipTextActive]}>
-                          {c.name}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </ScrollView>
+            {/* ==================== CATEGORY SELECTOR WITH ICONS ==================== */}
+            <View style={styles.inputGroup}>
+              <View style={styles.fieldLabelRow}>
+                <Ionicons name="grid-outline" size={14} color="#ea580c" />
+                <Text style={styles.fieldLabel}>Category *</Text>
               </View>
-            )}
+              <Text style={styles.fieldHelper}>Select the store category for customer discovery:</Text>
+
+              <View style={styles.catGrid}>
+                {displayCategories.map((c) => {
+                  const catId = c._id || c.id;
+                  const isSelected = selectedCatId === catId;
+                  const meta = getCategoryMeta(c.name);
+
+                  return (
+                    <TouchableOpacity
+                      key={catId}
+                      style={[styles.catChipWithIcon, isSelected && styles.catChipWithIconActive]}
+                      onPress={() => setSelectedCatId(catId)}
+                      activeOpacity={0.8}
+                    >
+                      <View
+                        style={[
+                          styles.catIconOrb,
+                          { backgroundColor: isSelected ? '#ea580c' : meta.bg }
+                        ]}
+                      >
+                        <Ionicons
+                          name={meta.icon}
+                          size={16}
+                          color={isSelected ? '#ffffff' : meta.color}
+                        />
+                      </View>
+                      <Text
+                        style={[
+                          styles.catChipText,
+                          isSelected && styles.catChipTextActive
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {c.name}
+                      </Text>
+                      {isSelected && (
+                        <Ionicons
+                          name="checkmark-circle"
+                          size={16}
+                          color="#ea580c"
+                          style={{ marginLeft: 'auto' }}
+                        />
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
 
             {/* Price & MRP */}
             <View style={styles.rowTwoCols}>
@@ -516,7 +357,7 @@ export const AddProductScreen = ({ navigation }) => {
 
             {/* Image Preview & URL */}
             <View style={styles.inputGroup}>
-              <Text style={styles.fieldLabel}>Product Image URL</Text>
+              <Text style={styles.fieldLabel}>Product Image URL (Optional)</Text>
               <TextInput
                 style={styles.glassInput}
                 value={imageUrl}
@@ -538,7 +379,7 @@ export const AddProductScreen = ({ navigation }) => {
                 style={[styles.glassInput, { height: 74, textAlignVertical: 'top', paddingTop: 8 }]}
                 value={description}
                 onChangeText={setDescription}
-                placeholder="Brief description of quality, harvest or taste..."
+                placeholder="Brief description of fresh harvest, taste or ingredients..."
                 placeholderTextColor={colors.textMuted}
                 multiline
               />
@@ -966,14 +807,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 14
   },
-  boltIconOrb: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(234, 88, 12, 0.12)',
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
   formIconOrb: {
     width: 32,
     height: 32,
@@ -983,82 +816,32 @@ const styles = StyleSheet.create({
     justifyContent: 'center'
   },
   sectionTitle: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '800',
     color: '#0f172a'
   },
   sectionSubtitle: {
-    fontSize: 11,
+    fontSize: 12,
     color: '#64748b'
   },
-  presetsRail: {
-    gap: 12,
-    paddingVertical: 4
-  },
-  presetCard: {
-    width: 130,
-    borderRadius: 16,
-    padding: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.65)',
-    borderWidth: 1.5,
-    borderColor: 'rgba(226, 232, 240, 0.8)',
-    alignItems: 'center'
-  },
-  presetCardSelected: {
-    borderColor: '#ea580c',
-    backgroundColor: 'rgba(254, 243, 199, 0.5)'
-  },
-  presetImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    marginBottom: 6
-  },
-  presetIconBadge: {
-    position: 'absolute',
-    top: 38,
-    right: 32,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: '#ffffff',
-    borderWidth: 1,
-    borderColor: 'rgba(234, 88, 12, 0.3)',
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
-  presetLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#0f172a',
-    textAlign: 'center'
-  },
-  presetPrice: {
-    fontSize: 11,
-    color: '#64748b',
-    marginTop: 2
-  },
-  oneTapAddBtn: {
-    marginTop: 8,
-    width: '100%',
-    paddingVertical: 5,
-    borderRadius: 8,
-    backgroundColor: '#ea580c',
-    alignItems: 'center'
-  },
-  oneTapBtnText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#ffffff'
-  },
   inputGroup: {
-    marginBottom: 12
+    marginBottom: 14
+  },
+  fieldLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 2
   },
   fieldLabel: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '700',
-    color: '#334155',
-    marginBottom: 4
+    color: '#334155'
+  },
+  fieldHelper: {
+    fontSize: 11,
+    color: '#64748b',
+    marginBottom: 8
   },
   glassInput: {
     height: 46,
@@ -1070,6 +853,49 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#0f172a'
   },
+
+  // CATEGORY GRID WITH ICONS
+  catGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8
+  },
+  catChipWithIcon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 7,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(226, 232, 240, 0.9)',
+    minHeight: 44,
+    flexGrow: 1,
+    flexBasis: '47%'
+  },
+  catChipWithIconActive: {
+    backgroundColor: 'rgba(254, 243, 199, 0.75)',
+    borderColor: '#ea580c'
+  },
+  catIconOrb: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 6
+  },
+  catChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#334155',
+    flexShrink: 1
+  },
+  catChipTextActive: {
+    color: '#ea580c',
+    fontWeight: '800'
+  },
+
   rowTwoCols: {
     flexDirection: 'row',
     gap: 12,
@@ -1091,31 +917,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#16a34a'
   },
-  catChipsRow: {
-    gap: 8,
-    paddingVertical: 4
-  },
-  catChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.7)',
-    borderWidth: 1,
-    borderColor: 'rgba(226, 232, 240, 0.8)'
-  },
-  catChipActive: {
-    backgroundColor: 'rgba(234, 88, 12, 0.12)',
-    borderColor: '#ea580c'
-  },
-  catChipText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#475569'
-  },
-  catChipTextActive: {
-    color: '#ea580c',
-    fontWeight: '700'
-  },
   pillsWrap: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -1123,7 +924,7 @@ const styles = StyleSheet.create({
   },
   presetPill: {
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 7,
     borderRadius: 10,
     backgroundColor: 'rgba(255, 255, 255, 0.7)',
     borderWidth: 1,

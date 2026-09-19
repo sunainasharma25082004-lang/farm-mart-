@@ -7,6 +7,7 @@ import { SocketProvider, useSocket } from './src/context/SocketContext';
 import { NewOrderModal } from './src/components/NewOrderModal';
 import { PartnerNavigator } from './src/navigation/PartnerNavigator';
 import { PartnerLoginScreen } from './src/screens/PartnerLoginScreen';
+import { soundAlert } from './src/utils/soundAlert';
 import { colors } from './src/theme/colors';
 
 // Prevent unhandled promise rejections or native errors from crashing the mobile process
@@ -71,8 +72,24 @@ function PartnerMain() {
 }
 
 function PartnerContent() {
-  const { vendor } = usePartner();
-  const { pendingOrder, acceptOrder, rejectOrder, dismissPendingOrder, connectionMode } = useSocket();
+  const { vendor, orders } = usePartner();
+  const { pendingOrder, setPendingOrder, acceptOrder, rejectOrder, dismissPendingOrder, connectionMode } = useSocket();
+  const notifiedOrderIdsRef = React.useRef(new Set());
+
+  // Dual-Safety: Ensure newly arrived NEW_ORDER from either WebSocket OR fast polling triggers modal + ring + vibration
+  React.useEffect(() => {
+    if (!orders || orders.length === 0 || pendingOrder) return;
+    const newUnaccepted = orders.find(
+      (o) => o.status === 'NEW_ORDER' && !notifiedOrderIdsRef.current.has(o._id || o.id)
+    );
+    if (newUnaccepted) {
+      const orderId = newUnaccepted._id || newUnaccepted.id;
+      notifiedOrderIdsRef.current.add(orderId);
+      console.log('🔔 [Partner Notification] Live order arrived for store:', newUnaccepted.orderNumber || orderId);
+      setPendingOrder(newUnaccepted);
+      soundAlert.start();
+    }
+  }, [orders, pendingOrder, setPendingOrder]);
 
   if (!vendor) {
     return <PartnerLoginScreen />;
@@ -85,7 +102,7 @@ function PartnerContent() {
         <PartnerNavigator connectionMode={connectionMode} />
       </NavigationContainer>
 
-      {/* Global Real-Time New Order Pop-up with Looping Audio Alert */}
+      {/* Global Real-Time New Order Pop-up with Looping Audio Alert & Vibration */}
       {pendingOrder && (
         <NewOrderModal
           order={pendingOrder}
