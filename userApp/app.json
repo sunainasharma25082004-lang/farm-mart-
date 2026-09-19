@@ -16,7 +16,7 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "package": "com.viz_eas001.userApp",
+      "package": "com.sfarmart.userapp",
       "permissions": [
         "INTERNET",
         "ACCESS_NETWORK_STATE",
@@ -29,8 +29,9 @@
     },
     "extra": {
       "eas": {
-        "projectId": "e25fbc44-5a36-452b-a9d4-a9083e5f67df"
+        "projectId": "b92a3a9a-2815-457f-b3ba-739b15298d2d"
       }
-    }
+    },
+    "owner": "sfarmart"
   }
 }
