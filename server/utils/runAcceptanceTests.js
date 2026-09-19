@@ -49,11 +49,11 @@ async function runTests() {
     const custLogin = await fetch(`${API_BASE}/auth/customer/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone: '9876543210', password: 'demo123' })
+      body: JSON.stringify({ phone: '9876543210', password: 'password123' })
     }).then((r) => r.json());
 
     recordTest(
-      'TC-03: Customer 1-Tap Login (Rajesh Kumar: 9876543210)',
+      'TC-03: Customer Login (Rajesh Kumar: 9876543210)',
       custLogin.success && !!custLogin.token,
       `Token generated, customer: ${custLogin.user?.name}`
     );
@@ -62,7 +62,7 @@ async function runTests() {
     const vendLogin = await fetch(`${API_BASE}/auth/vendor/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone: '9876543211', password: 'demo123' })
+      body: JSON.stringify({ phone: '9876543211', password: 'password123' })
     }).then((r) => r.json());
 
     recordTest(
