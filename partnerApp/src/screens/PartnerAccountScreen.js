@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -7,8 +7,7 @@ import {
   TouchableOpacity,
   Platform,
   StatusBar,
-  useWindowDimensions,
-  ActivityIndicator
+  useWindowDimensions
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,57 +15,31 @@ import { usePartner } from '../context/PartnerContext';
 import { GlassCard } from '../components/GlassCard';
 import { WaterBackground } from '../components/WaterBackground';
 import { colors } from '../theme/colors';
-import { glassTheme } from '../theme/glass';
-
-const DEMO_PARTNERS = [
-  {
-    name: 'Shimla Fresh Orchards',
-    phone: '9876543214',
-    owner: 'Manpreet Singh',
-    type: 'Fresh Fruits & Orchards',
-    icon: 'leaf-outline'
-  },
-  {
-    name: 'Sunita Home Restro & Sweets',
-    phone: '9876543211',
-    owner: 'Chef Sunita Sharma',
-    type: 'Home Kitchen & Sweets',
-    icon: 'restaurant-outline'
-  },
-  {
-    name: 'Sukhwinder Organic Farms',
-    phone: '9876543212',
-    owner: 'Sukhwinder Singh',
-    type: 'Organic Farm Veggies',
-    icon: 'flower-outline'
-  },
-  {
-    name: 'Gurpreet Fresh Orchards',
-    phone: '9876543213',
-    owner: 'Gurpreet Singh',
-    type: 'Farm Produce & Juices',
-    icon: 'nutrition-outline'
-  }
-];
+import { showAlert } from '../utils/alert';
 
 export const PartnerAccountScreen = () => {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const isTablet = width > 600;
 
-  const { vendor, loginVendor, logoutVendor } = usePartner();
-  const [isSwitching, setIsSwitching] = useState(false);
+  const { vendor, logoutVendor } = usePartner();
 
-  const handleQuickSwitch = async (phone) => {
-    setIsSwitching(true);
-    try {
-      await loginVendor(phone, 'password123');
-    } catch (err) {
-      console.warn('Switch failed:', err);
-    } finally {
-      setIsSwitching(false);
-    }
+  const handleLogout = () => {
+    showAlert(
+      'Confirm Logout',
+      `Are you sure you want to log out of ${vendor?.storeName || 'Partner Portal'}? You will need your credentials to log back in.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Log Out',
+          style: 'destructive',
+          onPress: () => logoutVendor()
+        }
+      ]
+    );
   };
+
+  const isStoreOpen = vendor?.isOpen ?? true;
 
   return (
     <View style={styles.container}>
@@ -77,8 +50,8 @@ export const PartnerAccountScreen = () => {
         contentContainerStyle={[
           styles.scrollContent,
           {
-            paddingTop: insets.top + 16,
-            paddingBottom: insets.bottom + 110,
+            paddingTop: Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight || 24) : 20) + 12,
+            paddingBottom: Math.max(insets.bottom, 20) + 120,
             maxWidth: isTablet ? 720 : '100%',
             alignSelf: 'center',
             width: '100%'
@@ -86,116 +59,187 @@ export const PartnerAccountScreen = () => {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Profile Glass Card */}
-        <GlassCard style={styles.profileCard}>
+        {/* Header Title */}
+        <View style={styles.pageHeader}>
+          <Text style={styles.pageHeaderTitle}>Store Profile & Account</Text>
+          <Text style={styles.pageHeaderSub}>Manage your verified merchant credentials and settings</Text>
+        </View>
+
+        {/* 1. Main Store Identity Card */}
+        <GlassCard style={styles.profileCard} showSheen={true}>
           <View style={styles.profileHeader}>
             <View style={styles.avatarGlow}>
               <Ionicons name="storefront" size={32} color="#ea580c" />
             </View>
             <View style={{ flex: 1, marginLeft: 16 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                 <Text style={styles.storeName} numberOfLines={1}>
                   {vendor?.storeName || 'Merchant Partner'}
                 </Text>
                 <Ionicons name="checkmark-circle" size={18} color="#16a34a" />
               </View>
               <Text style={styles.ownerName}>
-                {vendor?.ownerName || 'Verified Merchant'} • {vendor?.phone || '+91 98765 43210'}
+                {vendor?.ownerName || 'Verified Merchant'}
               </Text>
-              <View style={styles.ratingBadge}>
-                <Ionicons name="star" size={14} color="#f59e0b" />
-                <Text style={styles.ratingText}>4.9 (184 orders fulfilled)</Text>
+              <View style={styles.phoneRow}>
+                <Ionicons name="call-outline" size={13} color="#ea580c" />
+                <Text style={styles.phoneText}>{vendor?.phone || '+91 98765 43210'}</Text>
               </View>
             </View>
           </View>
+
+          {/* Quick Metrics & Live Duty Badge */}
+          <View style={styles.storeMetricsRow}>
+            <View style={styles.metricItem}>
+              <Text style={styles.metricLabel}>Store Duty</Text>
+              <View style={styles.statusBadgeWrap}>
+                <View style={[styles.statusDot, isStoreOpen ? styles.dotOnline : styles.dotOffline]} />
+                <Text style={[styles.statusText, isStoreOpen ? styles.textOnline : styles.textOffline]}>
+                  {isStoreOpen ? 'ONLINE' : 'OFFLINE'}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.metricDivider} />
+
+            <View style={styles.metricItem}>
+              <Text style={styles.metricLabel}>Customer Rating</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <Ionicons name="star" size={14} color="#f59e0b" />
+                <Text style={styles.metricValue}>{vendor?.rating || '4.9'} ★</Text>
+              </View>
+            </View>
+
+            <View style={styles.metricDivider} />
+
+            <View style={styles.metricItem}>
+              <Text style={styles.metricLabel}>Orders Fulfilled</Text>
+              <Text style={styles.metricValue}>180+ orders</Text>
+            </View>
+          </View>
         </GlassCard>
 
-        {/* Banking Settlement Info */}
+        {/* 2. Store Operational Parameters Card */}
         <GlassCard style={styles.sectionCard}>
           <View style={styles.cardHeaderRow}>
-            <Ionicons name="wallet-outline" size={20} color="#16a34a" />
-            <Text style={styles.sectionTitle}>Banking & Wednesday Payouts</Text>
+            <View style={[styles.sectionIconOrb, { backgroundColor: 'rgba(234, 88, 12, 0.12)' }]}>
+              <Ionicons name="options-outline" size={18} color="#ea580c" />
+            </View>
+            <View style={{ flex: 1, marginLeft: 10 }}>
+              <Text style={styles.sectionTitle}>Store Operational Details</Text>
+              <Text style={styles.sectionSubtitle}>Standard parameters shown to customers</Text>
+            </View>
           </View>
-          <View style={styles.bankDetailBox}>
-            <View style={styles.bankRow}>
-              <Text style={styles.bankLabel}>Disbursement Cycle</Text>
-              <Text style={styles.bankVal}>Every Wednesday (6:00 AM)</Text>
+
+          <View style={styles.detailBox}>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Business Specialization</Text>
+              <Text style={styles.detailVal}>{vendor?.storeType || 'Fresh Farm Produce & Groceries'}</Text>
             </View>
-            <View style={styles.bankRow}>
-              <Text style={styles.bankLabel}>Bank Name</Text>
-              <Text style={styles.bankVal}>State Bank of India (SBI)</Text>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Minimum Order Value</Text>
+              <Text style={styles.detailVal}>₹{vendor?.minOrderValue || 99}</Text>
             </View>
-            <View style={styles.bankRow}>
-              <Text style={styles.bankLabel}>Direct Account</Text>
-              <Text style={styles.bankVal}>•••• •••• 4321 (Verified)</Text>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Average Preparation Time</Text>
+              <Text style={styles.detailVal}>{vendor?.avgPrepTimeMins || 15} - 25 mins</Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Service Radius</Text>
+              <Text style={styles.detailVal}>Up to 8 km express delivery</Text>
+            </View>
+            <View style={[styles.detailRow, { borderBottomWidth: 0 }]}>
+              <Text style={styles.detailLabel}>Operating Hours</Text>
+              <Text style={styles.detailVal}>07:00 AM – 10:30 PM (Daily)</Text>
             </View>
           </View>
         </GlassCard>
 
-        {/* Switch Partner Profiles */}
+        {/* 3. Store Pickup & Location Address Card */}
         <GlassCard style={styles.sectionCard}>
           <View style={styles.cardHeaderRow}>
-            <Ionicons name="swap-horizontal-outline" size={20} color="#ea580c" />
-            <Text style={styles.sectionTitle}>Switch Partner Profile (Test Stores)</Text>
+            <View style={[styles.sectionIconOrb, { backgroundColor: 'rgba(6, 182, 212, 0.12)' }]}>
+              <Ionicons name="location-outline" size={18} color="#0891b2" />
+            </View>
+            <View style={{ flex: 1, marginLeft: 10 }}>
+              <Text style={styles.sectionTitle}>Pickup & Dispatch Address</Text>
+              <Text style={styles.sectionSubtitle}>Assigned location for delivery partner pick-ups</Text>
+            </View>
           </View>
-          <Text style={styles.sectionSubtitle}>
-            1-tap instant switch between verified test merchant accounts:
+
+          <View style={styles.detailBox}>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Store Address</Text>
+              <Text style={styles.detailVal}>{vendor?.address?.line1 || 'Main Market Road, Model Town'}</Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>City & Region</Text>
+              <Text style={styles.detailVal}>{vendor?.address?.city || 'Ludhiana'}, {vendor?.address?.state || 'Punjab'}</Text>
+            </View>
+            <View style={[styles.detailRow, { borderBottomWidth: 0 }]}>
+              <Text style={styles.detailLabel}>Postal Pincode</Text>
+              <Text style={styles.detailVal}>{vendor?.address?.pincode || '141001'}</Text>
+            </View>
+          </View>
+        </GlassCard>
+
+        {/* 4. Banking & Payout Settlement Info */}
+        <GlassCard style={styles.sectionCard}>
+          <View style={styles.cardHeaderRow}>
+            <View style={[styles.sectionIconOrb, { backgroundColor: 'rgba(22, 163, 74, 0.12)' }]}>
+              <Ionicons name="wallet-outline" size={18} color="#16a34a" />
+            </View>
+            <View style={{ flex: 1, marginLeft: 10 }}>
+              <Text style={styles.sectionTitle}>Banking & Weekly Settlements</Text>
+              <Text style={styles.sectionSubtitle}>Automated earnings payout account</Text>
+            </View>
+          </View>
+
+          <View style={styles.detailBox}>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Payout Schedule</Text>
+              <Text style={styles.detailVal}>Every Wednesday (06:00 AM)</Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Linked Bank</Text>
+              <Text style={styles.detailVal}>State Bank of India (SBI)</Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Account Number</Text>
+              <Text style={styles.detailVal}>•••• •••• 4321 (KYC Verified)</Text>
+            </View>
+            <View style={[styles.detailRow, { borderBottomWidth: 0 }]}>
+              <Text style={styles.detailLabel}>Settlement Mode</Text>
+              <Text style={styles.detailVal}>Direct NEFT / IMPS Transfer</Text>
+            </View>
+          </View>
+        </GlassCard>
+
+        {/* 5. Account Security & Privacy Guarantee */}
+        <GlassCard style={styles.sectionCard}>
+          <View style={styles.cardHeaderRow}>
+            <View style={[styles.sectionIconOrb, { backgroundColor: 'rgba(59, 130, 246, 0.12)' }]}>
+              <Ionicons name="shield-checkmark-outline" size={18} color="#2563eb" />
+            </View>
+            <View style={{ flex: 1, marginLeft: 10 }}>
+              <Text style={styles.sectionTitle}>Account Security & Protection</Text>
+              <Text style={styles.sectionSubtitle}>Encrypted merchant session active</Text>
+            </View>
+          </View>
+
+          <Text style={styles.securityExplanation}>
+            Your partner store data, inventory catalog, and incoming customer orders are isolated and private. Unauthorized access or 1-tap switching without phone and password authentication is strictly blocked.
           </Text>
-
-          {isSwitching && (
-            <View style={{ paddingVertical: 12, alignItems: 'center' }}>
-              <ActivityIndicator size="small" color={colors.primary} />
-            </View>
-          )}
-
-          <View style={styles.partnersGrid}>
-            {DEMO_PARTNERS.map((p, idx) => {
-              const isCurrent = vendor?.phone === p.phone || vendor?.storeName === p.name;
-              return (
-                <TouchableOpacity
-                  key={idx}
-                  style={[styles.partnerChip, isCurrent && styles.partnerChipActive]}
-                  onPress={() => !isCurrent && handleQuickSwitch(p.phone)}
-                  disabled={isSwitching || isCurrent}
-                  activeOpacity={0.75}
-                >
-                  <View style={styles.partnerChipLeft}>
-                    <Ionicons
-                      name={p.icon}
-                      size={20}
-                      color={isCurrent ? '#ea580c' : colors.textSecondary}
-                    />
-                    <View style={{ flex: 1, marginLeft: 10 }}>
-                      <Text
-                        style={[styles.partnerChipName, isCurrent && styles.partnerChipNameActive]}
-                        numberOfLines={1}
-                      >
-                        {p.name}
-                      </Text>
-                      <Text style={styles.partnerChipSub}>{p.owner} • {p.phone}</Text>
-                    </View>
-                  </View>
-                  {isCurrent ? (
-                    <View style={styles.activePill}>
-                      <Text style={styles.activePillText}>Active</Text>
-                    </View>
-                  ) : (
-                    <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
-                  )}
-                </TouchableOpacity>
-              );
-            })}
-          </View>
         </GlassCard>
 
-        {/* Logout Action */}
+        {/* 6. Secure Log Out Button */}
         <TouchableOpacity
           style={styles.logoutBtn}
-          onPress={logoutVendor}
+          onPress={handleLogout}
           activeOpacity={0.8}
         >
           <Ionicons name="log-out-outline" size={20} color="#ef4444" />
-          <Text style={styles.logoutText}>Logout of Partner Console</Text>
+          <Text style={styles.logoutText}>Log Out of Partner Account</Text>
         </TouchableOpacity>
       </ScrollView>
     </View>
@@ -210,9 +254,23 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16
   },
+  pageHeader: {
+    marginBottom: 16
+  },
+  pageHeaderTitle: {
+    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#0f172a'
+  },
+  pageHeaderSub: {
+    fontSize: 12,
+    color: '#64748b',
+    marginTop: 2
+  },
   profileCard: {
     marginBottom: 16,
-    padding: 20
+    padding: 18
   },
   profileHeader: {
     flexDirection: 'row',
@@ -236,29 +294,97 @@ const styles = StyleSheet.create({
   },
   ownerName: {
     fontSize: 13,
-    color: '#64748b',
+    fontWeight: '600',
+    color: '#475569',
     marginTop: 2
   },
-  ratingBadge: {
+  phoneRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    marginTop: 6
+    marginTop: 4
   },
-  ratingText: {
+  phoneText: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#d97706'
+    color: '#ea580c',
+    fontWeight: '700'
+  },
+  storeMetricsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 16,
+    paddingTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(226, 232, 240, 0.7)'
+  },
+  metricItem: {
+    flex: 1,
+    alignItems: 'center'
+  },
+  metricLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#64748b',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4
+  },
+  metricValue: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#0f172a'
+  },
+  metricDivider: {
+    width: 1,
+    height: 28,
+    backgroundColor: 'rgba(226, 232, 240, 0.8)'
+  },
+  statusBadgeWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.7)'
+  },
+  statusDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4
+  },
+  dotOnline: {
+    backgroundColor: '#16a34a'
+  },
+  dotOffline: {
+    backgroundColor: '#dc2626'
+  },
+  statusText: {
+    fontSize: 11,
+    fontWeight: '800'
+  },
+  textOnline: {
+    color: '#15803d'
+  },
+  textOffline: {
+    color: '#b91c1c'
   },
   sectionCard: {
     marginBottom: 16,
-    padding: 18
+    padding: 16
   },
   cardHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 6
+    marginBottom: 12
+  },
+  sectionIconOrb: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center'
   },
   sectionTitle: {
     fontSize: 15,
@@ -266,74 +392,45 @@ const styles = StyleSheet.create({
     color: '#0f172a'
   },
   sectionSubtitle: {
-    fontSize: 13,
+    fontSize: 11,
     color: '#64748b',
-    marginBottom: 14
+    marginTop: 1
   },
-  bankDetailBox: {
-    marginTop: 8,
-    gap: 10
+  detailBox: {
+    marginTop: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.65)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(226, 232, 240, 0.8)',
+    paddingHorizontal: 12,
+    paddingVertical: 4
   },
-  bankRow: {
+  detailRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 4,
+    alignItems: 'center',
+    paddingVertical: 9,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(226, 232, 240, 0.6)'
   },
-  bankLabel: {
-    fontSize: 13,
-    color: '#64748b'
-  },
-  bankVal: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#0f172a'
-  },
-  partnersGrid: {
-    gap: 8
-  },
-  partnerChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 12,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255, 255, 255, 0.55)',
-    borderWidth: 1,
-    borderColor: 'rgba(226, 232, 240, 0.8)'
-  },
-  partnerChipActive: {
-    backgroundColor: 'rgba(234, 88, 12, 0.08)',
-    borderColor: 'rgba(234, 88, 12, 0.35)'
-  },
-  partnerChipLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1
-  },
-  partnerChipName: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#0f172a'
-  },
-  partnerChipNameActive: {
-    color: '#ea580c'
-  },
-  partnerChipSub: {
+  detailLabel: {
     fontSize: 12,
-    color: '#64748b'
+    color: '#64748b',
+    fontWeight: '500'
   },
-  activePill: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 10,
-    backgroundColor: 'rgba(22, 163, 74, 0.15)'
-  },
-  activePillText: {
-    fontSize: 11,
+  detailVal: {
+    fontSize: 12,
     fontWeight: '700',
-    color: '#16a34a'
+    color: '#0f172a',
+    textAlign: 'right',
+    flexShrink: 1,
+    marginLeft: 10
+  },
+  securityExplanation: {
+    fontSize: 12,
+    color: '#475569',
+    lineHeight: 18,
+    marginTop: 2
   },
   logoutBtn: {
     flexDirection: 'row',
@@ -343,14 +440,14 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 16,
     backgroundColor: 'rgba(239, 68, 68, 0.08)',
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: 'rgba(239, 68, 68, 0.25)',
-    marginTop: 8,
-    marginBottom: 20
+    marginTop: 4,
+    marginBottom: 16
   },
   logoutText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#ef4444'
   }
 });

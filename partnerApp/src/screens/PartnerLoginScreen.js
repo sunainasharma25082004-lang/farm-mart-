@@ -21,12 +21,6 @@ import { WaterBackground } from '../components/WaterBackground';
 
 const LOGO = require('../../assets/farmart_logo.png');
 
-const DEMO_ACCOUNTS = [
-  { name: 'Shimla Fresh Orchards', phone: '9876543214', owner: 'Manpreet Singh', icon: 'leaf-outline' },
-  { name: 'Sunita Home Restro', phone: '9876543211', owner: 'Chef Sunita', icon: 'restaurant-outline' },
-  { name: 'Sukhwinder Farms', phone: '9876543212', owner: 'Sukhwinder Singh', icon: 'flower-outline' },
-  { name: 'Gurpreet Orchards', phone: '9876543213', owner: 'Gurpreet Singh', icon: 'nutrition-outline' }
-];
 
 export const PartnerLoginScreen = () => {
   const insets = useSafeAreaInsets();
@@ -180,31 +174,12 @@ export const PartnerLoginScreen = () => {
             )}
           </TouchableOpacity>
 
-          {/* Quick Demo Switcher Section */}
-          <View style={styles.demoSection}>
-            <Text style={styles.demoSectionTitle}>1-Tap Demo Merchant Access:</Text>
-            <View style={styles.demoGrid}>
-              {DEMO_ACCOUNTS.map((acc, idx) => (
-                <TouchableOpacity
-                  key={idx}
-                  style={styles.demoChip}
-                  onPress={() => {
-                    setPhone(acc.phone);
-                    setPassword('password123');
-                    handleLogin(acc.phone, 'password123');
-                  }}
-                  disabled={isLoading}
-                >
-                  <Ionicons name={acc.icon} size={16} color="#ea580c" />
-                  <View style={{ flex: 1, marginLeft: 6 }}>
-                    <Text style={styles.demoChipName} numberOfLines={1}>
-                      {acc.name}
-                    </Text>
-                    <Text style={styles.demoChipPhone}>{acc.phone}</Text>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </View>
+          {/* Security Notice */}
+          <View style={styles.securityBox}>
+            <Ionicons name="shield-checkmark-outline" size={16} color="#16a34a" />
+            <Text style={styles.securityText}>
+              Verified Merchant Portal. Each partner account is isolated with individual phone & password credentials.
+            </Text>
           </View>
         </GlassCard>
       </ScrollView>
@@ -342,37 +317,22 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#ffffff'
   },
-  demoSection: {
-    marginTop: 20,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(226, 232, 240, 0.8)'
-  },
-  demoSectionTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#64748b',
-    marginBottom: 10
-  },
-  demoGrid: {
-    gap: 8
-  },
-  demoChip: {
+  securityBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 10,
+    gap: 8,
+    marginTop: 20,
+    padding: 12,
     borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.75)',
+    backgroundColor: 'rgba(22, 163, 74, 0.08)',
     borderWidth: 1,
-    borderColor: 'rgba(234, 88, 12, 0.25)'
+    borderColor: 'rgba(22, 163, 74, 0.25)'
   },
-  demoChipName: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#0f172a'
-  },
-  demoChipPhone: {
-    fontSize: 11,
-    color: '#64748b'
+  securityText: {
+    fontSize: 12,
+    color: '#15803d',
+    fontWeight: '600',
+    flex: 1,
+    lineHeight: 16
   }
 });

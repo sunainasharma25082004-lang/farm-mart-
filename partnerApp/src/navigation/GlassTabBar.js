@@ -20,7 +20,7 @@ const TAB_ICONS = {
   Orders: { active: 'receipt', inactive: 'receipt-outline', label: 'Orders' },
   Inventory: { active: 'cube', inactive: 'cube-outline', label: 'Inventory' },
   Reports: { active: 'bar-chart', inactive: 'bar-chart-outline', label: 'Reports' },
-  Account: { active: 'person', inactive: 'person-outline', label: 'Account' }
+  Account: { active: 'person', inactive: 'person-outline', label: 'Profile' }
 };
 
 const TabItem = ({ route, isFocused, onPress, onLongPress }) => {

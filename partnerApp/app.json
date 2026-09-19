@@ -23,7 +23,7 @@
         "INTERNET",
         "ACCESS_NETWORK_STATE"
       ],
-      "softwareKeyboardLayoutMode": "pan"
+      "softwareKeyboardLayoutMode": "resize"
     },
     "web": {
       "favicon": "./assets/favicon.png"

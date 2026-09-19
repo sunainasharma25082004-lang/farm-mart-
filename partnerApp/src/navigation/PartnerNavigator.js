@@ -45,7 +45,7 @@ const PartnerTabs = () => {
       <Tab.Screen
         name="Account"
         component={PartnerAccountScreen}
-        options={{ tabBarLabel: 'Account' }}
+        options={{ tabBarLabel: 'Profile' }}
       />
     </Tab.Navigator>
   );

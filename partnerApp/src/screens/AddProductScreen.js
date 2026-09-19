@@ -160,7 +160,14 @@ export const AddProductScreen = ({ navigation }) => {
       <WaterBackground />
 
       {/* Top Header */}
-      <View style={[styles.headerBar, { paddingTop: insets.top + 10 }]}>
+      <View
+        style={[
+          styles.headerBar,
+          {
+            paddingTop: Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight || 24) : 20) + 8
+          }
+        ]}
+      >
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           style={styles.glassBackBtn}
@@ -182,13 +189,14 @@ export const AddProductScreen = ({ navigation }) => {
           contentContainerStyle={[
             styles.scrollContent,
             {
-              paddingBottom: insets.bottom + 110,
+              paddingBottom: Math.max(insets.bottom, 20) + 130,
               maxWidth: isTablet ? 720 : '100%',
               alignSelf: 'center',
               width: '100%'
             }
           ]}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
         >
           {/* ==================== PRODUCT FORM CARD ==================== */}
@@ -212,6 +220,10 @@ export const AddProductScreen = ({ navigation }) => {
                 onChangeText={setName}
                 placeholder="e.g. Kashmiri Sweet Apples, Fresh Thali..."
                 placeholderTextColor={colors.textMuted}
+                autoCorrect={false}
+                spellCheck={false}
+                autoCapitalize="words"
+                returnKeyType="next"
               />
             </View>
 
@@ -253,7 +265,7 @@ export const AddProductScreen = ({ navigation }) => {
                           styles.catChipText,
                           isSelected && styles.catChipTextActive
                         ]}
-                        numberOfLines={1}
+                        numberOfLines={2}
                       >
                         {c.name}
                       </Text>
@@ -282,6 +294,9 @@ export const AddProductScreen = ({ navigation }) => {
                   placeholder="120"
                   placeholderTextColor={colors.textMuted}
                   keyboardType="numeric"
+                  returnKeyType="next"
+                  autoCorrect={false}
+                  spellCheck={false}
                 />
               </View>
               <View style={{ flex: 1 }}>
@@ -293,6 +308,9 @@ export const AddProductScreen = ({ navigation }) => {
                   placeholder="150"
                   placeholderTextColor={colors.textMuted}
                   keyboardType="numeric"
+                  returnKeyType="next"
+                  autoCorrect={false}
+                  spellCheck={false}
                 />
               </View>
             </View>
@@ -364,6 +382,10 @@ export const AddProductScreen = ({ navigation }) => {
                 onChangeText={setImageUrl}
                 placeholder="https://images.unsplash.com/..."
                 placeholderTextColor={colors.textMuted}
+                autoCapitalize="none"
+                autoCorrect={false}
+                spellCheck={false}
+                returnKeyType="next"
               />
               {imageUrl ? (
                 <View style={styles.imagePreviewWrap}>
@@ -376,12 +398,15 @@ export const AddProductScreen = ({ navigation }) => {
             <View style={styles.inputGroup}>
               <Text style={styles.fieldLabel}>Description</Text>
               <TextInput
-                style={[styles.glassInput, { height: 74, textAlignVertical: 'top', paddingTop: 8 }]}
+                style={[styles.glassInput, { height: 76, textAlignVertical: 'top', paddingTop: 8 }]}
                 value={description}
                 onChangeText={setDescription}
                 placeholder="Brief description of fresh harvest, taste or ingredients..."
                 placeholderTextColor={colors.textMuted}
-                multiline
+                multiline={true}
+                numberOfLines={3}
+                autoCorrect={false}
+                spellCheck={false}
               />
             </View>
 
@@ -863,13 +888,13 @@ const styles = StyleSheet.create({
   catChipWithIcon: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 7,
+    paddingVertical: 8,
     paddingHorizontal: 10,
     borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    backgroundColor: 'rgba(255, 255, 255, 0.85)',
     borderWidth: 1.5,
     borderColor: 'rgba(226, 232, 240, 0.9)',
-    minHeight: 44,
+    minHeight: 52,
     flexGrow: 1,
     flexBasis: '47%'
   },
@@ -889,7 +914,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: '#334155',
-    flexShrink: 1
+    flexShrink: 1,
+    lineHeight: 15
   },
   catChipTextActive: {
     color: '#ea580c',

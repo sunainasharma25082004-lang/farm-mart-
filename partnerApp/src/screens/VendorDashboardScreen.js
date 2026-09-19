@@ -28,13 +28,6 @@ import { showAlert } from '../utils/alert';
 
 const LOGO = require('../../assets/farmart_logo.png');
 
-const DEMO_PARTNERS = [
-  { name: 'Shimla Fresh Orchards', phone: '9876543214', owner: 'Manpreet Singh', icon: 'leaf-outline' },
-  { name: 'Sunita Home Restro & Sweets', phone: '9876543211', owner: 'Sunita Sharma', icon: 'restaurant-outline' },
-  { name: 'Sukhwinder Organic Farms', phone: '9876543212', owner: 'Sukhwinder Singh', icon: 'flower-outline' },
-  { name: 'Gurpreet Fresh Orchards', phone: '9876543213', owner: 'Gurpreet Singh', icon: 'nutrition-outline' }
-];
-
 export const VendorDashboardScreen = ({ navigation, initialSection }) => {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
@@ -46,7 +39,6 @@ export const VendorDashboardScreen = ({ navigation, initialSection }) => {
     orders,
     updateOrderStatus,
     stats,
-    loginVendor,
     logoutVendor,
     fetchOrders,
     isTogglingStore
@@ -55,12 +47,6 @@ export const VendorDashboardScreen = ({ navigation, initialSection }) => {
   const { connectionMode } = useSocket();
 
   const [processingOrderId, setProcessingOrderId] = useState(null);
-  const [showLoginModal, setShowLoginModal] = useState(false);
-  const [loginPhoneInput, setLoginPhoneInput] = useState('');
-  const [loginPasswordInput, setLoginPasswordInput] = useState('password123');
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const [loginError, setLoginError] = useState('');
-
   const scrollRef = useRef(null);
   const ordersSectionRef = useRef(null);
 
@@ -105,97 +91,8 @@ export const VendorDashboardScreen = ({ navigation, initialSection }) => {
     }
   };
 
-  const handleCustomLogin = async (phone) => {
-    const p = phone || loginPhoneInput.trim();
-    if (!p) {
-      setLoginError('Please enter Partner Phone number or ID');
-      return;
-    }
-    setIsLoggingIn(true);
-    setLoginError('');
-    try {
-      const res = await loginVendor(p, loginPasswordInput);
-      if (res && res.success) {
-        setShowLoginModal(false);
-        setLoginPhoneInput('');
-      } else {
-        setLoginError(res?.message || 'Vendor not found or invalid credentials.');
-      }
-    } catch (err) {
-      setLoginError('Login failed. Please check network.');
-    } finally {
-      setIsLoggingIn(false);
-    }
-  };
-
-  // If merchant is logged out, show glass login screen
   if (!vendor) {
-    return (
-      <View style={styles.container}>
-        <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
-        <WaterBackground />
-        <View style={[styles.unauthContainer, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 20 }]}>
-          <GlassCard style={styles.unauthGlassCard}>
-            <View style={styles.unauthHeader}>
-              <View style={styles.logoGlassGlow}>
-                <Image source={LOGO} style={{ width: 56, height: 56 }} resizeMode="contain" />
-              </View>
-              <Text style={styles.unauthTitle}>Farmart Partner Console</Text>
-              <Text style={styles.unauthSub}>
-                Please log in with your verified Partner Phone number to access your store orders.
-              </Text>
-            </View>
-
-            <View style={styles.loginForm}>
-              <Text style={styles.inputLabel}>Partner Mobile / Store ID</Text>
-              <TextInput
-                style={styles.glassInput}
-                placeholder="e.g. 9876543213"
-                placeholderTextColor={colors.textMuted}
-                value={loginPhoneInput}
-                onChangeText={setLoginPhoneInput}
-                keyboardType="phone-pad"
-              />
-
-              {loginError ? <Text style={styles.errorText}>{loginError}</Text> : null}
-
-              <TouchableOpacity
-                style={styles.loginBtn}
-                onPress={() => handleCustomLogin()}
-                disabled={isLoggingIn}
-                activeOpacity={0.8}
-              >
-                {isLoggingIn ? (
-                  <ActivityIndicator size="small" color="#ffffff" />
-                ) : (
-                  <>
-                    <Text style={styles.loginBtnText}>Log In to Store</Text>
-                    <Ionicons name="arrow-forward" size={18} color="#ffffff" />
-                  </>
-                )}
-              </TouchableOpacity>
-            </View>
-
-            {/* Quick Demo Accounts */}
-            <View style={styles.demoPartnersBox}>
-              <Text style={styles.demoPartnersTitle}>Instant Test Merchant Access:</Text>
-              <View style={styles.demoChipsGrid}>
-                {DEMO_PARTNERS.map((p, idx) => (
-                  <TouchableOpacity
-                    key={idx}
-                    style={styles.demoChip}
-                    onPress={() => handleCustomLogin(p.phone)}
-                  >
-                    <Ionicons name={p.icon} size={15} color="#ea580c" />
-                    <Text style={styles.demoChipText}>{p.name.split(' ')[0]}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          </GlassCard>
-        </View>
-      </View>
-    );
+    return null;
   }
 
   // Render Dashboard
@@ -255,14 +152,14 @@ export const VendorDashboardScreen = ({ navigation, initialSection }) => {
               </Text>
             </View>
 
-            {/* Quick Switch Store Icon Button */}
+            {/* Store Profile & Settings Button */}
             <TouchableOpacity
-              style={styles.switchIconBtn}
-              onPress={() => setShowLoginModal(true)}
-              activeOpacity={0.7}
-              accessibilityLabel="Switch Partner Store"
+              style={styles.profileHeaderBtn}
+              onPress={() => navigation.navigate('Account')}
+              activeOpacity={0.75}
+              accessibilityLabel="Store Profile"
             >
-              <Ionicons name="swap-horizontal" size={18} color="#ea580c" />
+              <Ionicons name="person-circle" size={24} color="#ea580c" />
             </TouchableOpacity>
           </View>
         </View>
@@ -500,74 +397,6 @@ export const VendorDashboardScreen = ({ navigation, initialSection }) => {
           </View>
         </View>
       </ScrollView>
-
-      {/* ==================== PARTNER SWITCHER MODAL ==================== */}
-      <Modal
-        visible={showLoginModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowLoginModal(false)}
-      >
-        <View style={styles.modalBackdrop}>
-          <GlassCard style={styles.switchModalCard}>
-            <View style={styles.switchModalHeader}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Ionicons name="swap-horizontal" size={22} color="#ea580c" />
-                <Text style={styles.switchModalTitle}>Switch Partner Store</Text>
-              </View>
-              <TouchableOpacity onPress={() => setShowLoginModal(false)} style={styles.modalCloseBtn}>
-                <Ionicons name="close" size={20} color="#64748b" />
-              </TouchableOpacity>
-            </View>
-
-            <Text style={styles.switchModalSub}>
-              Select a verified test store to immediately switch views:
-            </Text>
-
-            {isLoggingIn && (
-              <View style={{ paddingVertical: 12, alignItems: 'center' }}>
-                <ActivityIndicator size="small" color={colors.primary} />
-              </View>
-            )}
-
-            <View style={{ gap: 8, marginTop: 10 }}>
-              {DEMO_PARTNERS.map((p, idx) => {
-                const isCurrent = vendor?.phone === p.phone || vendor?.storeName === p.name;
-                return (
-                  <TouchableOpacity
-                    key={idx}
-                    style={[styles.partnerSelectChip, isCurrent && styles.partnerSelectChipActive]}
-                    onPress={() => handleCustomLogin(p.phone)}
-                    disabled={isLoggingIn || isCurrent}
-                  >
-                    <Ionicons
-                      name={p.icon}
-                      size={20}
-                      color={isCurrent ? '#ea580c' : colors.textSecondary}
-                    />
-                    <View style={{ flex: 1, marginLeft: 10 }}>
-                      <Text
-                        style={[styles.selectChipName, isCurrent && styles.selectChipNameActive]}
-                        numberOfLines={1}
-                      >
-                        {p.name}
-                      </Text>
-                      <Text style={styles.selectChipSub}>{p.owner} • {p.phone}</Text>
-                    </View>
-                    {isCurrent ? (
-                      <View style={styles.currentBadge}>
-                        <Text style={styles.currentBadgeText}>Current</Text>
-                      </View>
-                    ) : (
-                      <Ionicons name="arrow-forward" size={16} color="#94a3b8" />
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </GlassCard>
-        </View>
-      </Modal>
     </View>
   );
 };
@@ -647,13 +476,13 @@ const styles = StyleSheet.create({
   textOffline: {
     color: '#b91c1c'
   },
-  switchIconBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: 'rgba(255, 255, 255, 0.85)',
-    borderWidth: 1,
-    borderColor: 'rgba(234, 88, 12, 0.35)',
+  profileHeaderBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(254, 243, 199, 0.75)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(234, 88, 12, 0.4)',
     alignItems: 'center',
     justifyContent: 'center'
   },
@@ -960,188 +789,5 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '800',
     color: '#ffffff'
-  },
-
-  // MODAL
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.45)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20
-  },
-  switchModalCard: {
-    width: '100%',
-    maxWidth: 420,
-    padding: 20
-  },
-  switchModalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center'
-  },
-  switchModalTitle: {
-    fontSize: 17,
-    fontWeight: '800',
-    color: '#0f172a'
-  },
-  modalCloseBtn: {
-    padding: 4
-  },
-  switchModalSub: {
-    fontSize: 12,
-    color: '#64748b',
-    marginTop: 4
-  },
-  partnerSelectChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.65)',
-    borderWidth: 1,
-    borderColor: 'rgba(226, 232, 240, 0.8)'
-  },
-  partnerSelectChipActive: {
-    backgroundColor: 'rgba(234, 88, 12, 0.08)',
-    borderColor: 'rgba(234, 88, 12, 0.35)'
-  },
-  selectChipName: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#0f172a'
-  },
-  selectChipNameActive: {
-    color: '#ea580c'
-  },
-  selectChipSub: {
-    fontSize: 11,
-    color: '#64748b'
-  },
-  currentBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-    backgroundColor: 'rgba(234, 88, 12, 0.15)'
-  },
-  currentBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#ea580c'
-  },
-
-  // UNAUTH / LOGGED OUT VIEW
-  unauthContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20
-  },
-  unauthGlassCard: {
-    width: '100%',
-    maxWidth: 440,
-    padding: 24
-  },
-  unauthHeader: {
-    alignItems: 'center',
-    marginBottom: 20
-  },
-  logoGlassGlow: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: 'rgba(234, 88, 12, 0.12)',
-    borderWidth: 1.5,
-    borderColor: 'rgba(234, 88, 12, 0.35)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12
-  },
-  unauthTitle: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#0f172a'
-  },
-  unauthSub: {
-    fontSize: 13,
-    color: '#64748b',
-    textAlign: 'center',
-    marginTop: 4,
-    lineHeight: 19
-  },
-  loginForm: {
-    gap: 10
-  },
-  inputLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#334155'
-  },
-  glassInput: {
-    height: 48,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(226, 232, 240, 0.8)',
-    backgroundColor: 'rgba(255, 255, 255, 0.75)',
-    paddingHorizontal: 14,
-    fontSize: 15,
-    color: '#0f172a'
-  },
-  errorText: {
-    fontSize: 12,
-    color: '#ef4444'
-  },
-  loginBtn: {
-    height: 48,
-    borderRadius: 14,
-    backgroundColor: '#ea580c',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    marginTop: 6,
-    shadowColor: '#ea580c',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 4
-  },
-  loginBtnText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#ffffff'
-  },
-  demoPartnersBox: {
-    marginTop: 20,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(226, 232, 240, 0.7)'
-  },
-  demoPartnersTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#64748b',
-    marginBottom: 8
-  },
-  demoChipsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8
-  },
-  demoChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.75)',
-    borderWidth: 1,
-    borderColor: 'rgba(234, 88, 12, 0.25)'
-  },
-  demoChipText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#0f172a'
   }
 });
