@@ -56,17 +56,27 @@ export const ActiveNavigationScreen = ({ navigation }) => {
   const orderNumber = currentTask.orderNumber || (orderId ? String(orderId).slice(-6) : 'ORD-101');
   const status = currentTask.status || 'RIDER_ASSIGNED';
 
+  const getAddressString = (addr, fallback) => {
+    if (!addr) return fallback;
+    if (typeof addr === 'string') return addr;
+    if (typeof addr === 'object') {
+      const parts = [addr.line1, addr.city, addr.pincode].filter(Boolean);
+      return parts.length > 0 ? parts.join(', ') : fallback;
+    }
+    return fallback;
+  };
+
   // Vendor / Store extraction
   const storeName = currentTask.vendor?.storeName || currentTask.vendor?.name || currentTask.pickupLocation || 'Partner Merchant Store';
   const storePhone = currentTask.vendor?.phone || '9876543211';
-  const storeAddress = currentTask.vendor?.address?.line1 || currentTask.vendor?.address || currentTask.pickupAddress || 'Shop #12, Market Complex, Ludhiana';
+  const storeAddress = getAddressString(currentTask.vendor?.address, currentTask.pickupAddress || 'Shop #12, Market Complex, Ludhiana');
   const storeLat = currentTask.vendor?.location?.coordinates?.[1] || currentTask.vendor?.lat || 30.9010;
   const storeLng = currentTask.vendor?.location?.coordinates?.[0] || currentTask.vendor?.lng || 75.8573;
 
   // Customer extraction
   const customerName = currentTask.customer?.name || currentTask.address?.name || currentTask.customerName || 'Customer';
   const customerPhone = currentTask.customer?.phone || currentTask.address?.phone || currentTask.customerPhone || '9876543210';
-  const customerAddress = currentTask.address?.line1 || currentTask.deliveryAddress || 'Sector 32, Urban Estate, Ludhiana';
+  const customerAddress = getAddressString(currentTask.address || currentTask.deliveryAddress, 'Sector 32, Urban Estate, Ludhiana');
   const custLat = currentTask.address?.lat || 30.9120;
   const custLng = currentTask.address?.lng || 75.8650;
 

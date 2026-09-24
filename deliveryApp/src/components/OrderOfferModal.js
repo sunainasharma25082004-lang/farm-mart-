@@ -142,7 +142,11 @@ export const OrderOfferModal = () => {
                   {pendingOffer.storeName || 'Merchant Store'}
                 </Text>
                 <Text style={styles.stopAddress} numberOfLines={1}>
-                  {pendingOffer.storeAddress || 'Store Location'}
+                  {typeof pendingOffer.storeAddress === 'string'
+                    ? pendingOffer.storeAddress
+                    : pendingOffer.storeAddress?.line1
+                    ? `${pendingOffer.storeAddress.line1}, ${pendingOffer.storeAddress.city || ''}`
+                    : 'Store Location'}
                 </Text>
               </View>
             </View>
@@ -160,7 +164,11 @@ export const OrderOfferModal = () => {
                   {pendingOffer.customerName || 'Customer'}
                 </Text>
                 <Text style={styles.stopAddress} numberOfLines={1}>
-                  {pendingOffer.customerAddress || 'Customer Address'}
+                  {typeof pendingOffer.customerAddress === 'string'
+                    ? pendingOffer.customerAddress
+                    : pendingOffer.customerAddress?.line1
+                    ? `${pendingOffer.customerAddress.line1}, ${pendingOffer.customerAddress.city || ''}`
+                    : 'Customer Address'}
                 </Text>
               </View>
             </View>

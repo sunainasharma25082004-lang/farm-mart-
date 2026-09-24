@@ -173,12 +173,22 @@ export const DutyScreen = ({ navigation }) => {
                   </View>
 
                   <Text style={styles.cardStoreName}>{ord.vendor?.storeName || 'Merchant Store'}</Text>
-                  <Text style={styles.cardStoreAddr}>{ord.vendor?.address || 'Store Location'}</Text>
+                  <Text style={styles.cardStoreAddr}>
+                    {typeof ord.vendor?.address === 'string'
+                      ? ord.vendor.address
+                      : ord.vendor?.address?.line1
+                      ? `${ord.vendor.address.line1}, ${ord.vendor.address.city || ''}`
+                      : 'Store Location'}
+                  </Text>
 
                   <View style={styles.cardDivider} />
 
                   <Text style={styles.cardCustomerText}>
-                    Drop: {ord.customer?.name || ord.address?.name || 'Customer'} ({ord.address?.line1 || ''})
+                    Drop: {ord.customer?.name || ord.address?.name || 'Customer'} (
+                    {typeof ord.address === 'string'
+                      ? ord.address
+                      : ord.address?.line1 || ord.deliveryAddress || ''}
+                    )
                   </Text>
 
                   <TouchableOpacity

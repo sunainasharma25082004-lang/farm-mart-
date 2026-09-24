@@ -254,7 +254,10 @@ export const CheckoutScreen = ({ navigation }) => {
   const navigateToLiveTracking = () => {
     const orderToTrack = confirmedOrder;
     setConfirmedOrder(null);
-    navigation.navigate('OrderTracking', { order: orderToTrack });
+    navigation.navigate('OrderTracking', {
+      orderId: orderToTrack?._id,
+      order: orderToTrack
+    });
   };
 
   return (

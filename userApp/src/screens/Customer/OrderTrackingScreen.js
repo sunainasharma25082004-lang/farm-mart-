@@ -118,6 +118,7 @@ export const OrderTrackingScreen = ({ route, navigation }) => {
   const { isAuthenticated, userProfile } = useApp();
   const [activeOrder, setActiveOrder] = useState(null);
   const [orders, setOrders] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const { activeOrderUpdate, riderLocationUpdate, trackOrder } = useCustomerSocket();
   const [riderLiveLocation, setRiderLiveLocation] = useState(null);
 
@@ -147,7 +148,16 @@ export const OrderTrackingScreen = ({ route, navigation }) => {
 
   // Handle route params order safely with strict customer identity check
   useEffect(() => {
-    const routeOrder = route.params?.order;
+    let routeOrder = route.params?.order;
+    const routeOrderId = route.params?.orderId;
+    if (typeof routeOrder === 'string') {
+      try {
+        routeOrder = JSON.parse(routeOrder);
+      } catch {
+        routeOrder = null;
+      }
+    }
+
     if (routeOrder && typeof routeOrder === 'object' && routeOrder._id) {
       const currentUserId = (userProfile?._id || userProfile?.id)?.toString();
       const currentUserPhone = userProfile?.phone?.toString();
@@ -166,8 +176,13 @@ export const OrderTrackingScreen = ({ route, navigation }) => {
           return exists ? prev : [routeOrder, ...prev];
         });
       }
+    } else if (routeOrderId && orders.length > 0) {
+      const match = orders.find((o) => String(o._id) === String(routeOrderId));
+      if (match) {
+        setActiveOrder(match);
+      }
     }
-  }, [route.params?.order, userProfile?._id, userProfile?.id, userProfile?.phone]);
+  }, [route.params?.order, route.params?.orderId, orders, userProfile?._id, userProfile?.id, userProfile?.phone]);
 
   useEffect(() => {
     if (activeOrder?._id) {
