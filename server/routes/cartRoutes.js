@@ -13,7 +13,7 @@ import { requireAuth } from '../middleware/auth.js';
 
 const router = express.Router();
 
-router.use(requireAuth);
+router.use('/cart', requireAuth);
 
 router.get('/cart', getCart);
 router.post('/cart/items', addItem);

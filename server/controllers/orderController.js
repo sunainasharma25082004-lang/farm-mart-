@@ -4,6 +4,7 @@ import Product from '../models/Product.js';
 import Vendor from '../models/Vendor.js';
 import User from '../models/User.js';
 import { notifyNewOrder, notifyOrderStatus, notifyProductStock } from '../services/notify.js';
+import { dispatchOrderToRiders } from '../services/riderAssignmentService.js';
 
 // @desc    Create a new order with single-vendor validation and atomic stock locking
 // @route   POST /api/orders
@@ -605,6 +606,13 @@ export const updateOrderStatus = async (req, res) => {
 
     // 🔴 Notify real-time status change to customer & vendor
     notifyOrderStatus(populatedOrder);
+
+    // If order is ready for rider pickup, trigger auto-assignment dispatcher
+    if (status === 'READY_FOR_RIDER') {
+      dispatchOrderToRiders(populatedOrder).catch((err) =>
+        console.error('Error dispatching order to riders:', err)
+      );
+    }
 
     res.json({
       success: true,

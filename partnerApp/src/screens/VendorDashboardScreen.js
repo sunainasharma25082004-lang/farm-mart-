@@ -75,7 +75,7 @@ export const VendorDashboardScreen = ({ navigation, initialSection }) => {
 
   // Active in-flight orders
   const inFlightOrders = orders.filter((o) =>
-    ['NEW_ORDER', 'ACCEPTED', 'PREPARING', 'READY_FOR_RIDER', 'OUT_FOR_DELIVERY'].includes(o.status)
+    ['NEW_ORDER', 'ACCEPTED', 'PREPARING', 'READY_FOR_RIDER', 'RIDER_ASSIGNED', 'RIDER_ARRIVED_STORE', 'OUT_FOR_DELIVERY'].includes(o.status)
   );
 
   const handleUpdateStatus = async (orderId, newStatus, reason = '') => {
@@ -376,18 +376,57 @@ export const VendorDashboardScreen = ({ navigation, initialSection }) => {
                               >
                                 <Text style={styles.readyBtnText}>READY</Text>
                               </TouchableOpacity>
+                            ) : o.status === 'READY_FOR_RIDER' ? (
+                              <View style={styles.searchingRiderPill}>
+                                <ActivityIndicator size="small" color="#0284c7" />
+                                <Text style={styles.searchingRiderText}>DISPATCHING</Text>
+                              </View>
+                            ) : o.status === 'RIDER_ASSIGNED' ? (
+                              <View style={styles.riderEnRoutePill}>
+                                <Ionicons name="bicycle" size={14} color="#0284c7" />
+                                <Text style={styles.riderEnRouteText}>RIDER EN ROUTE</Text>
+                              </View>
+                            ) : o.status === 'RIDER_ARRIVED_STORE' ? (
+                              <View style={styles.riderAtStorePill}>
+                                <Ionicons name="storefront" size={14} color="#ea580c" />
+                                <Text style={styles.riderAtStoreText}>AT STORE</Text>
+                              </View>
                             ) : (
-                              <TouchableOpacity
-                                style={styles.deliverSlateBtn}
-                                onPress={() => handleUpdateStatus(o._id, 'OUT_FOR_DELIVERY')}
-                                disabled={isProcessing}
-                                activeOpacity={0.8}
-                              >
-                                <Text style={styles.deliverBtnText}>DISPATCH</Text>
-                              </TouchableOpacity>
+                              <View style={styles.dispatchedPill}>
+                                <Ionicons name="checkmark-circle" size={14} color="#16a34a" />
+                                <Text style={styles.dispatchedText}>DISPATCHED</Text>
+                              </View>
                             )}
                           </View>
                         </View>
+
+                        {/* Store Pickup OTP & Rider Details Section */}
+                        {['READY_FOR_RIDER', 'RIDER_ASSIGNED', 'RIDER_ARRIVED_STORE', 'OUT_FOR_DELIVERY'].includes(o.status) && (
+                          <View style={styles.riderHandoffWrap}>
+                            <View style={styles.pickupOtpBadge}>
+                              <Text style={styles.pickupOtpKey}>STORE PICKUP OTP:</Text>
+                              <Text style={styles.pickupOtpVal}>{o.pickupOtp || '----'}</Text>
+                            </View>
+
+                            {o.rider && (
+                              <View style={styles.assignedRiderMeta}>
+                                <Ionicons name="bicycle" size={14} color="#0284c7" />
+                                <Text style={styles.assignedRiderName}>
+                                  {o.rider?.name || 'Gurmukh Singh'} ({o.rider?.vehicle?.plateNumber || 'PB-10-AB-1234'})
+                                </Text>
+                              </View>
+                            )}
+
+                            {o.status === 'RIDER_ARRIVED_STORE' && (
+                              <View style={styles.arrivedAlertBanner}>
+                                <Ionicons name="alert-circle" size={14} color="#ea580c" />
+                                <Text style={styles.arrivedAlertText}>
+                                  Rider is at counter! Confirm Store OTP {o.pickupOtp || '----'} & Handover parcel.
+                                </Text>
+                              </View>
+                            )}
+                          </View>
+                        )}
                       </View>
                     );
                   })}
@@ -789,5 +828,122 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '800',
     color: '#ffffff'
+  },
+  searchingRiderPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#eff6ff',
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#bfdbfe'
+  },
+  searchingRiderText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#0284c7'
+  },
+  riderEnRoutePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#eff6ff',
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 8
+  },
+  riderEnRouteText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#0284c7'
+  },
+  riderAtStorePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#fff7ed',
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#fed7aa'
+  },
+  riderAtStoreText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#ea580c'
+  },
+  dispatchedPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#f0fdf4',
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 8
+  },
+  dispatchedText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#16a34a'
+  },
+  riderHandoffWrap: {
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#f1f5f9'
+  },
+  pickupOtpBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#f8fafc',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    alignSelf: 'flex-start'
+  },
+  pickupOtpKey: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: '#64748b'
+  },
+  pickupOtpVal: {
+    fontSize: 13,
+    fontWeight: '900',
+    color: '#0f172a',
+    letterSpacing: 1.5
+  },
+  assignedRiderMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 6
+  },
+  assignedRiderName: {
+    fontSize: 11.5,
+    color: '#0284c7',
+    fontWeight: '700'
+  },
+  arrivedAlertBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#fff7ed',
+    padding: 8,
+    borderRadius: 8,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#fdba74'
+  },
+  arrivedAlertText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#c2410c',
+    flex: 1
   }
 });

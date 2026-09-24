@@ -85,6 +85,8 @@ const orderSchema = new mongoose.Schema(
         'ACCEPTED',
         'PREPARING',
         'READY_FOR_RIDER',
+        'RIDER_ASSIGNED',
+        'RIDER_ARRIVED_STORE',
         'OUT_FOR_DELIVERY',
         'DELIVERED',
         'CANCELLED',
@@ -104,15 +106,40 @@ const orderSchema = new mongoose.Schema(
       type: String,
       default: ''
     },
+    pickupOtp: {
+      type: String,
+      default: () => Math.floor(1000 + Math.random() * 9000).toString()
+    },
     deliveryOtp: {
       type: String,
       default: () => Math.floor(1000 + Math.random() * 9000).toString()
     },
+    rider: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Rider',
+      default: null,
+      index: true
+    },
     riderId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      ref: 'Rider',
       default: null
     },
+    riderAssignedAt: {
+      type: Date,
+      default: null
+    },
+    riderAcceptedAt: {
+      type: Date,
+      default: null
+    },
+    deliveryRoute: [
+      {
+        lat: Number,
+        lng: Number,
+        at: { type: Date, default: Date.now }
+      }
+    ],
     placedAt: {
       type: Date,
       default: Date.now

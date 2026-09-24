@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 import { StyleSheet, StatusBar, Platform, View, Text, TouchableOpacity } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer } from '@react-navigation/native';
+import { RiderAuthProvider } from './src/context/RiderAuthContext';
 import { DeliveryProvider } from './src/context/DeliveryContext';
 import { DeliveryNavigator } from './src/navigation/DeliveryNavigator';
 
@@ -39,14 +40,16 @@ export default function App() {
   return (
     <ErrorBoundary>
       <SafeAreaProvider>
-        <DeliveryProvider>
-          <View style={styles.container}>
-            <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-            <NavigationContainer>
-              <DeliveryNavigator />
-            </NavigationContainer>
-          </View>
-        </DeliveryProvider>
+        <RiderAuthProvider>
+          <DeliveryProvider>
+            <View style={styles.container}>
+              <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+              <NavigationContainer>
+                <DeliveryNavigator />
+              </NavigationContainer>
+            </View>
+          </DeliveryProvider>
+        </RiderAuthProvider>
       </SafeAreaProvider>
     </ErrorBoundary>
   );
@@ -67,7 +70,7 @@ const styles = StyleSheet.create({
   },
   errorTitle: {
     fontSize: 20,
-    fontWeight: '500',
+    fontWeight: '700',
     color: '#0f172a',
     marginBottom: 8
   },
@@ -85,7 +88,7 @@ const styles = StyleSheet.create({
   },
   reloadText: {
     color: '#ffffff',
-    fontWeight: '500',
+    fontWeight: '700',
     fontSize: 14
   }
 });

@@ -14,10 +14,16 @@
 
 You can download and install the production-ready standalone APKs directly onto any Android smartphone without requiring developer tools or Expo Go:
 
-| Application | Direct APK Download Link | EAS Build Dashboard | Status |
-| :--- | :--- | :--- | :--- |
-| **🏪 Partner Portal (`partnerApp`)** | [⬇️ **Download Partner APK (v1.0.0)**](https://expo.dev/artifacts/eas/308ruSGs-6RbNi2kbOgWj_1pyy8wY4J17Nw1T2pmNDg.apk) | [EAS Partner Dashboard](https://expo.dev/accounts/sfarmart/projects/sfarmart-partner/builds/25f2b536-404a-4d05-bfed-1e254a4e6ed5) | `FINISHED (Verified)` |
-| **🛒 Consumer App (`userApp`)** | [⬇️ **Download User APK (v1.0.0)**](https://expo.dev/artifacts/eas/vmnDnyLaiaguyEPAwb5YzZehXOMkgrXGxx_sfO948oo.apk) | [EAS User Dashboard](https://expo.dev/accounts/sfarmart/projects/userApp/builds/89c35192-9ccc-474b-a900-f8283866bdd6) | `FINISHED (Verified)` |
+| Application | Direct Download Link | Format | Build | Status |
+| :--- | :--- | :---: | :---: | :--- |
+| **🏪 Partner Portal (`partnerApp`)** | [⬇️ **Download Partner APK (v1.0.0)**](https://expo.dev/artifacts/eas/308ruSGs-6RbNi2kbOgWj_1pyy8wY4J17Nw1T2pmNDg.apk) | `.apk` | `1` | `FINISHED (Verified)` |
+| **🏪 Partner Portal (`partnerApp`)** | [📦 **Download Play Store AAB (v1.0.0-b4)**](https://expo.dev/artifacts/eas/1lGCPbUOnNSzOw_PpfMzBuzP55iSALenufyw5kUrEY8.aab) | `.aab` | `4` | `FINISHED (Play Store Ready)` |
+| **🛒 Consumer App (`userApp`)** | [⬇️ **Download User APK (v1.0.0)**](https://expo.dev/artifacts/eas/vmnDnyLaiaguyEPAwb5YzZehXOMkgrXGxx_sfO948oo.apk) | `.apk` | `1` | `FINISHED (Verified)` |
+| **🛒 Consumer App (`userApp`)** | [📦 **Download Play Store AAB (v1.0.0-b4)**](https://expo.dev/artifacts/eas/paO6d3GS1tUUXcnkxTCWKaHbzcnNphTsUnPMDpHE9mI.aab) | `.aab` | `4` | `FINISHED (Play Store Ready)` |
+
+* **Live EAS Build Dashboard (Partner App):** [Build 02e5ddd1](https://expo.dev/accounts/sfarmart/projects/sfarmart-partner/builds/02e5ddd1-3084-43ee-92ed-a67f3f61401e)
+* **Package Name:** `com.sfarmart.partner`
+* **Version Code:** `4`
 
 > [!TIP]
 > **Android Installation Instructions:**
@@ -354,6 +360,36 @@ graph TD
     F -->|Rider Dispatched & Picked Up| G[OUT_FOR_DELIVERY]
     G -->|Customer 4-Digit OTP Verified| H[DELIVERED & Closed]
 ```
+
+---
+
+## 🛵 Delivery App (`deliveryApp`) Integration & Order Handoff
+
+Jab aap **Delivery App (`deliveryApp`)** ko check karenge, to partner app se delivery app tak ka handoff is flow me work karta hai:
+
+### 1. The Handoff Trigger: "Order is Packed"
+* Merchant jab food cook kar leta hai ya farm veggies weigh & pack kar leta hai, to Partner Dashboard par green action button tap karta hai:
+  ```text
+  ┌────────────────────────────────────────────────────────┐
+  │ [ ✅ READY — Handover to Delivery Partner ]            │
+  └────────────────────────────────────────────────────────┘
+  ```
+* Yeh button order status ko **`READY_FOR_RIDER`** me update karta hai (`PATCH /api/orders/:id/status`), jo automatically nearest available rider ko geospatial dispatch trigger karta hai.
+
+### 2. Assigned Rider Details & Store Pickup OTP Handshake
+* Jaise hi rider offer accept karta hai, order status **`RIDER_ASSIGNED`** ho jata hai:
+  - **Rider Info Displayed:** Merchant dashboard par assigned rider ka naam aur vehicle plate number show hota hai (e.g. `🛵 Rider: Gurmukh Singh (PB-10-AB-1234)`).
+  - **Store Pickup OTP Badge:** Merchant ke order card par **`STORE PICKUP OTP: [XXXX]`** highlight hota hai.
+  - **Rider Arrival Alert (`RIDER_ARRIVED_STORE`):** Rider store par pahunch kar jab *"Arrived at Store"* tap karta hai, merchant console par orange banner alert aata hai: *"🏪 Rider is at counter! Confirm Store OTP & Handover parcel."*
+  - Rider ko parcel tabhi diya jata hai jab rider ye Store Pickup OTP apne app me enter karke verify karta hai. Isse parcel ka misuse ya wrong collection 100% prevent hota hai.
+
+### 3. Rider Pickup ➔ Out for Delivery
+* Store Pickup OTP match hote hi order status automatic **`OUT_FOR_DELIVERY`** me transition hota hai.
+* Partner console par live status pill change hokar *"DISPATCHED with Gurmukh Singh"* ho jati hai.
+
+### 4. Final Delivery & Revenue Settlement
+* Customer ke doorstep par 4-digit Delivery OTP verify hote hi order **`DELIVERED`** state me close ho jata hai.
+* Partner App ke [SettlementsScreen](file:///c:/viz/all%20app/farmart/farm-mart-/partnerApp/src/screens/SettlementsScreen.js) me is order ki revenue automatically **"Pending Wednesday Payout"** ledger me credit ho jati hai!
 
 ---
 

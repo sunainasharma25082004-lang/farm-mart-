@@ -1,116 +1,255 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
-import { driverProfile as initialProfile, weeklyEarningsHistory as initialHistory } from '../data/mockDeliveryData';
-
-const API_BASE_URL =
-  typeof window !== 'undefined' && window.location && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-    ? `http://${window.location.hostname}:5000/api`
-    : (process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000/api');
+import React, { createContext, useState, useContext, useEffect, useRef, useCallback } from 'react';
+import { useRiderAuth } from './RiderAuthContext';
+import { riderApi } from '../services/api';
+import { getSocket, connectSocket } from '../services/socket';
 
 const DeliveryContext = createContext();
 
 export const DeliveryProvider = ({ children }) => {
-  const [profile, setProfile] = useState(initialProfile);
-  const [tasks, setTasks] = useState([]);
+  const { rider, isAuthenticated, updateRiderProfile } = useRiderAuth();
   const [currentTask, setCurrentTask] = useState(null);
-  const [completedList, setCompletedList] = useState([]);
-  const [earningsHistory, setEarningsHistory] = useState(initialHistory);
+  const [pendingOffer, setPendingOffer] = useState(null);
+  const [availableOrders, setAvailableOrders] = useState([]);
+  const [earnings, setEarnings] = useState({
+    todayEarnings: 0,
+    totalEarnings: 0,
+    completedCount: 0,
+    recentTrips: []
+  });
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
+  // Simulated GPS position coordinates (Ludhiana default)
+  const riderCoordsRef = useRef({
+    lat: rider?.currentLocation?.coordinates?.[1] || 30.9010,
+    lng: rider?.currentLocation?.coordinates?.[0] || 75.8573
+  });
+
+  // Fetch active order and earnings
+  const refreshActiveOrder = useCallback(async () => {
+    if (!isAuthenticated) return;
+    try {
+      const res = await riderApi.getActiveOrder();
+      if (res.data?.success && res.data?.hasActiveOrder) {
+        setCurrentTask(res.data.order);
+      } else {
+        setCurrentTask(null);
+      }
+    } catch (err) {
+      console.warn('[DeliveryContext] Active order fetch error:', err.message);
+    }
+  }, [isAuthenticated]);
+
+  const refreshEarnings = useCallback(async () => {
+    if (!isAuthenticated) return;
+    try {
+      const res = await riderApi.getEarnings();
+      if (res.data?.success) {
+        setEarnings({
+          todayEarnings: res.data.todayEarnings || 0,
+          totalEarnings: res.data.totalEarnings || 0,
+          completedCount: res.data.completedCount || 0,
+          recentTrips: res.data.recentTrips || []
+        });
+      }
+    } catch (err) {
+      console.warn('[DeliveryContext] Earnings fetch error:', err.message);
+    }
+  }, [isAuthenticated]);
+
+  const fetchAvailablePool = useCallback(async () => {
+    if (!isAuthenticated) return;
+    try {
+      const res = await riderApi.getPendingDeliveryOrders();
+      if (res.data?.success && Array.isArray(res.data.orders)) {
+        setAvailableOrders(res.data.orders);
+      }
+    } catch {
+      // Ignore pool error
+    }
+  }, [isAuthenticated]);
+
+  // Initial load on authentication
   useEffect(() => {
-    fetchDeliveryTasks();
-    const interval = setInterval(fetchDeliveryTasks, 10000);
-    return () => clearInterval(interval);
-  }, []);
+    if (isAuthenticated) {
+      refreshActiveOrder();
+      refreshEarnings();
+      fetchAvailablePool();
 
-  const fetchDeliveryTasks = async () => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/orders/delivery`);
-      const data = await response.json();
-      if (data.success) {
-        // Map _id to id to prevent frontend breakage
-        const formattedTasks = data.orders.map(o => ({ ...o, id: o._id, estEarnings: 65, distanceKm: 3.5, itemsCount: o.itemsCount || o.items.length, items: o.items.map(i => `${i.qty}x ${i.name}`), totalToCollect: o.paymentMethod === 'COD' ? o.totalAmount : 0 }));
-        setTasks(formattedTasks);
-        if (formattedTasks.length > 0 && !currentTask) {
-          setCurrentTask(formattedTasks[0]);
+      const pollInterval = setInterval(() => {
+        refreshActiveOrder();
+        fetchAvailablePool();
+      }, 12000);
+
+      return () => clearInterval(pollInterval);
+    } else {
+      setCurrentTask(null);
+      setPendingOffer(null);
+      setAvailableOrders([]);
+    }
+  }, [isAuthenticated, refreshActiveOrder, refreshEarnings, fetchAvailablePool]);
+
+  // WebSocket event listeners for order:offer and order:status_updated
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    let cleanup = null;
+
+    connectSocket().then((socket) => {
+      if (!socket) return;
+
+      const handleOffer = (offer) => {
+        console.log('🔔 [DeliveryContext] Incoming order offer received:', offer);
+        setPendingOffer(offer);
+      };
+
+      const handleStatus = (updatedOrder) => {
+        console.log('📦 [DeliveryContext] Order status update received:', updatedOrder);
+        if (currentTask && currentTask.id === updatedOrder._id) {
+          setCurrentTask((prev) => (prev ? { ...prev, status: updatedOrder.status } : null));
         }
+        refreshActiveOrder();
+        fetchAvailablePool();
+      };
+
+      socket.on('order:offer', handleOffer);
+      socket.on('order:status_updated', handleStatus);
+      socket.on('order:status', handleStatus);
+
+      cleanup = () => {
+        socket.off('order:offer', handleOffer);
+        socket.off('order:status_updated', handleStatus);
+        socket.off('order:status', handleStatus);
+      };
+    });
+
+    return () => {
+      if (cleanup) cleanup();
+    };
+  }, [isAuthenticated, currentTask, refreshActiveOrder, fetchAvailablePool]);
+
+  // GPS Location Beacon Loop (emits coordinate pings every 5s while online)
+  useEffect(() => {
+    if (!isAuthenticated || rider?.status === 'OFFLINE') return;
+
+    const locationInterval = setInterval(() => {
+      // Gentle jitter simulation so moving dot is visibly animated on customer map
+      const deltaLat = (Math.random() - 0.5) * 0.00035;
+      const deltaLng = (Math.random() - 0.5) * 0.00035;
+      riderCoordsRef.current.lat += deltaLat;
+      riderCoordsRef.current.lng += deltaLng;
+
+      const activeId = currentTask?.id || currentTask?._id || null;
+
+      // Send to server
+      riderApi
+        .sendLocation(
+          riderCoordsRef.current.lat,
+          riderCoordsRef.current.lng,
+          Math.floor(Math.random() * 360),
+          18, // km/h
+          activeId
+        )
+        .catch(() => {});
+
+      // Also emit over socket directly for instant reaction
+      const socket = getSocket();
+      if (socket?.connected && activeId) {
+        socket.emit('rider:location', {
+          orderId: activeId,
+          lat: riderCoordsRef.current.lat,
+          lng: riderCoordsRef.current.lng,
+          heading: Math.floor(Math.random() * 360),
+          speed: 18
+        });
       }
-    } catch (e) {
-      console.warn("Could not fetch delivery orders");
-    }
-  };
+    }, 5000);
 
-  const toggleDuty = () => {
-    setProfile((prev) => ({ ...prev, isOnline: !prev.isOnline }));
-  };
+    return () => clearInterval(locationInterval);
+  }, [isAuthenticated, rider?.status, currentTask]);
 
-  const updateTaskStatus = async (taskId, newStatus) => {
+  // Rider Actions
+  const acceptOffer = async (orderId) => {
     try {
-      await fetch(`${API_BASE_URL}/orders/${taskId}/status`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus })
-      });
-      setTasks((prevTasks) =>
-        prevTasks.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t))
-      );
-      if (currentTask && currentTask.id === taskId) {
-        setCurrentTask((prev) => (prev ? { ...prev, status: newStatus } : null));
+      const res = await riderApi.acceptOffer(orderId);
+      if (res.data?.success) {
+        setPendingOffer(null);
+        await refreshActiveOrder();
+        updateRiderProfile({ status: 'ON_DELIVERY' });
+        return { success: true };
       }
-    } catch (e) {
-      console.warn("Failed to update task status");
+      return { success: false, message: res.data?.message };
+    } catch (err) {
+      return { success: false, message: err.response?.data?.message || err.message };
     }
   };
 
-  const completeDelivery = async (taskId) => {
-    const finishedTask = tasks.find((t) => t.id === taskId) || currentTask;
-    const earnedAmount = finishedTask ? finishedTask.estEarnings : 65;
-
+  const declineOffer = async (orderId) => {
     try {
-      await fetch(`${API_BASE_URL}/orders/${taskId}/status`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'DELIVERED' })
-      });
-    } catch (e) {
-      console.warn("Could not sync completeDelivery to server");
+      await riderApi.declineOffer(orderId);
+      setPendingOffer(null);
+      return { success: true };
+    } catch (err) {
+      setPendingOffer(null);
+      return { success: false, message: err.message };
     }
-
-    // 1. Remove from active tasks queue
-    const remainingTasks = tasks.filter((t) => t.id !== taskId);
-    setTasks(remainingTasks);
-
-    // 2. Add to completed deliveries list
-    if (finishedTask) {
-      setCompletedList((prev) => [{ ...finishedTask, status: 'DELIVERED', completedAt: new Date().toLocaleTimeString() }, ...prev]);
-    }
-
-    // 3. Update driver stats
-    setProfile((prev) => ({
-      ...prev,
-      todayEarnings: prev.todayEarnings + earnedAmount,
-      todayTrips: prev.todayTrips + 1,
-      completedDeliveries: prev.completedDeliveries + 1
-    }));
-
-    // 4. Update current active task
-    setCurrentTask(remainingTasks.length > 0 ? remainingTasks[0] : null);
   };
 
-  const selectTask = (task) => {
-    setCurrentTask(task);
+  const markArrivedAtStore = async (orderId) => {
+    try {
+      const res = await riderApi.arrivedAtStore(orderId);
+      if (res.data?.success) {
+        setCurrentTask((prev) => (prev ? { ...prev, status: 'RIDER_ARRIVED_STORE' } : null));
+        return { success: true };
+      }
+    } catch (err) {
+      return { success: false, message: err.response?.data?.message || err.message };
+    }
+  };
+
+  const verifyPickup = async (orderId, pickupOtp) => {
+    try {
+      const res = await riderApi.verifyPickup(orderId, pickupOtp);
+      if (res.data?.success) {
+        setCurrentTask((prev) => (prev ? { ...prev, status: 'OUT_FOR_DELIVERY' } : null));
+        return { success: true };
+      }
+    } catch (err) {
+      return { success: false, message: err.response?.data?.message || err.message };
+    }
+  };
+
+  const verifyDelivery = async (orderId, deliveryOtp) => {
+    try {
+      const res = await riderApi.verifyDelivery(orderId, deliveryOtp);
+      if (res.data?.success) {
+        setCurrentTask(null);
+        await refreshEarnings();
+        updateRiderProfile({ status: 'ONLINE_IDLE' });
+        return { success: true, earnedAmount: res.data?.earnedAmount || 65 };
+      }
+    } catch (err) {
+      return { success: false, message: err.response?.data?.message || err.message };
+    }
   };
 
   return (
     <DeliveryContext.Provider
       value={{
-        profile,
-        toggleDuty,
-        tasks,
         currentTask,
-        setCurrentTask: selectTask,
-        updateTaskStatus,
-        completeDelivery,
-        completedList,
-        weeklyEarningsHistory: earningsHistory
+        pendingOffer,
+        availableOrders,
+        earnings,
+        isRefreshing,
+        currentCoords: riderCoordsRef.current,
+        acceptOffer,
+        declineOffer,
+        markArrivedAtStore,
+        verifyPickup,
+        verifyDelivery,
+        refreshActiveOrder,
+        refreshEarnings,
+        fetchAvailablePool,
+        clearPendingOffer: () => setPendingOffer(null)
       }}
     >
       {children}
@@ -118,4 +257,12 @@ export const DeliveryProvider = ({ children }) => {
   );
 };
 
-export const useDelivery = () => useContext(DeliveryContext);
+export const useDelivery = () => {
+  const context = useContext(DeliveryContext);
+  if (!context) {
+    throw new Error('useDelivery must be used within a DeliveryProvider');
+  }
+  return context;
+};
+
+export default DeliveryContext;

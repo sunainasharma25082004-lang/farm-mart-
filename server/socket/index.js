@@ -56,6 +56,31 @@ export function initSocket(httpServer) {
       console.log(`📢 Socket ${socket.id} joined room: customer:${uId}`);
     }
 
+    if (user?.role === 'RIDER' && user.id) {
+      const rId = user.id.toString();
+      socket.join(`rider:${rId}`);
+      console.log(`🛵 Socket ${socket.id} joined room: rider:${rId}`);
+    }
+
+    // Rider live location broadcast
+    socket.on('rider:location', (payload) => {
+      const riderId = (socket.user?.sub || socket.user?.id || socket.user?._id)?.toString();
+      if (!riderId) return;
+
+      const { orderId, lat, lng, heading = 0, speed = 0 } = payload || {};
+      if (orderId && typeof lat === 'number' && typeof lng === 'number') {
+        io.to(`order:${orderId}`).emit('order:rider_location', {
+          orderId,
+          riderId,
+          lat,
+          lng,
+          heading,
+          speed,
+          at: new Date()
+        });
+      }
+    });
+
     // Client explicitly joining an order room for live tracking (with ownership check)
     socket.on('join:order', async (orderId) => {
       if (!orderId) return;

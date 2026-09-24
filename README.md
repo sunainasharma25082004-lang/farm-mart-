@@ -24,8 +24,8 @@ You can download and install the production-ready standalone APKs directly onto 
 
 | Application | Direct APK Download Link | EAS Build Dashboard | Status |
 | :--- | :--- | :--- | :--- |
-| **🏪 Partner Portal (`partnerApp`)** | [⬇️ **Download Partner APK (v1.0.0)**](https://expo.dev/artifacts/eas/308ruSGs-6RbNi2kbOgWj_1pyy8wY4J17Nw1T2pmNDg.apk) | [EAS Partner Dashboard](https://expo.dev/accounts/sfarmart/projects/sfarmart-partner/builds/25f2b536-404a-4d05-bfed-1e254a4e6ed5) | `FINISHED (Verified)` |
-| **🛒 Consumer App (`userApp`)** | [⬇️ **Download User APK (v1.0.0)**](https://expo.dev/artifacts/eas/vmnDnyLaiaguyEPAwb5YzZehXOMkgrXGxx_sfO948oo.apk) | [EAS User Dashboard](https://expo.dev/accounts/sfarmart/projects/userApp/builds/89c35192-9ccc-474b-a900-f8283866bdd6) | `FINISHED (Verified)` |
+| **🏪 Partner Portal (`partnerApp`)** | [⬇️ **Download Partner APK (v1.0.0)**](https://expo.dev/artifacts/eas/308ruSGs-6RbNi2kbOgWj_1pyy8wY4J17Nw1T2pmNDg.apk)<br>[📦 **Download Play Store AAB (v1.0.0-b4)**](https://expo.dev/artifacts/eas/1lGCPbUOnNSzOw_PpfMzBuzP55iSALenufyw5kUrEY8.aab) | [EAS Partner Dashboard (Build 4)](https://expo.dev/accounts/sfarmart/projects/sfarmart-partner/builds/02e5ddd1-3084-43ee-92ed-a67f3f61401e) | `FINISHED (Verified .aab)` |
+| **🛒 Consumer App (`userApp`)** | [⬇️ **Download User APK (v1.0.0)**](https://expo.dev/artifacts/eas/vmnDnyLaiaguyEPAwb5YzZehXOMkgrXGxx_sfO948oo.apk)<br>[📦 **Download Play Store AAB (v1.0.0-b4)**](https://expo.dev/artifacts/eas/paO6d3GS1tUUXcnkxTCWKaHbzcnNphTsUnPMDpHE9mI.aab) | [EAS User Dashboard (Build 4)](https://expo.dev/accounts/sfarmart/projects/userApp/builds/9dbb8f7a-6257-4a5a-bd33-e17fb98b68d8) | `FINISHED (Verified .aab)` |
 
 ---
 

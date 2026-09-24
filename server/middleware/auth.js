@@ -54,6 +54,19 @@ export const requireAuth = async (req, res, next) => {
       return next();
     }
 
+    if (decoded.role === 'RIDER') {
+      req.user = {
+        _id: userId,
+        id: userId,
+        riderId: userId,
+        role: 'RIDER',
+        phone: decoded.phone,
+        name: decoded.name,
+        status: 'ACTIVE'
+      };
+      return next();
+    }
+
     const user = await User.findById(userId);
     if (!user) {
       return res.status(401).json({

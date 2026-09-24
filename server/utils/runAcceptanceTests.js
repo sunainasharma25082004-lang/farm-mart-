@@ -374,6 +374,77 @@ async function runTests() {
       `Created: ${newProdRes.product?.name}, Deleted: ${delRes.deletedProductId}`
     );
 
+    // 15. Rider Dual-Token Authentication
+    const riderLoginRes = await fetch(`${API_BASE}/rider/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: '9876543220', password: 'demo123' })
+    }).then((r) => r.json());
+
+    recordTest(
+      'TC-16: Rider Dual-Token Login (Gurmukh Singh: 9876543220)',
+      riderLoginRes.success && !!riderLoginRes.token && !!riderLoginRes.refreshToken,
+      `Rider: ${riderLoginRes.rider?.name}, Plate: ${riderLoginRes.rider?.vehicleNumber || riderLoginRes.rider?.vehicle?.plateNumber}`
+    );
+
+    // 16. Rider Refresh Token Rotation
+    const riderRefreshRes = await fetch(`${API_BASE}/rider/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken: riderLoginRes.refreshToken })
+    }).then((r) => r.json());
+
+    recordTest(
+      'TC-17: Rider Token Rotation & Refresh Endpoint',
+      riderRefreshRes.success && !!riderRefreshRes.token && !!riderRefreshRes.refreshToken,
+      `New Token issued, session valid`
+    );
+
+    const activeRiderToken = riderRefreshRes.token || riderLoginRes.token;
+
+    // 17. Rider Duty Status Toggle (ONLINE_IDLE)
+    const dutyRes = await fetch(`${API_BASE}/rider/duty/status`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${activeRiderToken}`
+      },
+      body: JSON.stringify({ status: 'ONLINE_IDLE' })
+    }).then((r) => r.json());
+
+    recordTest(
+      'TC-18: Rider Duty Status Switch (ONLINE_IDLE)',
+      dutyRes.success && dutyRes.rider?.status === 'ONLINE_IDLE',
+      `Duty status: ${dutyRes.rider?.status}`
+    );
+
+    // 18. Rider Rate-Limited Location Beacon
+    const locRes = await fetch(`${API_BASE}/rider/location`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${activeRiderToken}`
+      },
+      body: JSON.stringify({ lat: 30.9010, lng: 75.8573, heading: 90, speed: 18 })
+    }).then((r) => r.json());
+
+    recordTest(
+      'TC-19: Rider Live Location Telemetry Beacon',
+      locRes.success,
+      `Location registered: 30.9010, 75.8573`
+    );
+
+    // 19. Rider Earnings Ledger Endpoint
+    const earningsRes = await fetch(`${API_BASE}/rider/earnings`, {
+      headers: { Authorization: `Bearer ${activeRiderToken}` }
+    }).then((r) => r.json());
+
+    recordTest(
+      'TC-20: Rider Earnings & Settlement Ledger',
+      earningsRes.success && typeof earningsRes.todayEarnings === 'number',
+      `Today: ₹${earningsRes.todayEarnings}, Total: ₹${earningsRes.totalEarnings}`
+    );
+
     console.log('\n=========================================');
     const passedCount = results.filter((r) => r.passed).length;
     console.log(`TOTAL TESTS: ${results.length} | PASSED: ${passedCount} | FAILED: ${results.length - passedCount}`);

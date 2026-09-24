@@ -4,18 +4,36 @@ Official hyper-local customer marketplace application for **S-farmart 24**, buil
 
 ---
 
+## 📲 Direct Standalone APK & Google Play AAB Downloads
+
+You can download and test the production-ready packages directly:
+
+| Application | Direct Download Link | Format | Build | Status |
+| :--- | :--- | :---: | :---: | :--- |
+| **🛒 Consumer App (`userApp`)** | [⬇️ **Download User APK (v1.0.0)**](https://expo.dev/artifacts/eas/vmnDnyLaiaguyEPAwb5YzZehXOMkgrXGxx_sfO948oo.apk) | `.apk` | `1` | `FINISHED (Verified)` |
+| **🛒 Consumer App (`userApp`)** | [📦 **Download Play Store AAB (v1.0.0-b4)**](https://expo.dev/artifacts/eas/paO6d3GS1tUUXcnkxTCWKaHbzcnNphTsUnPMDpHE9mI.aab) | `.aab` | `4` | `FINISHED (Play Store Ready)` |
+| **🏪 Partner Portal (`partnerApp`)** | [📦 **Download Play Store AAB (v1.0.0-b4)**](https://expo.dev/artifacts/eas/1lGCPbUOnNSzOw_PpfMzBuzP55iSALenufyw5kUrEY8.aab) | `.aab` | `4` | `FINISHED (Play Store Ready)` |
+
+* **Live EAS Build Dashboard (User App):** [Build 9dbb8f7a](https://expo.dev/accounts/sfarmart/projects/userApp/builds/9dbb8f7a-6257-4a5a-bd33-e17fb98b68d8)
+* **Package Name:** `com.sfarmart.userapp`
+* **Version Code:** `4`
+
+---
+
 ## 📑 Table of Contents
-1. [Brand Identity & Official Logo](#-brand-identity--official-logo)
-2. [End-to-End Customer Workflow (User Kaise Use Kr Raha H)](#-end-to-end-customer-workflow-user-kaise-use-kr-raha-h)
-3. [Core Features & Working Architecture](#-core-features--working-architecture)
-4. [ACID Concurrency, Stock Deduction & Safety Guards](#-acid-concurrency-stock-deduction--safety-guards)
-5. [Real-Time Synergy with Partner App (`partnerApp`)](#-real-time-synergy-with-partner-app-partnerapp)
-6. [UI/UX Design Architecture & Customization Guide (Design Ke Liye Kya Kr Sakte Hain)](#-uiux-design-architecture--customization-guide-design-ke-liye-kya-kr-sakte-hain)
-7. [Screen-by-Screen Breakdown](#-screen-by-screen-breakdown)
-8. [Directory Structure](#-directory-structure)
-9. [1-Tap Demo Customer Account](#-1-tap-demo-customer-account)
-10. [How to Run Locally](#-how-to-run-locally)
-11. [Phase 1: Production Authentication & Session Architecture](#-phase-1-production-authentication--session-architecture)
+1. [Direct Downloads (APK & Play Store AAB)](#-direct-standalone-apk--google-play-aab-downloads)
+2. [Brand Identity & Official Logo](#-brand-identity--official-logo)
+3. [End-to-End Customer Workflow](#-end-to-end-customer-workflow-user-kaise-use-kr-raha-h)
+4. [🛵 Delivery App (`deliveryApp`) Integration & Rider Handshake](#-delivery-app-deliveryapp-integration--rider-handshake)
+5. [Core Features & Working Architecture](#-core-features--working-architecture)
+6. [ACID Concurrency, Stock Deduction & Safety Guards](#-acid-concurrency-stock-deduction--safety-guards)
+7. [Real-Time Synergy with Partner App (`partnerApp`)](#-real-time-synergy-with-partner-app-partnerapp)
+8. [UI/UX Design Architecture & Customization Guide](#-uiux-design-architecture--customization-guide)
+9. [Screen-by-Screen Breakdown](#-screen-by-screen-breakdown)
+10. [Directory Structure](#-directory-structure)
+11. [1-Tap Demo Customer Account](#-1-tap-demo-customer-account)
+12. [Mobile Zero-Crash Architecture & Recent Safe-Area Fixes](#-mobile-zero-crash-architecture--recent-safe-area-fixes)
+13. [How to Run Locally](#-how-to-run-locally)
 
 ---
 
@@ -95,11 +113,60 @@ sequenceDiagram
 7. **Live Order Tracking:**
    * Order submit hote hi customer **Order Tracking Screen** par aata hai.
    * Animated pulse timeline dikhti hai:
-     1. `Order Placed`
-     2. `Store Packing`
-     3. `Rider Out for Delivery`
-     4. `Delivered`
+     1. `Order Placed` (`NEW_ORDER`)
+     2. `Order Accepted` (`ACCEPTED`)
+     3. `Store Packing` (`PREPARING`)
+     4. `Ready for Rider` (`READY_FOR_RIDER`)
+     5. `Rider Out for Delivery` (`OUT_FOR_DELIVERY`)
+     6. `Delivered` (`DELIVERED`)
    * Socket.io ke zariye partner jab bhi dashboard par order accept ya packed mark karta hai, customer screen par status real-time update ho jata hai.
+
+---
+
+## 🛵 Delivery App (`deliveryApp`) Integration & Rider Handshake
+
+Jab aap **Delivery App (`deliveryApp`)** inspect ya develop karenge, to ye samajhna zaroori hai ki `userApp`, `partnerApp` aur `deliveryApp` aapas me kaise interact karte hain:
+
+### 1. 6-Stage Order & Rider Lifecycle
+```
+[Customer Checkout] ──▶ [Partner Prepares] ──▶ [Rider Pick Up] ──▶ [Doorstep Handshake]
+  (userApp)               (partnerApp)           (deliveryApp)         (OTP Verification)
+
+1. NEW_ORDER      ──▶ 2. ACCEPTED / PREP  ──▶ 4. READY_FOR_RIDER ──▶ 5. OUT_FOR_DELIVERY ──▶ 6. DELIVERED
+(Stock Deducted)       (Kitchen/Weighing)      (Rider Pool Tasks)    (Live Customer Stepper)  (Final Settlement)
+```
+
+### 2. 🔐 4-Digit Delivery OTP Security Handshake
+* **Generation:** Order place hone par backend automatically random 4-digit Delivery OTP generate karta hai (`order.deliveryOtp`, e.g., `4829`).
+* **Customer Display:** Customer ko uski `userApp/src/screens/Customer/OrderTrackingScreen.js` par highlighted golden badge me ye OTP show hota hai:
+  ```text
+  ┌──────────────────────────────────┐
+  │ 🔐 Share Delivery OTP with Rider │
+  │              [ 4 8 2 9 ]         │
+  └──────────────────────────────────┘
+  ```
+* **Rider Verification:** Delivery Partner jab customer ke doorstep par pahunchta hai, to customer se OTP mangta hai aur apne `deliveryApp` terminal par enter karke order ko `DELIVERED` mark karta hai. Isse wrong delivery ya false delivery claims 100% eliminate ho jate hain.
+
+### 3. 💵 COD (Cash On Delivery) Cash Collection
+* Agar customer ne checkout ke time `Cash on Delivery (COD)` select kiya hai:
+  - `deliveryApp` par rider ko prominent **"Collect Cash: ₹Total"** ka alert card dikhta hai.
+  - Rider cash collect karne ke baad hi delivery verify karta hai.
+* Agar online pay (UPI / Cards / Wallet) ho chuka hai:
+  - Rider ko **"PAID ONLINE — Zero Cash Collection"** green badge show hota hai.
+
+### 4. 🛵 Assigned Rider Details & Live GPS Route Telemetry
+* `userApp/src/screens/Customer/OrderTrackingScreen.js` me jaise hi order `RIDER_ASSIGNED`, `RIDER_ARRIVED_STORE` ya `OUT_FOR_DELIVERY` banta hai:
+  - **Rider Card Displayed:** Rider ka photo initial, naam (e.g. *Gurmukh Singh*), vehicle model & number plate (`Hero Splendor • PB-10-AB-1234`), aur verified rating (`⭐ 4.9`) dikhti hai.
+  - **Direct Dialer:** 1-tap **"Call Rider"** button jo device phone dialer ko safely trigger karta hai (`Linking.openURL('tel:${riderPhone}')`).
+  - **Live GPS Telemetry Bar:** Socket event `order:rider_location` ke through rider ki moving speed (~18 km/h) aur live ETA dynamically update hoti hai.
+  - **6-Step Animated Progress Stepper:** Intermediate statuses `RIDER_ASSIGNED` aur `RIDER_ARRIVED_STORE` smooth pulse animation ke sath stepper line par advance karte hain.
+
+### 5. 📡 APIs & WebSockets for Delivery Integration
+* **Pending Orders Queue:** `GET /api/orders/delivery/pending` (status: `READY_FOR_RIDER`, `OUT_FOR_DELIVERY`).
+* **Status Updates:** `PATCH /api/orders/:id/status` (ya `PUT /api/orders/:id/status`).
+* **WebSocket Channels:**
+  - `order:status`: Real-time order lifecycle changes (Accepted -> Preparing -> Ready -> Rider Assigned -> Out for Delivery -> Delivered).
+  - `order:rider_location`: High-frequency moving coordinate beacon without hitting MongoDB.
 
 ---
 
@@ -354,6 +421,28 @@ S-farmart 24 features a bank-grade, hardened authentication and session manageme
   4. Resets the local shopping cart and user state.
   5. Smoothly redirects the navigation stack to `LoginScreen`.
 * **Security & Sessions:** Includes a **"Log out from all devices"** action in the Security section which calls `POST /api/auth/logout-all`, revoking all active sessions across all devices.
+
+---
+
+## 📱 Mobile Zero-Crash Architecture & Recent Safe-Area Fixes
+
+To guarantee that the Customer App runs without crashes on any real Android device, iPhone, or Web browser, the following defensive engineering principles have been implemented:
+
+1. **Android Safe-Area & Notch Inset Normalization (`Math.max`):**
+   * Physical Android devices often report `insets.top === 0` under translucent status bars, causing screen titles or icons to clip under the status bar clock.
+   * All screens now enforce normalized safe insets:
+     ```javascript
+     paddingTop: Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight || 24) : 20) + 12
+     ```
+2. **Keyboard Glitch Elimination (`softwareKeyboardLayoutMode: pan`):**
+   * Prevents screen shaking and input focus loss on Android when typing in Search, Address input, or Checkout.
+   * `keyboardShouldPersistTaps="handled"` added to all major ScrollViews so taps on buttons register immediately without needing a second tap to dismiss keyboard.
+3. **Universal `showAlert` (Hermes Crash Hazard Eliminated):**
+   * On native React Native (Hermes engine), standard JavaScript `alert()` throws `ReferenceError: alert is not defined`.
+   * Cross-platform `showAlert` helper (`src/utils/alert.js`) safely renders `Alert.alert()` on iOS/Android and native modal on Web.
+4. **Deep Defensive Null Guards:**
+   * Guarded array accesses and cart item lookups (`it.product?.name || 'Item'`).
+   * Fallback handlers for dialer `Linking.openURL` preventing unhandled promise rejections on SIM-less tablets.
 
 ---
 

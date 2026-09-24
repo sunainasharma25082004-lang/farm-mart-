@@ -12,6 +12,7 @@ const SocketContext = createContext();
 export const SocketProvider = ({ children, token, userId }) => {
   const [isConnected, setIsConnected] = useState(false);
   const [activeOrderUpdate, setActiveOrderUpdate] = useState(null);
+  const [riderLocationUpdate, setRiderLocationUpdate] = useState(null);
   const [productStockUpdate, setProductStockUpdate] = useState(null);
   const socketRef = useRef(null);
 
@@ -43,6 +44,10 @@ export const SocketProvider = ({ children, token, userId }) => {
         setActiveOrderUpdate(data);
       });
 
+      socket.on('order:rider_location', (data) => {
+        setRiderLocationUpdate(data);
+      });
+
       socket.on('product:stock', (data) => {
         console.log('⚡ Live product:stock update received:', data);
         setProductStockUpdate(data);
@@ -68,6 +73,7 @@ export const SocketProvider = ({ children, token, userId }) => {
       value={{
         isConnected,
         activeOrderUpdate,
+        riderLocationUpdate,
         productStockUpdate,
         trackOrder
       }}
