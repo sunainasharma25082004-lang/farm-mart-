@@ -106,20 +106,27 @@ sequenceDiagram
    * Customer floating green cart bar ya top header cart icon se cart open karta hai.
    * Cart me `+` aur `-` buttons se quantity instant update hoti hai.
    * Bill Summary me Item Total, Delivery Fee (Free above ₹199), Taxes, aur Platform Fee real-time calculate hote hain.
-6. **Checkout & Multi-Channel Payment:**
-   * **S-farmart Wallet:** Customer ke profile me ₹250 preloaded balance hota hai, jisse 1-tap me zero-fee checkout ho sakta hai.
-   * **Cash on Delivery (COD):** Delivery boy ko cash ya arrival QR scan se pay karne ka option.
-   * **Online Gateway Modal:** Bank-grade 256-bit SSL encrypted modal jisme Google Pay, PhonePe, Paytm, aur Credit/Debit card options integrated hain.
-7. **Live Order Tracking:**
-   * Order submit hote hi customer **Order Tracking Screen** par aata hai.
-   * Animated pulse timeline dikhti hai:
-     1. `Order Placed` (`NEW_ORDER`)
-     2. `Order Accepted` (`ACCEPTED`)
-     3. `Store Packing` (`PREPARING`)
-     4. `Ready for Rider` (`READY_FOR_RIDER`)
-     5. `Rider Out for Delivery` (`OUT_FOR_DELIVERY`)
-     6. `Delivered` (`DELIVERED`)
-   * Socket.io ke zariye partner jab bhi dashboard par order accept ya packed mark karta hai, customer screen par status real-time update ho jata hai.
+6. **Checkout & Real GPS Location Detection:**
+   * **📍 1-Tap Real GPS Location:** Customer can tap **"📍 Use Real GPS Location (Google Maps)"** to instantly query device coordinates (`navigator.geolocation` / `expo-location`).
+   * Automatically populates the delivery address and stores the exact latitude & longitude coordinates (`order.address.lat`, `order.address.lng`).
+   * **🗺️ Google Maps Pin Verification:** Customer can tap **"Preview on Map"** to verify their pinpoint on Google Maps (`https://www.google.com/maps?q=lat,lng`) before placing the order.
+   * **Payment Modes:**
+     - **S-farmart Wallet:** Customer ke profile me ₹250 preloaded balance hota hai, jisse 1-tap me zero-fee checkout ho sakta hai.
+     - **Cash on Delivery (COD):** Delivery boy ko cash ya arrival QR scan se pay karne ka option.
+     - **Online Gateway Modal:** Bank-grade 256-bit SSL encrypted modal jisme Google Pay, PhonePe, Paytm, aur Credit/Debit card options integrated hain.
+7. **Live Radar GPS Order Tracking (`OrderTrackingScreen.js` & `LiveOrderMap.js`):**
+   * Order submit hote hi customer **Order Tracking Screen** par aata hai jisme interactive Canvas Radar Map render hota hai:
+     - 🏬 **Store Marker:** Kitchen / Farm hub location pin.
+     - 🏠 **Customer Marker:** Customer ke exact Google Maps pin coordinates par green house marker.
+     - 🏍️ **Animated Rider Marker:** Rider ka real-time position with pulsating radar ripples.
+   * **Intelligent Rider Motion & Stop Detection:**
+     - **🟢 Moving:** Speed > 2 km/h — *"Rider is Moving (24 km/h)"*.
+     - **🟡 Stopped at Signal / Junction:** Speed ≤ 2 km/h while on the road — *"Rider Stopped (0 km/h) • At Traffic Signal / Junction"*.
+     - **🏪 Stopped at Kitchen:** When rider arrives at merchant counter — *"Rider Stopped at Kitchen Counter"*.
+   * **Dynamic Haversine Distance & ETA:** Real-time distance remaining in km (e.g. `1.8 km`) and dynamic ETA (e.g. `6 mins`).
+   * **Google Maps Driving Navigation:** 1-tap button jo customer ko live route Google Maps par open karke dikhata hai.
+   * **Animated Pulse Timeline:**
+     `Order Placed` ➔ `Order Accepted` ➔ `Store Packing` ➔ `Ready for Rider` ➔ `Rider Assigned` ➔ `Out for Delivery` ➔ `Delivered`.
 
 ---
 
@@ -129,46 +136,51 @@ Jab aap **Delivery App (`deliveryApp`)** inspect ya develop karenge, to ye samaj
 
 ### 1. 6-Stage Order & Rider Lifecycle
 ```
-[Customer Checkout] ──▶ [Partner Prepares] ──▶ [Rider Pick Up] ──▶ [Doorstep Handshake]
-  (userApp)               (partnerApp)           (deliveryApp)         (OTP Verification)
+[Customer Places Order] ──▶ [Partner Prepares] ──▶ [Rider Pick Up] ──▶ [Customer Doorstep]
+      (userApp)                 (partnerApp)          (deliveryApp)         (Doorstep Handshake)
+   (Real GPS Lat/Lng)         (Kitchen Packing)      (Store Pickup OTP)    (Delivery OTP + COD)
 
 1. NEW_ORDER      ──▶ 2. ACCEPTED / PREP  ──▶ 4. READY_FOR_RIDER ──▶ 5. OUT_FOR_DELIVERY ──▶ 6. DELIVERED
-(Stock Deducted)       (Kitchen/Weighing)      (Rider Pool Tasks)    (Live Customer Stepper)  (Final Settlement)
+(Stock Deducted)       (Kitchen/Weighing)      (Rider Pool Tasks)    (Live Radar Map Pulse)   (Final Settlement)
 ```
 
-### 2. 🔐 4-Digit Delivery OTP Security Handshake
-* **Generation:** Order place hone par backend automatically random 4-digit Delivery OTP generate karta hai (`order.deliveryOtp`, e.g., `4829`).
-* **Customer Display:** Customer ko uski `userApp/src/screens/Customer/OrderTrackingScreen.js` par highlighted golden badge me ye OTP show hota hai:
+### 2. 📍 Exact Google Maps Coordinates Delivery
+* Customer ka exact GPS pin (`lat`, `lng`) order ke sath backend database me save hota hai.
+* Rider ke `deliveryApp` terminal par customer ka address ek verified badge ke sath show hota hai:
   ```text
-  ┌──────────────────────────────────┐
-  │ 🔐 Share Delivery OTP with Rider │
-  │              [ 4 8 2 9 ]         │
-  └──────────────────────────────────┘
+  📍 GPS: 30.9010° N, 75.8573° E (Exact Google Maps Pin)
+  [ 🗺️ Open Turn-by-Turn in Google Maps ]
   ```
-* **Rider Verification:** Delivery Partner jab customer ke doorstep par pahunchta hai, to customer se OTP mangta hai aur apne `deliveryApp` terminal par enter karke order ko `DELIVERED` mark karta hai. Isse wrong delivery ya false delivery claims 100% eliminate ho jate hain.
+* Rider bina kisi confusion ya calls ke seedha customer ke exact gate / house number par pahunchta hai.
 
-### 3. 💵 COD (Cash On Delivery) Cash Collection
+### 3. 🔐 Dual-OTP Handshake Architecture
+Farmart do alag-alag 4-digit OTPs use karta hai taaki koi wrong handoff ya fake delivery na ho:
+* **OTP 1: Store Pickup OTP (`order.pickupOtp`):**
+  - Partner App par display hota hai.
+  - Rider jab store par pahunchta hai to parcel collect karne ke liye ye OTP apne `deliveryApp` me enter karta hai. Iske baad hi order `OUT_FOR_DELIVERY` banta hai.
+* **OTP 2: Customer Delivery OTP (`order.deliveryOtp`):**
+  - Customer ke `userApp` live tracking screen par golden security badge me show hota hai:
+    ```text
+    ┌──────────────────────────────────┐
+    │ 🔐 Share Delivery OTP with Rider │
+    │              [ 4 8 2 9 ]         │
+    └──────────────────────────────────┘
+    ```
+  - Delivery Partner jab customer ke doorstep par pahunchta hai, to customer se OTP mangta hai aur enter karke order ko `DELIVERED` mark karta hai.
+
+### 4. 💵 COD (Cash On Delivery) Cash Collection
 * Agar customer ne checkout ke time `Cash on Delivery (COD)` select kiya hai:
   - `deliveryApp` par rider ko prominent **"Collect Cash: ₹Total"** ka alert card dikhta hai.
-  - Rider cash collect karne ke baad hi delivery verify karta hai.
+  - Rider cash collect karne ke baad hi delivery OTP enter karta hai.
 * Agar online pay (UPI / Cards / Wallet) ho chuka hai:
   - Rider ko **"PAID ONLINE — Zero Cash Collection"** green badge show hota hai.
 
-### 4. 🛵 Assigned Rider Details & Live GPS Route Telemetry
+### 5. 🛰️ Live Radar Telemetry & Motion Monitoring (`LiveOrderMap.js`)
 * `userApp/src/screens/Customer/OrderTrackingScreen.js` me jaise hi order `RIDER_ASSIGNED`, `RIDER_ARRIVED_STORE` ya `OUT_FOR_DELIVERY` banta hai:
-  - **Rider Card Displayed:** Rider ka photo initial, naam (e.g. *Gurmukh Singh*), vehicle model & number plate (`Hero Splendor • PB-10-AB-1234`), aur verified rating (`⭐ 4.9`) dikhti hai.
-  - **Direct Dialer:** 1-tap **"Call Rider"** button jo device phone dialer ko safely trigger karta hai (`Linking.openURL('tel:${riderPhone}')`).
-  - **Live GPS Telemetry Bar:** Socket event `order:rider_location` ke through rider ki moving speed (~18 km/h) aur live ETA dynamically update hoti hai.
-  - **6-Step Animated Progress Stepper:** Intermediate statuses `RIDER_ASSIGNED` aur `RIDER_ARRIVED_STORE` smooth pulse animation ke sath stepper line par advance karte hain.
-
-### 5. 📡 APIs & WebSockets for Delivery Integration
-* **Pending Orders Queue:** `GET /api/orders/delivery/pending` (status: `READY_FOR_RIDER`, `OUT_FOR_DELIVERY`).
-* **Status Updates:** `PATCH /api/orders/:id/status` (ya `PUT /api/orders/:id/status`).
-* **WebSocket Channels:**
-  - `order:status`: Real-time order lifecycle changes (Accepted -> Preparing -> Ready -> Rider Assigned -> Out for Delivery -> Delivered).
-  - `order:rider_location`: High-frequency moving coordinate beacon without hitting MongoDB.
-
----
+  - **Live Radar Canvas:** Store, rider, aur customer pins real-time display hote hain.
+  - **Motion Banner:** Detects whether the rider is moving (e.g., `24 km/h`), stopped at a traffic signal/junction (`0 km/h`), or stopped at the store counter.
+  - **Rider Card Displayed:** Rider ka photo initial, naam (e.g. *Gurmukh Singh*), vehicle model & number plate (`Hero Splendor • PB-10-AB-1234`), aur verified rating (`⭐ 4.9`).
+  - **Direct Dialer:** 1-tap **"Call Rider"** button jo device dialer safely trigger karta hai (`Linking.openURL('tel:${riderPhone}')`).
 
 ## ⚡ Core Features & Working Architecture
 
@@ -314,6 +326,7 @@ userApp/
 ├── src/
 │   ├── components/
 │   │   ├── Header.js              # App bar with S-farmart 24 logo, GPS location & cart badge
+│   │   ├── LiveOrderMap.js        # Interactive Radar GPS canvas with speed & stop status
 │   │   ├── ProductCard.js         # Reusable card with veg badge, price, strike MRP & ADD button
 │   │   ├── CategoryChip.js        # Horizontal selector pills
 │   │   ├── ClearCartModal.js      # Single-store delivery enforcement popup

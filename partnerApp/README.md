@@ -20,6 +20,7 @@ You can download and install the production-ready standalone APKs directly onto 
 | **🏪 Partner Portal (`partnerApp`)** | [📦 **Download Play Store AAB (v1.0.0-b4)**](https://expo.dev/artifacts/eas/1lGCPbUOnNSzOw_PpfMzBuzP55iSALenufyw5kUrEY8.aab) | `.aab` | `4` | `FINISHED (Play Store Ready)` |
 | **🛒 Consumer App (`userApp`)** | [⬇️ **Download User APK (v1.0.0)**](https://expo.dev/artifacts/eas/vmnDnyLaiaguyEPAwb5YzZehXOMkgrXGxx_sfO948oo.apk) | `.apk` | `1` | `FINISHED (Verified)` |
 | **🛒 Consumer App (`userApp`)** | [📦 **Download Play Store AAB (v1.0.0-b4)**](https://expo.dev/artifacts/eas/paO6d3GS1tUUXcnkxTCWKaHbzcnNphTsUnPMDpHE9mI.aab) | `.aab` | `4` | `FINISHED (Play Store Ready)` |
+| **🛵 Rider App (`deliveryApp`)** | [🌐 **Rider Web & Mobile (Port 8083)**](http://localhost:8083) | `.web / apk` | `1` | `ACTIVE (Port 8083)` |
 
 * **Live EAS Build Dashboard (Partner App):** [Build 02e5ddd1](https://expo.dev/accounts/sfarmart/projects/sfarmart-partner/builds/02e5ddd1-3084-43ee-92ed-a67f3f61401e)
 * **Package Name:** `com.sfarmart.partner`
@@ -45,10 +46,11 @@ You can download and install the production-ready standalone APKs directly onto 
    - [Screen 5: Wednesday Settlements & Banking Ledger](#5-wednesday-settlements--banking-ledger-settlementsscreen)
    - [Screen 6: Multi-Partner Authentication & Session Engine](#6-multi-partner-authentication--session-engine-partnerloginscreen)
 4. [Order Fulfillment State Machine](#-order-fulfillment-state-machine)
-5. [Zero-Crash Mobile Engineering & Fixes](#-zero-crash-mobile-engineering--fixes)
-6. [Verified Partner Accounts & Credentials](#-verified-partner-accounts--credentials)
-7. [Directory Structure & Architecture](#-directory-structure--architecture)
-8. [How to Run Locally (Web, Android, iOS)](#-how-to-run-locally)
+5. [🛵 Delivery App (`deliveryApp`) Integration & Order Handoff](#-delivery-app-deliveryapp-integration--order-handoff)
+6. [Zero-Crash Mobile Engineering & Fixes](#-zero-crash-mobile-engineering--fixes)
+7. [Verified Partner Accounts & Credentials](#-verified-partner-accounts--credentials)
+8. [Directory Structure & Architecture](#-directory-structure--architecture)
+9. [How to Run Locally (Web, Android, iOS)](#-how-to-run-locally)
 
 ---
 
@@ -380,6 +382,7 @@ Jab aap **Delivery App (`deliveryApp`)** ko check karenge, to partner app se del
 * Jaise hi rider offer accept karta hai, order status **`RIDER_ASSIGNED`** ho jata hai:
   - **Rider Info Displayed:** Merchant dashboard par assigned rider ka naam aur vehicle plate number show hota hai (e.g. `🛵 Rider: Gurmukh Singh (PB-10-AB-1234)`).
   - **Store Pickup OTP Badge:** Merchant ke order card par **`STORE PICKUP OTP: [XXXX]`** highlight hota hai.
+  - **Verified Customer GPS Location:** Merchant console par customer address ke sath `📍 GPS Fixed: lat° N, lng° E` verified pin indicator show hota hai for accurate delivery routing.
   - **Rider Arrival Alert (`RIDER_ARRIVED_STORE`):** Rider store par pahunch kar jab *"Arrived at Store"* tap karta hai, merchant console par orange banner alert aata hai: *"🏪 Rider is at counter! Confirm Store OTP & Handover parcel."*
   - Rider ko parcel tabhi diya jata hai jab rider ye Store Pickup OTP apne app me enter karke verify karta hai. Isse parcel ka misuse ya wrong collection 100% prevent hota hai.
 

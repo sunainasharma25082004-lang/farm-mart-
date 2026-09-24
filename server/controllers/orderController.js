@@ -188,7 +188,9 @@ export const createOrder = async (req, res) => {
       phone: address?.phone || customerPhone || '9876543210',
       line1: address?.line1 || 'Flat 302, Green Avenue, Model Town',
       city: address?.city || 'Ludhiana',
-      pincode: address?.pincode || '141001'
+      pincode: address?.pincode || '141001',
+      lat: typeof address?.lat === 'number' ? address.lat : parseFloat(address?.lat) || 30.9080,
+      lng: typeof address?.lng === 'number' ? address.lng : parseFloat(address?.lng) || 75.8610
     };
 
     // 11. 🔒 ACID-Compliant Multi-Document Atomic Transaction

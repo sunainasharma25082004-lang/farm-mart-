@@ -56,7 +56,9 @@ async function runLiveDeliveryCycle() {
       address: {
         name: 'Rajesh Kumar',
         phone: '9876543210',
-        line1: 'House 42, Model Town, Ludhiana, Punjab'
+        line1: 'House 42, Model Town, Ludhiana, Punjab',
+        lat: 30.9095,
+        lng: 75.8645
       },
       paymentMethod: 'COD'
     })

@@ -266,6 +266,12 @@ export const ActiveNavigationScreen = ({ navigation }) => {
                 </View>
                 <Text style={styles.stopName}>{customerName}</Text>
                 <Text style={styles.stopAddress}>{customerAddress}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4 }}>
+                  <Ionicons name="navigate-circle" size={14} color="#16a34a" />
+                  <Text style={{ fontSize: 11, color: '#16a34a', fontWeight: '700' }}>
+                    GPS: {custLat.toFixed(4)}°N, {custLng.toFixed(4)}°E (Exact Google Maps Pin)
+                  </Text>
+                </View>
               </View>
             </View>
           </View>

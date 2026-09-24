@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Header } from '../../components/Header';
+import { LiveOrderMap } from '../../components/LiveOrderMap';
 import { apiService } from '../../services/api';
 import { useCustomerSocket } from '../../context/SocketContext';
 import { useApp } from '../../context/AppContext';
@@ -547,6 +548,15 @@ export const OrderTrackingScreen = ({ route, navigation }) => {
                   </Text>
                 </View>
               </View>
+            )}
+
+            {/* Live Interactive GPS Radar Map with Rider Marker & Real-Time Tracking */}
+            {(activeOrder.rider || ['RIDER_ASSIGNED', 'RIDER_ARRIVED_STORE', 'OUT_FOR_DELIVERY', 'DELIVERED'].includes(activeOrder.status)) && (
+              <LiveOrderMap
+                order={activeOrder}
+                riderLocation={riderLiveLocation}
+                rider={activeOrder.rider}
+              />
             )}
 
             {/* OTP Banner */}
