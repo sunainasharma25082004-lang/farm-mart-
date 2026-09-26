@@ -1,3 +1,5 @@
+import mongoose from 'mongoose';
+import { storePoint, validCoordinates, distanceKm } from '../utils/deliveryPolicy.js';
 import Rider from '../models/Rider.js';
 import Order from '../models/Order.js';
 import { getIO } from '../socket/index.js';
@@ -36,15 +38,14 @@ async function offerToNextRider(order, attemptedRiderIds) {
   const io = getIO();
 
   try {
-    // Determine vendor coordinates or fallback to default hub
-    const vendorCoords = order.vendor?.location?.coordinates || [75.8573, 30.9010];
-
-    // Query nearest ONLINE_IDLE riders who haven't rejected this specific order
+    const point=storePoint(order.vendor);
+    if(!validCoordinates(point.lat,point.lng)) {activeOffers.delete(orderId);return;}
     const candidateRiders = await Rider.find({
-      status: 'ONLINE_IDLE',
-      _id: { $nin: Array.from(attemptedRiderIds) }
+      status:'ONLINE_IDLE', activeOrderId:null,
+      locationUpdatedAt:{$gte:new Date(Date.now()-120000)},
+      currentLocation:{$near:{$geometry:{type:'Point',coordinates:[point.lng,point.lat]},$maxDistance:8000}},
+      _id:{$nin:Array.from(attemptedRiderIds)}
     }).limit(5);
-
     if (!candidateRiders || candidateRiders.length === 0) {
       console.log(`🛵 [RiderAssignment] No idle riders available for Order #${order.orderNumber}. Left in pool.`);
       activeOffers.delete(orderId);
@@ -69,7 +70,7 @@ async function offerToNextRider(order, attemptedRiderIds) {
       totalAmount: order.pricing?.grandTotal || 0,
       paymentMethod: order.payment?.method || 'COD',
       estEarnings: 65, // ₹65 per delivery
-      distanceKm: 2.8,
+      distanceKm: Number(distanceKm({lat:candidate.currentLocation.coordinates[1],lng:candidate.currentLocation.coordinates[0]},point).toFixed(2)),
       expiresInSeconds: 20
     };
 
@@ -84,7 +85,7 @@ async function offerToNextRider(order, attemptedRiderIds) {
       activeOffers.delete(orderId);
 
       // Re-verify order wasn't accepted in the race window
-      const freshOrder = await Order.findById(orderId);
+      const freshOrder = await Order.findById(orderId).populate('vendor customer');
       if (freshOrder && freshOrder.status === 'READY_FOR_RIDER' && !freshOrder.rider) {
         // Offer to next candidate if attempts < 5
         if (attemptedRiderIds.size < 5) {
@@ -110,44 +111,24 @@ async function offerToNextRider(order, attemptedRiderIds) {
  * Handle rider accepting an offer
  */
 export async function handleRiderAccept(orderId, riderId) {
-  const offer = activeOffers.get(orderId.toString());
-  if (offer) {
-    clearTimeout(offer.timeoutHandle);
-    activeOffers.delete(orderId.toString());
-  }
-
-  // Atomic lock: update order only if still READY_FOR_RIDER
-  const order = await Order.findOneAndUpdate(
-    { _id: orderId, status: 'READY_FOR_RIDER', rider: null },
-    {
-      $set: {
-        rider: riderId,
-        riderId: riderId,
-        status: 'RIDER_ASSIGNED',
-        riderAssignedAt: new Date(),
-        riderAcceptedAt: new Date()
-      },
-      $push: {
-        statusHistory: {
-          status: 'RIDER_ASSIGNED',
-          at: new Date(),
-          by: 'RIDER'
-        }
-      }
-    },
-    { new: true }
-  ).populate('vendor customer rider');
-
-  if (!order) {
-    return { success: false, message: 'Order was already accepted by another rider or canceled.' };
-  }
-
-  // Mark rider as ON_DELIVERY
-  await Rider.findByIdAndUpdate(riderId, {
-    status: 'ON_DELIVERY',
-    activeOrderId: order._id
-  });
-
+  const session=await mongoose.startSession();
+  let order;
+  try {
+    await session.withTransaction(async()=>{
+      const candidate=await Order.findOne({_id:orderId,status:'READY_FOR_RIDER',rider:null}).populate('vendor').session(session);
+      const rider=await Rider.findOne({_id:riderId,status:'ONLINE_IDLE',activeOrderId:null,locationUpdatedAt:{$gte:new Date(Date.now()-120000)}}).session(session);
+      if(!candidate || !rider || distanceKm({lat:rider.currentLocation?.coordinates?.[1],lng:rider.currentLocation?.coordinates?.[0]},storePoint(candidate.vendor))>8) throw new Error('Order unavailable or rider must be online with fresh GPS within 8 km of store.');
+      order=await Order.findOneAndUpdate({_id:orderId,status:'READY_FOR_RIDER',rider:null},{
+        $set:{rider:riderId,riderId,status:'RIDER_ASSIGNED',riderAssignedAt:new Date(),riderAcceptedAt:new Date()},
+        $push:{statusHistory:{status:'RIDER_ASSIGNED',at:new Date(),by:'RIDER'}}
+      },{new:true,session}).populate('vendor customer rider');
+      const assigned=await Rider.findOneAndUpdate({_id:riderId,status:'ONLINE_IDLE',activeOrderId:null},{$set:{status:'ON_DELIVERY',activeOrderId:orderId}},{new:true,session});
+      if(!order || !assigned)throw new Error('Another delivery was accepted. Refresh and retry.');
+    });
+  }catch(error){return {success:false,message:error.message};}
+  finally{await session.endSession();}
+  const offer=activeOffers.get(String(orderId));
+  if(offer){clearTimeout(offer.timeoutHandle);activeOffers.delete(String(orderId));}
   // Notify customer and vendor real-time
   notifyOrderStatus(order);
 
@@ -179,6 +160,7 @@ export async function handleRiderAccept(orderId, riderId) {
  */
 export async function handleRiderDecline(orderId, riderId) {
   const offer = activeOffers.get(orderId.toString());
+  if (!offer || offer.riderId !== String(riderId)) return {success:false,message:'This offer is not assigned to you.'};
   if (offer) {
     clearTimeout(offer.timeoutHandle);
     activeOffers.delete(orderId.toString());

@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import { StyleSheet, StatusBar, Platform, View, Text, TouchableOpacity } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer } from '@react-navigation/native';
-import { RiderAuthProvider } from './src/context/RiderAuthContext';
+import { RiderAuthProvider, useRiderAuth } from './src/context/RiderAuthContext';
 import { DeliveryProvider } from './src/context/DeliveryContext';
 import { DeliveryNavigator } from './src/navigation/DeliveryNavigator';
 
@@ -36,19 +36,23 @@ class ErrorBoundary extends Component {
   }
 }
 
+function RiderSession({ children }) {
+  const { rider } = useRiderAuth();
+  return <DeliveryProvider key={rider?._id || rider?.id || 'guest'}>{children}</DeliveryProvider>;
+}
 export default function App() {
   return (
     <ErrorBoundary>
       <SafeAreaProvider>
         <RiderAuthProvider>
-          <DeliveryProvider>
+          <RiderSession>
             <View style={styles.container}>
               <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
               <NavigationContainer>
                 <DeliveryNavigator />
               </NavigationContainer>
             </View>
-          </DeliveryProvider>
+          </RiderSession>
         </RiderAuthProvider>
       </SafeAreaProvider>
     </ErrorBoundary>

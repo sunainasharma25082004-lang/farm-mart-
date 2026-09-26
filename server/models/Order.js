@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import mongoose from 'mongoose';
 
 const orderSchema = new mongoose.Schema(
@@ -108,11 +109,11 @@ const orderSchema = new mongoose.Schema(
     },
     pickupOtp: {
       type: String,
-      default: () => Math.floor(1000 + Math.random() * 9000).toString()
+      default: () => crypto.randomInt(1000, 10000).toString()
     },
     deliveryOtp: {
       type: String,
-      default: () => Math.floor(1000 + Math.random() * 9000).toString()
+      default: () => crypto.randomInt(1000, 10000).toString()
     },
     rider: {
       type: mongoose.Schema.Types.ObjectId,
@@ -133,6 +134,7 @@ const orderSchema = new mongoose.Schema(
       type: Date,
       default: null
     },
+    riderLocation: { lat: Number, lng: Number, speed: Number, heading: Number, accuracy: Number, at: Date },
     deliveryRoute: [
       {
         lat: Number,

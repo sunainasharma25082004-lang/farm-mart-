@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { MapView, Marker, Polyline, PROVIDER_GOOGLE, MapViewDirections } from '../components/MapViewWrapper';
 import {
   View,
   Text,
@@ -68,17 +69,17 @@ export const ActiveNavigationScreen = ({ navigation }) => {
 
   // Vendor / Store extraction
   const storeName = currentTask.vendor?.storeName || currentTask.vendor?.name || currentTask.pickupLocation || 'Partner Merchant Store';
-  const storePhone = currentTask.vendor?.phone || '9876543211';
+  const storePhone = currentTask.vendor?.phone || '';
   const storeAddress = getAddressString(currentTask.vendor?.address, currentTask.pickupAddress || 'Shop #12, Market Complex, Ludhiana');
-  const storeLat = currentTask.vendor?.location?.coordinates?.[1] || currentTask.vendor?.lat || 30.9010;
-  const storeLng = currentTask.vendor?.location?.coordinates?.[0] || currentTask.vendor?.lng || 75.8573;
+  const storeLat = currentTask.vendor?.address?.location?.coordinates?.[1] ?? currentTask.vendor?.location?.coordinates?.[1];
+  const storeLng = currentTask.vendor?.address?.location?.coordinates?.[0] ?? currentTask.vendor?.location?.coordinates?.[0];
 
   // Customer extraction
   const customerName = currentTask.customer?.name || currentTask.address?.name || currentTask.customerName || 'Customer';
-  const customerPhone = currentTask.customer?.phone || currentTask.address?.phone || currentTask.customerPhone || '9876543210';
+  const customerPhone = currentTask.customer?.phone || currentTask.address?.phone || currentTask.customerPhone || '';
   const customerAddress = getAddressString(currentTask.address || currentTask.deliveryAddress, 'Sector 32, Urban Estate, Ludhiana');
-  const custLat = currentTask.address?.lat || 30.9120;
-  const custLng = currentTask.address?.lng || 75.8650;
+  const custLat = currentTask.address?.lat;
+  const custLng = currentTask.address?.lng;
 
   // Financials & Payment
   const isCOD = currentTask.payment?.method === 'COD' || currentTask.paymentMethod === 'COD';
@@ -91,18 +92,35 @@ export const ActiveNavigationScreen = ({ navigation }) => {
     ? { name: storeName, address: storeAddress, lat: storeLat, lng: storeLng, role: 'STORE' }
     : { name: customerName, address: customerAddress, lat: custLat, lng: custLng, role: 'CUSTOMER' };
 
+  const mapRef = useRef(null);
+  const apiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
+
+  const riderLat = currentCoords?.latitude;
+  const riderLng = currentCoords?.longitude;
+
+  useEffect(() => {
+    if (!mapRef.current) return;
+    const pts = [];
+    if (Number.isFinite(riderLat) && Number.isFinite(riderLng)) {
+      pts.push({ latitude: riderLat, longitude: riderLng });
+    }
+    if (Number.isFinite(targetDestination.lat) && Number.isFinite(targetDestination.lng)) {
+      pts.push({ latitude: targetDestination.lat, longitude: targetDestination.lng });
+    }
+    if (pts.length > 0) {
+      mapRef.current.fitToCoordinates(pts, {
+        edgePadding: { top: 40, right: 40, bottom: 40, left: 40 },
+        animated: true,
+      });
+    }
+  }, [riderLat, riderLng, targetDestination.lat, targetDestination.lng]);
+
   const handleOpenMaps = () => {
     const lat = targetDestination.lat;
     const lng = targetDestination.lng;
-    const label = encodeURIComponent(targetDestination.name);
-    const url = Platform.select({
-      ios: `maps:0,0?q=${label}@${lat},${lng}`,
-      android: `geo:0,0?q=${lat},${lng}(${label})`,
-      web: `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`
-    });
-    Linking.openURL(url || `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`).catch(() => {
-      Alert.alert('Navigation Error', 'Could not open Google Maps on this device.');
-    });
+    if(!Number.isFinite(lat) || !Number.isFinite(lng)) {Alert.alert('Location missing','The delivery pin is missing. Contact the store/customer to confirm their location.');return;}
+    const url='https://www.google.com/maps/dir/?api=1&destination='+lat+','+lng+'&travelmode=driving&dir_action=navigate';
+    Linking.openURL(url).catch(()=>Alert.alert('Maps unavailable','Could not open Google Maps.'));
   };
 
   const handleCall = (phone) => {
@@ -215,13 +233,115 @@ export const ActiveNavigationScreen = ({ navigation }) => {
           <View style={styles.routeHeaderRow}>
             <View style={styles.routeHeaderLeft}>
               <View style={styles.gpsBlinkDot} />
-              <Text style={styles.routeHeaderTitle}>LIVE GPS ROUTE OVERVIEW</Text>
+              <Text style={styles.routeHeaderTitle}>DELIVERY STOPS</Text>
             </View>
             <TouchableOpacity style={styles.mapsPillBtn} onPress={handleOpenMaps} activeOpacity={0.85}>
               <Ionicons name="map" size={14} color="#ffffff" />
               <Text style={styles.mapsPillText}>Google Maps</Text>
             </TouchableOpacity>
           </View>
+
+            {/* Embedded Navigation Map (~180px) */}
+          {Platform.OS === 'web' ? (
+            <View style={{ height: 180, width: '100%', borderRadius: 12, overflow: 'hidden', marginVertical: 10, backgroundColor: '#f1f5f9', justifyContent: 'center', alignItems: 'center' }}>
+              <Text style={{ color: '#64748b', textAlign: 'center' }}>
+                🗺️ Live map preview available in the mobile app
+              </Text>
+              <Text style={{ color: '#94a3b8', fontSize: 12, marginTop: 6 }}>
+                Lat: {currentCoords?.latitude?.toFixed(4) ?? 'N/A'}, Lng: {currentCoords?.longitude?.toFixed(4) ?? 'N/A'}
+              </Text>
+            </View>
+          ) : (
+            <View style={{ height: 180, width: '100%', borderRadius: 12, overflow: 'hidden', marginVertical: 10, backgroundColor: '#f1f5f9' }}>
+              <MapView
+                ref={mapRef}
+                provider={PROVIDER_GOOGLE}
+                style={{ ...StyleSheet.absoluteFillObject }}
+                initialRegion={{
+                  latitude: Number.isFinite(riderLat) ? riderLat : (targetDestination.lat || 20.59),
+                  longitude: Number.isFinite(riderLng) ? riderLng : (targetDestination.lng || 78.96),
+                  latitudeDelta: 0.02,
+                  longitudeDelta: 0.02,
+                }}
+                showsUserLocation={false}
+                showsMyLocationButton={false}
+              >
+                {/* Target Destination Marker */}
+                {Number.isFinite(targetDestination.lat) && Number.isFinite(targetDestination.lng) && (
+                  <Marker
+                    coordinate={{ latitude: targetDestination.lat, longitude: targetDestination.lng }}
+                    title={targetDestination.name}
+                    description={targetDestination.address}
+                  >
+                    <View style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: 14,
+                      backgroundColor: targetDestination.role === 'STORE' ? '#ea580c' : '#0284c7',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderWidth: 2,
+                      borderColor: '#ffffff',
+                      elevation: 4,
+                    }}>
+                      <Ionicons
+                        name={targetDestination.role === 'STORE' ? 'storefront' : 'home'}
+                        size={14}
+                        color="#ffffff"
+                      />
+                    </View>
+                  </Marker>
+                )}
+
+                {/* Rider Live Position Marker */}
+                {Number.isFinite(riderLat) && Number.isFinite(riderLng) && (
+                  <Marker
+                    coordinate={{ latitude: riderLat, longitude: riderLng }}
+                    title="Your Location"
+                    description="Live GPS"
+                  >
+                    <View style={{
+                      width: 30,
+                      height: 30,
+                      borderRadius: 15,
+                      backgroundColor: '#16a34a',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderWidth: 2.5,
+                      borderColor: '#ffffff',
+                      elevation: 5,
+                    }}>
+                      <Ionicons name="bicycle" size={16} color="#ffffff" />
+                    </View>
+                  </Marker>
+                )}
+
+                {/* Route Polyline connecting Rider and Destination */}
+                {Number.isFinite(riderLat) && Number.isFinite(riderLng) && Number.isFinite(targetDestination.lat) && Number.isFinite(targetDestination.lng) && (
+                  apiKey ? (
+                    <MapViewDirections
+                      origin={{ latitude: riderLat, longitude: riderLng }}
+                      destination={{ latitude: targetDestination.lat, longitude: targetDestination.lng }}
+                      apikey={apiKey}
+                      strokeWidth={4}
+                      strokeColor="#16a34a"
+                      mode="DRIVING"
+                      onError={() => {}}
+                    />
+                  ) : (
+                    <Polyline
+                      coordinates={[
+                        { latitude: riderLat, longitude: riderLng },
+                        { latitude: targetDestination.lat, longitude: targetDestination.lng }
+                      ]}
+                      strokeColor="#16a34a"
+                      strokeWidth={3}
+                    />
+                  )
+                )}
+              </MapView>
+            </View>
+          )} </View>
 
           <View style={styles.routeStops}>
             {/* Store Stop */}
@@ -247,7 +367,7 @@ export const ActiveNavigationScreen = ({ navigation }) => {
               <View style={styles.verticalDashedLine} />
               <View style={styles.riderBeaconWrap}>
                 <Ionicons name="bicycle" size={14} color="#0284c7" />
-                <Text style={styles.riderBeaconText}>GPS Active • ~18 km/h</Text>
+                <Text style={styles.riderBeaconText}>{currentCoords ? 'GPS • '+Math.round(currentCoords.speed || 0)+' km/h' : 'Waiting for GPS'}</Text>
               </View>
             </View>
 
@@ -269,12 +389,12 @@ export const ActiveNavigationScreen = ({ navigation }) => {
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4 }}>
                   <Ionicons name="navigate-circle" size={14} color="#16a34a" />
                   <Text style={{ fontSize: 11, color: '#16a34a', fontWeight: '700' }}>
-                    GPS: {custLat.toFixed(4)}°N, {custLng.toFixed(4)}°E (Exact Google Maps Pin)
+                    GPS: {custLat?.toFixed(4)}°N, {custLng?.toFixed(4)}°E (Confirmed delivery pin)
                   </Text>
                 </View>
               </View>
             </View>
-          </View>
+ 
         </View>
 
         {/* Payment & COD Badge */}

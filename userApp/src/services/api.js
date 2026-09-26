@@ -10,6 +10,8 @@ const apiClient = axios.create({
   }
 });
 
+let tokenChangedHandler=null;
+export const setTokenChangedHandler=handler=>{tokenChangedHandler=handler;};
 let forceLogoutHandler = null;
 export const setForceLogoutHandler = (handler) => {
   forceLogoutHandler = handler;
@@ -110,7 +112,9 @@ apiClient.interceptors.response.use(
           throw new Error('Refresh response missing access token');
         }
 
+        if(storedRefreshToken !== await storage.getRefreshToken())throw new Error('Account changed during refresh');
         await storage.setAccessToken(newAccessToken);
+        tokenChangedHandler?.(newAccessToken);
         if (newRefreshToken) {
           await storage.setRefreshToken(newRefreshToken);
         }

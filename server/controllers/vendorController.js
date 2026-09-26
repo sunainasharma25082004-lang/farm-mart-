@@ -1,3 +1,4 @@
+import {validCoordinates,orderForRole} from '../utils/deliveryPolicy.js';
 import Vendor from '../models/Vendor.js';
 import Product from '../models/Product.js';
 import Order from '../models/Order.js';
@@ -134,7 +135,7 @@ export const getVendorOrders = async (req, res) => {
     res.json({
       success: true,
       count: orders.length,
-      orders
+      orders: orders.map(o=>orderForRole(o,'VENDOR'))
     });
   } catch (err) {
     console.error('Error fetching vendor orders:', err);
@@ -212,6 +213,11 @@ export const updateVendorProfile = async (req, res) => {
     const vendor = await Vendor.findById(vendorId);
     if (!vendor) return res.status(404).json({ success: false, message: 'Vendor not found' });
 
+    if(req.body.location) {
+      const {lat,lng}=req.body.location;
+      if(!validCoordinates(lat,lng))return res.status(400).json({success:false,message:'Valid store latitude and longitude are required.'});
+      vendor.address.location={type:'Point',coordinates:[lng,lat]};
+    }
     if (storeName) vendor.storeName = storeName.trim();
     if (description !== undefined) vendor.description = description.trim();
     if (avgPrepTimeMins) vendor.avgPrepTimeMins = Number(avgPrepTimeMins);

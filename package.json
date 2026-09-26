@@ -10,7 +10,8 @@
     "test": "node server/utils/runAcceptanceTests.js",
     "build": "vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:delivery": "node --test server/tests/delivery.test.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

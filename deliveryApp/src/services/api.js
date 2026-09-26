@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 import storage from './storage';
 
 export const getBaseUrl = () => {
+  if(process.env.EXPO_PUBLIC_API_URL)return process.env.EXPO_PUBLIC_API_URL;
   if (Platform.OS === 'web') {
     if (
       typeof window !== 'undefined' &&
@@ -130,8 +131,7 @@ export const riderApi = {
 
   // Duty Status & Location
   toggleDuty: (status) => api.patch('/rider/status', { status }),
-  sendLocation: (lat, lng, heading = 0, speed = 0, orderId = null) =>
-    api.post('/rider/location', { lat, lng, heading, speed, orderId }),
+  sendLocation: (fix) => api.post('/rider/location', fix),
 
   // Order Lifecycle
   getActiveOrder: () => api.get('/rider/active-order'),

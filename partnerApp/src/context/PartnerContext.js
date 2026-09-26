@@ -1,10 +1,11 @@
-import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
+import React, { createContext, useState, useContext, useEffect, useCallback, useRef } from 'react';
 import { API_BASE_URL } from '../config/env';
 import storage from '../services/storage';
 
 const PartnerContext = createContext();
 
 export const PartnerProvider = ({ children }) => {
+  const sessionRef=useRef({id:null,token:null});
   const [vendor, setVendor] = useState(null);
   const [token, setToken] = useState(null);
   const [orders, setOrders] = useState([]);
@@ -38,6 +39,7 @@ export const PartnerProvider = ({ children }) => {
     try {
       const res = await fetch(`${API_BASE_URL}/vendors/${id}/products`);
       const data = await res.json();
+      if(sessionRef.current.id!==id)return;
       if (data.success && Array.isArray(data.products)) {
         const mapped = data.products.map((p) => ({
           id: p._id,
@@ -74,6 +76,7 @@ export const PartnerProvider = ({ children }) => {
         }
       });
       const data = await res.json();
+      if(sessionRef.current.id!==id || sessionRef.current.token!==authHeader)return;
       if (data.success && Array.isArray(data.orders)) {
         setOrders(data.orders);
       }
@@ -91,6 +94,7 @@ export const PartnerProvider = ({ children }) => {
         headers: { Authorization: `Bearer ${t}` }
       });
       const data = await res.json();
+      if(sessionRef.current.token!==t)return;
       if (data.success && data.stats) {
         setStats(data.stats);
       }
@@ -110,6 +114,8 @@ export const PartnerProvider = ({ children }) => {
       });
       const data = await res.json();
       if (data.success && data.vendor) {
+        sessionRef.current={id:data.vendor._id,token:data.token};
+        setStats({todaySales:0,todayOrdersCount:0,activeOrdersCount:0,allTimeDelivered:0});
         setVendor(data.vendor);
         setToken(data.token);
         // Persist to storage so user never has to log in again on app launch
@@ -140,7 +146,8 @@ export const PartnerProvider = ({ children }) => {
       try {
         const savedVendor = await storage.getVendor();
         const savedToken = await storage.getToken();
-        if (isMounted && savedVendor) {
+        if (isMounted && savedVendor && savedToken) {
+          sessionRef.current={id:savedVendor._id,token:savedToken};
           setVendor(savedVendor);
           if (savedToken) setToken(savedToken);
           fetchInventory(savedVendor._id);
@@ -157,7 +164,7 @@ export const PartnerProvider = ({ children }) => {
     return () => {
       isMounted = false;
     };
-  }, [fetchCategories, fetchInventory, fetchOrders, fetchStats]);
+  }, []);
 
   // Periodic fast polling fallback (every 5 seconds)
   useEffect(() => {
@@ -174,6 +181,8 @@ export const PartnerProvider = ({ children }) => {
 
   // Logout Vendor and clear persisted credentials
   const logoutVendor = useCallback(async () => {
+    sessionRef.current={id:null,token:null};
+    setStats({todaySales:0,todayOrdersCount:0,activeOrdersCount:0,allTimeDelivered:0});
     setVendor(null);
     setToken(null);
     setOrders([]);

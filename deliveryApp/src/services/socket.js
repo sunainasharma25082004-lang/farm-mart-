@@ -17,6 +17,7 @@ const getIO = () => {
 };
 
 export const getSocketUrl = () => {
+  if(process.env.EXPO_PUBLIC_API_URL)return process.env.EXPO_PUBLIC_API_URL.replace(/\/api\/?$/, '');
   if (Platform.OS === 'web') {
     if (
       typeof window !== 'undefined' &&
@@ -47,14 +48,14 @@ export const connectSocket = async () => {
   const io = getIO();
   if (!io) return null;
 
-  if (socket?.connected) return socket;
+  if (socket) return socket;
 
   const token = await storage.getToken();
   const url = getSocketUrl();
 
   socket = io(url, {
     transports: ['websocket', 'polling'],
-    auth: { token },
+    auth: async (callback) => callback({token:await storage.getToken()}),
     reconnection: true,
     reconnectionAttempts: 20,
     reconnectionDelay: 2000,
@@ -66,6 +67,7 @@ export const connectSocket = async () => {
   });
 
   socket.on('disconnect', (reason) => {
+    if(reason==='io server disconnect')socket?.connect();
     console.log(`🔌 [delivery:socket] Disconnected: ${reason}`);
   });
 

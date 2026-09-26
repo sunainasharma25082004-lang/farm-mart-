@@ -1,3 +1,5 @@
+import * as Location from 'expo-location';
+import {locationPayload} from '../services/location';
 import React, { createContext, useState, useContext, useEffect, useRef, useCallback } from 'react';
 import { useRiderAuth } from './RiderAuthContext';
 import { riderApi } from '../services/api';
@@ -18,17 +20,16 @@ export const DeliveryProvider = ({ children }) => {
   });
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Simulated GPS position coordinates (Ludhiana default)
-  const riderCoordsRef = useRef({
-    lat: rider?.currentLocation?.coordinates?.[1] || 30.9010,
-    lng: rider?.currentLocation?.coordinates?.[0] || 75.8573
-  });
-
+  const [currentCoords,setCurrentCoords]=useState(null);
+  const [locationError,setLocationError]=useState('');
+  const alive=useRef(true);
+  useEffect(()=>{alive.current=true;return()=>{alive.current=false;};},[]);
   // Fetch active order and earnings
   const refreshActiveOrder = useCallback(async () => {
     if (!isAuthenticated) return;
     try {
       const res = await riderApi.getActiveOrder();
+      if (!alive.current) return;
       if (res.data?.success && res.data?.hasActiveOrder) {
         setCurrentTask(res.data.order);
       } else {
@@ -43,6 +44,7 @@ export const DeliveryProvider = ({ children }) => {
     if (!isAuthenticated) return;
     try {
       const res = await riderApi.getEarnings();
+      if (!alive.current) return;
       if (res.data?.success) {
         setEarnings({
           todayEarnings: res.data.todayEarnings || 0,
@@ -60,6 +62,7 @@ export const DeliveryProvider = ({ children }) => {
     if (!isAuthenticated) return;
     try {
       const res = await riderApi.getPendingDeliveryOrders();
+      if (!alive.current) return;
       if (res.data?.success && Array.isArray(res.data.orders)) {
         setAvailableOrders(res.data.orders);
       }
@@ -95,7 +98,7 @@ export const DeliveryProvider = ({ children }) => {
     let cleanup = null;
 
     connectSocket().then((socket) => {
-      if (!socket) return;
+      if (!socket || !alive.current) return;
 
       const handleOffer = (offer) => {
         console.log('🔔 [DeliveryContext] Incoming order offer received:', offer);
@@ -127,50 +130,35 @@ export const DeliveryProvider = ({ children }) => {
     };
   }, [isAuthenticated, currentTask, refreshActiveOrder, fetchAvailablePool]);
 
-  // GPS Location Beacon Loop (emits coordinate pings every 5s while online)
-  useEffect(() => {
-    if (!isAuthenticated || rider?.status === 'OFFLINE') return;
-
-    const locationInterval = setInterval(() => {
-      // Gentle jitter simulation so moving dot is visibly animated on customer map
-      const deltaLat = (Math.random() - 0.5) * 0.00035;
-      const deltaLng = (Math.random() - 0.5) * 0.00035;
-      riderCoordsRef.current.lat += deltaLat;
-      riderCoordsRef.current.lng += deltaLng;
-
-      const activeId = currentTask?.id || currentTask?._id || null;
-
-      // Send to server
-      riderApi
-        .sendLocation(
-          riderCoordsRef.current.lat,
-          riderCoordsRef.current.lng,
-          Math.floor(Math.random() * 360),
-          18, // km/h
-          activeId
-        )
-        .catch(() => {});
-
-      // Also emit over socket directly for instant reaction
-      const socket = getSocket();
-      if (socket?.connected && activeId) {
-        socket.emit('rider:location', {
-          orderId: activeId,
-          lat: riderCoordsRef.current.lat,
-          lng: riderCoordsRef.current.lng,
-          heading: Math.floor(Math.random() * 360),
-          speed: 18
-        });
-      }
-    }, 5000);
-
-    return () => clearInterval(locationInterval);
-  }, [isAuthenticated, rider?.status, currentTask]);
+  useEffect(()=>{
+    if(!isAuthenticated || rider?.status==='OFFLINE')return;
+    let cancelled=false,watch,lastSent=0,sending=false;
+    const start=async()=>{
+      const permission=await Location.requestForegroundPermissionsAsync();
+      if(cancelled)return;
+      if(permission.status!=='granted')throw new Error('Allow location access to share your live position.');
+      watch=await Location.watchPositionAsync({accuracy:Location.Accuracy.High,timeInterval:5000,distanceInterval:5},async position=>{
+        if(cancelled)return;
+        try{
+          const fix=locationPayload(position);setCurrentCoords(fix);
+          if(sending || Date.now()-lastSent<3000)return;
+          sending=true;lastSent=Date.now();
+          await riderApi.sendLocation(fix);
+          if(!cancelled)setLocationError('');
+        }catch(e){if(!cancelled)setLocationError(e.response?.data?.message || e.message);}
+        finally{sending=false;}
+      },reason=>{if(!cancelled)setLocationError(String(reason));});
+      if(cancelled)watch.remove();
+    };
+    start().catch(e=>{if(!cancelled)setLocationError(e.message);});
+    return()=>{cancelled=true;watch?.remove();};
+  },[isAuthenticated,rider?._id,rider?.status]);
 
   // Rider Actions
   const acceptOffer = async (orderId) => {
     try {
       const res = await riderApi.acceptOffer(orderId);
+      if (!alive.current) return;
       if (res.data?.success) {
         setPendingOffer(null);
         await refreshActiveOrder();
@@ -197,6 +185,7 @@ export const DeliveryProvider = ({ children }) => {
   const markArrivedAtStore = async (orderId) => {
     try {
       const res = await riderApi.arrivedAtStore(orderId);
+      if (!alive.current) return;
       if (res.data?.success) {
         setCurrentTask((prev) => (prev ? { ...prev, status: 'RIDER_ARRIVED_STORE' } : null));
         return { success: true };
@@ -209,6 +198,7 @@ export const DeliveryProvider = ({ children }) => {
   const verifyPickup = async (orderId, pickupOtp) => {
     try {
       const res = await riderApi.verifyPickup(orderId, pickupOtp);
+      if (!alive.current) return;
       if (res.data?.success) {
         setCurrentTask((prev) => (prev ? { ...prev, status: 'OUT_FOR_DELIVERY' } : null));
         return { success: true };
@@ -221,6 +211,7 @@ export const DeliveryProvider = ({ children }) => {
   const verifyDelivery = async (orderId, deliveryOtp) => {
     try {
       const res = await riderApi.verifyDelivery(orderId, deliveryOtp);
+      if (!alive.current) return;
       if (res.data?.success) {
         setCurrentTask(null);
         await refreshEarnings();
@@ -240,7 +231,8 @@ export const DeliveryProvider = ({ children }) => {
         availableOrders,
         earnings,
         isRefreshing,
-        currentCoords: riderCoordsRef.current,
+        currentCoords,
+        locationError,
         acceptOffer,
         declineOffer,
         markArrivedAtStore,

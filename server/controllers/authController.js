@@ -494,11 +494,12 @@ export const vendorLogin = async (req, res) => {
     }
 
     const cleanPhone = phone.trim();
-    let vendor = await Vendor.findOne({ phone: cleanPhone }).populate('categories');
+    let vendor = await Vendor.findOne({ phone: cleanPhone }).select('+passwordHash').populate('categories');
     if (!vendor) {
       return res.status(401).json({ success: false, message: 'Vendor account not found with this phone number.' });
     }
 
+    if (!password || !vendor.passwordHash || !vendor.isActive || !vendor.isApproved) return res.status(401).json({success:false,message:'Valid merchant credentials are required.'});
     if (vendor.passwordHash && password) {
       const isValid = await bcrypt.compare(password, vendor.passwordHash);
       if (!isValid) {

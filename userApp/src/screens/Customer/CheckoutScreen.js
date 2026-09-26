@@ -1,3 +1,5 @@
+import * as Location from 'expo-location';
+import GoogleMap from '../../components/GoogleMap';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
@@ -11,7 +13,8 @@ import {
   Image,
   Modal,
   Platform,
-  Animated
+  Animated,
+  Linking
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
@@ -20,7 +23,9 @@ import { useApp } from '../../context/AppContext';
 import { apiService } from '../../services/api';
 import { showAlert } from '../../utils/alert';
 import { TactileButton } from '../../components/common/TactileButton';
-
+import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
+import { MapView, Marker } from '../../components/MapViewWrapper';
+import { reverseGeocode } from '../../utils/maps';
 const StaggeredBillRow = ({ children, delay = 0, style }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const transY = useRef(new Animated.Value(8)).current;
@@ -133,73 +138,55 @@ export const CheckoutScreen = ({ navigation }) => {
 
   const [loading, setLoading] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
-  const [deliveryAddress, setDeliveryAddress] = useState({
-    name: userProfile?.fullName || userProfile?.name || 'Rajesh Kumar',
-    phone: userProfile?.phone || '9876543210',
-    line1: userProfile?.address || 'Flat 302, Green Avenue, Model Town',
-    city: 'Ludhiana',
-    pincode: '141001',
-    lat: 30.9095,
-    lng: 75.8645,
-    isGpsVerified: true
-  });
-
-  const handleFetchCurrentLocation = async () => {
-    setIsLocating(true);
+  const [paymentMethod,setPaymentMethod]=useState('COD');
+  const [pinConfirmed,setPinConfirmed]=useState(false);
+  const [pinLat,setPinLat]=useState(''),[pinLng,setPinLng]=useState('');
+  const [deliveryAddress,setDeliveryAddress]=useState({name:userProfile?.name || '',phone:userProfile?.phone || '',line1:'',city:'',pincode:'',lat:null,lng:null});
+  const selectPin = async (point) => {
+    setDeliveryAddress(p => ({ ...p, ...point }));
+    setPinLat(String(point.lat));
+    setPinLng(String(point.lng));
+    setPinConfirmed(false);
     try {
-      if (typeof navigator !== 'undefined' && navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          async (pos) => {
-            const { latitude, longitude } = pos.coords;
-            try {
-              const res = await fetch(
-                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
-              ).then((r) => r.json());
-              const road =
-                res.address?.road || res.address?.suburb || res.address?.neighbourhood || 'Model Town';
-              const city = res.address?.city || res.address?.town || 'Ludhiana';
-              const postcode = res.address?.postcode || '141001';
-
-              setDeliveryAddress((prev) => ({
-                ...prev,
-                lat: latitude,
-                lng: longitude,
-                line1: `${road}, ${city}`,
-                city,
-                pincode: postcode,
-                isGpsVerified: true
-              }));
-            } catch {
-              setDeliveryAddress((prev) => ({
-                ...prev,
-                lat: latitude,
-                lng: longitude,
-                isGpsVerified: true
-              }));
-            }
-            setIsLocating(false);
-          },
-          () => {
-            // Fallback default coordinates
-            setDeliveryAddress((prev) => ({
-              ...prev,
-              lat: 30.9095,
-              lng: 75.8645,
-              isGpsVerified: true
-            }));
-            setIsLocating(false);
-          },
-          { enableHighAccuracy: true, timeout: 8000 }
-        );
-      } else {
-        setDeliveryAddress((prev) => ({ ...prev, isGpsVerified: true }));
-        setIsLocating(false);
-      }
-    } catch {
-      setIsLocating(false);
+      const { address, city, pincode } = await reverseGeocode(point.lat, point.lng);
+      setDeliveryAddress(prev => ({
+        ...prev,
+        line1: address,
+        city,
+        pincode,
+      }));
+    } catch (e) {
+      console.warn('Reverse geocode failed', e);
     }
   };
-
+// DUPLICATE BLOCK - DISABLED (kept for reference, safe to delete later)
+//      setDeliveryAddress(p => ({ ...p, ...point }));
+//      setPinLat(String(point.lat));
+//      setPinLng(String(point.lng));
+//      setPinConfirmed(false);
+//      try {
+//        const { address, city, pincode } = await reverseGeocode(point.lat, point.lng);
+//        setDeliveryAddress(prev => ({
+//          ...prev,
+//          line1: address,
+//          city,
+//          pincode,
+//        }));
+//      } catch (e) {
+//        console.warn('Reverse geocode failed', e);
+//      }
+//    };setDeliveryAddress(p=>({...p,...point}));setPinLat(String(point.lat));setPinLng(String(point.lng));setPinConfirmed(false);};
+  const handleFetchCurrentLocation=async()=>{
+    setIsLocating(true);
+    try {
+      const permission=await Location.requestForegroundPermissionsAsync();
+      if(permission.status!=='granted')throw new Error('Location permission denied. Enter your coordinates or select the delivery pin on the map.');
+      const position=await Location.getCurrentPositionAsync({accuracy:Location.Accuracy.High});
+      if(position.coords.accuracy==null || position.coords.accuracy>100)throw new Error('GPS accuracy is low. Move outdoors or select your building on the map.');
+      selectPin({lat:position.coords.latitude,lng:position.coords.longitude});
+    }catch(e){showAlert('Location unavailable',e.message);}
+    finally{setIsLocating(false);}
+  };
   // Payment Gateway Modal State
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentSubmitting, setPaymentSubmitting] = useState(false);
@@ -239,6 +226,9 @@ export const CheckoutScreen = ({ navigation }) => {
   // Trigger Payment / Order Flow with Single-Execution & Closed-Store Guards
   const handleInitiatePayment = async () => {
     if (loading || paymentSubmitting) return;
+    if (!pinConfirmed || !deliveryAddress.line1.trim() || !deliveryAddress.name.trim() || !deliveryAddress.phone.trim()) {
+      showAlert('Confirm delivery address','Enter recipient details and house address, then confirm your delivery pin.');return;
+    }
 
     if (items.length === 0) {
       showAlert('Cart Empty', 'Your cart is empty');
@@ -435,9 +425,8 @@ export const CheckoutScreen = ({ navigation }) => {
           </View>
 
           <View style={styles.addressBox}>
-            <Text style={styles.addressRecipient}>
-              {deliveryAddress.name} • <Text style={{ color: '#64748b' }}>+91 {deliveryAddress.phone}</Text>
-            </Text>
+            <TextInput style={styles.addressInput} placeholder="Recipient name" value={deliveryAddress.name} onChangeText={name=>setDeliveryAddress(p=>({...p,name}))}/>
+            <TextInput style={styles.addressInput} placeholder="Phone number" keyboardType="phone-pad" value={deliveryAddress.phone} onChangeText={phone=>setDeliveryAddress(p=>({...p,phone}))}/>
             <TextInput
               style={styles.addressInput}
               value={deliveryAddress.line1}
@@ -445,9 +434,20 @@ export const CheckoutScreen = ({ navigation }) => {
               placeholder="House/Flat No, Apartment, Street name"
             />
             <Text style={styles.addressCity}>
-              {deliveryAddress.city}, Punjab - {deliveryAddress.pincode}
+              {deliveryAddress.city} {deliveryAddress.pincode}
             </Text>
 
+            <TextInput style={styles.addressInput} placeholder="City" value={deliveryAddress.city} onChangeText={city=>setDeliveryAddress(p=>({...p,city}))}/>
+            <TextInput style={styles.addressInput} placeholder="Pincode" value={deliveryAddress.pincode} onChangeText={pincode=>setDeliveryAddress(p=>({...p,pincode}))}/>
+            <GoogleMap points={Number.isFinite(deliveryAddress.lat)?[{...deliveryAddress,label:'Delivery',id:'delivery'}]:[]} onSelect={selectPin}/>
+            <Text style={{paddingVertical:10}}>Tap the map or enter coordinates for the building entrance. GPS accuracy can vary.</Text>
+            <TextInput style={styles.addressInput} placeholder="Latitude" value={pinLat} onChangeText={v=>{setPinLat(v);setPinConfirmed(false);}}/>
+            <TextInput style={styles.addressInput} placeholder="Longitude" value={pinLng} onChangeText={v=>{setPinLng(v);setPinConfirmed(false);}}/>
+            <TouchableOpacity onPress={()=>{
+              const lat=Number(pinLat),lng=Number(pinLng);
+              if(!pinLat.trim() || !pinLng.trim() || !Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat)>90 || Math.abs(lng)>180){showAlert('Invalid pin','Enter valid latitude and longitude.');return;}
+              setDeliveryAddress(p=>({...p,lat,lng}));setPinConfirmed(true);
+            }}><Text style={{padding:12,color:'#15803d',fontWeight:'700'}}>{pinConfirmed?'Delivery pin confirmed':'Confirm this delivery pin'}</Text></TouchableOpacity>
             {/* GPS Verification Action & Google Maps Badge */}
             <View style={{ marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#f1f5f9' }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
@@ -473,10 +473,10 @@ export const CheckoutScreen = ({ navigation }) => {
                   </Text>
                 </TouchableOpacity>
 
-                {deliveryAddress.lat && (
+                {Number.isFinite(deliveryAddress.lat) && (
                   <TouchableOpacity
                     style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
-                    onPress={() => Linking.openURL(`https://www.google.com/maps?q=${deliveryAddress.lat},${deliveryAddress.lng}`)}
+                    onPress={() => Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${deliveryAddress.lat},${deliveryAddress.lng}`).catch(() => showAlert("Maps unavailable", "Please try again."))}
                     activeOpacity={0.7}
                   >
                     <Ionicons name="map-outline" size={13} color="#0284c7" />
@@ -487,15 +487,106 @@ export const CheckoutScreen = ({ navigation }) => {
                 )}
               </View>
 
-              {deliveryAddress.lat && (
+              {/* Google Places Autocomplete */}
+              <View style={{ marginTop: 10, zIndex: 1000 }}>
+                <GooglePlacesAutocomplete
+                  placeholder="Search delivery address"
+                  fetchDetails={true}
+                  onPress={(data, details = null) => {
+                    const lat = details?.geometry?.location?.lat;
+                    const lng = details?.geometry?.location?.lng;
+                    if (lat && lng) {
+                      selectPin({ lat, lng });
+                    }
+                  }}
+                  query={{
+                    key: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,
+                    language: 'en',
+                  }}
+                  styles={{
+                    container: {
+                      width: '100%',
+                      zIndex: 1000,
+                    },
+                    textInputContainer: {
+                      backgroundColor: 'transparent',
+                    },
+                    textInput: {
+                      height: 44,
+                      color: '#0f172a',
+                      fontSize: 13.5,
+                      backgroundColor: '#f8fafc',
+                      borderRadius: 10,
+                      borderWidth: 1.5,
+                      borderColor: '#cbd5e1',
+                      paddingHorizontal: 12,
+                    },
+                    listView: {
+                      backgroundColor: '#ffffff',
+                      borderRadius: 10,
+                      elevation: 5,
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.12,
+                      shadowRadius: 6,
+                      zIndex: 1001,
+                      marginTop: 4,
+                    },
+                    row: {
+                      padding: 12,
+                    },
+                    description: {
+                      fontSize: 13,
+                      color: '#334155',
+                    },
+                  }}
+                  enablePoweredByContainer={false}
+                  keyboardShouldPersistTaps="handled"
+                />
+              </View>
+
+{Platform.OS === 'web' ? (
+  <View style={{ padding: 12, backgroundColor: '#f1f5f9' }}>
+    <Text>🗺️ Live map preview available in the mobile app</Text>
+    <Text>Lat: {deliveryAddress.lat?.toFixed(4) ?? 'N/A'}, Lng: {deliveryAddress.lng?.toFixed(4) ?? 'N/A'}</Text>
+  </View>
+) : (
+  <MapView
+    style={{ flex: 1 }}
+    initialRegion={{
+      latitude: deliveryAddress.lat ?? 20.59,
+      longitude: deliveryAddress.lng ?? 78.96,
+      latitudeDelta: 0.02,
+      longitudeDelta: 0.02,
+    }}
+    onPress={e => {
+      const { latitude, longitude } = e.nativeEvent.coordinate;
+      selectPin({ lat: latitude, lng: longitude });
+    }}
+  >
+    {Number.isFinite(deliveryAddress.lat) && Number.isFinite(deliveryAddress.lng) && (
+      <Marker
+        coordinate={{ latitude: deliveryAddress.lat, longitude: deliveryAddress.lng }}
+        draggable
+        onDragEnd={e => {
+          const { latitude, longitude } = e.nativeEvent.coordinate;
+          selectPin({ lat: latitude, lng: longitude });
+        }}
+      />
+    )}
+  </MapView>
+)}
+              </View>
+
+              {Number.isFinite(deliveryAddress.lat) && (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6 }}>
                   <Ionicons name="checkmark-circle" size={13} color="#16a34a" />
                   <Text style={{ fontSize: 11, color: '#15803d', fontWeight: '600' }}>
-                    GPS Coordinates Attached: {deliveryAddress.lat.toFixed(4)}°N, {deliveryAddress.lng.toFixed(4)}°E (Rider will navigate to this exact pin)
+                    Selected pin: {deliveryAddress.lat.toFixed(4)}, {deliveryAddress.lng.toFixed(4)} (Rider will navigate to this exact pin)
                   </Text>
                 </View>
               )}
-            </View>
+
           </View>
         </View>
 
@@ -513,38 +604,7 @@ export const CheckoutScreen = ({ navigation }) => {
           </View>
 
           <View style={styles.paymentOptions}>
-            {[
-              {
-                id: 'UPI',
-                icon: 'phone-portrait-outline',
-                title: 'Pay Online via UPI (Instant)',
-                sub: 'Google Pay, PhonePe, Paytm, BHIM, QR Code',
-                tag: 'FASTEST & RECOMMENDED',
-                tagColor: '#16a34a'
-              },
-              {
-                id: 'CARD',
-                icon: 'card-outline',
-                title: 'Credit / Debit Cards',
-                sub: 'Visa, MasterCard, RuPay, NetBanking',
-                tag: null
-              },
-              {
-                id: 'WALLET',
-                icon: 'wallet-outline',
-                title: 'S-farmart Wallet',
-                sub: 'Available Balance: ₹250',
-                tag: 'BALANCE AVAILABLE',
-                tagColor: '#0284c7'
-              },
-              {
-                id: 'COD',
-                icon: 'cash-outline',
-                title: 'Cash on Delivery (COD)',
-                sub: 'Pay cash or scan QR on arrival',
-                tag: null
-              }
-            ].map((opt) => (
+            {[{id:'COD',icon:'cash-outline',title:'Cash on Delivery',sub:'Pay the rider on delivery',tag:null}].map((opt) => (
               <AnimatedPayOption
                 key={opt.id}
                 opt={opt}

@@ -1,4 +1,5 @@
-import React from 'react';
+import React,{useState} from 'react';
+import {API_BASE_URL} from '../config/env';
 import {
   View,
   Text,
@@ -7,6 +8,8 @@ import {
   TouchableOpacity,
   Platform,
   StatusBar,
+  TextInput,
+  Linking,
   useWindowDimensions
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -22,8 +25,18 @@ export const PartnerAccountScreen = () => {
   const { width } = useWindowDimensions();
   const isTablet = width > 600;
 
-  const { vendor, logoutVendor } = usePartner();
+  const { vendor, token, logoutVendor } = usePartner();
 
+  const [pickupLat,setPickupLat]=useState(String(vendor?.address?.location?.coordinates?.[1] ?? ''));
+  const [pickupLng,setPickupLng]=useState(String(vendor?.address?.location?.coordinates?.[0] ?? ''));
+  const [savingPin,setSavingPin]=useState(false);
+  const savePin=async()=>{
+    const lat=Number(pickupLat),lng=Number(pickupLng);
+    if(!pickupLat.trim() || !pickupLng.trim() || !Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat)>90 || Math.abs(lng)>180){showAlert('Invalid location','Enter a valid store pickup pin.');return;}
+    setSavingPin(true);
+    try{const response=await fetch(API_BASE_URL+'/vendors/me/profile',{method:'PATCH',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({location:{lat,lng}})});const data=await response.json();if(!data.success)throw new Error(data.message);showAlert('Pickup pin saved','Riders will navigate to this store entrance.');}
+    catch(e){showAlert('Unable to save',e.message);}finally{setSavingPin(false);}
+  };
   const handleLogout = () => {
     showAlert(
       'Confirm Logout',
@@ -155,6 +168,14 @@ export const PartnerAccountScreen = () => {
           </View>
         </GlassCard>
 
+        <GlassCard style={styles.sectionCard}>
+          <Text style={styles.sectionTitle}>Store entrance pin</Text>
+          <Text style={{marginVertical:10}}>Copy the coordinates of your entrance from Google Maps. Riders use this pin for pickup.</Text>
+          <TextInput accessibilityLabel="Store latitude" value={pickupLat} onChangeText={setPickupLat} placeholder="Latitude" style={{padding:12,borderWidth:1,borderColor:'#cbd5e1',marginVertical:5}}/>
+          <TextInput accessibilityLabel="Store longitude" value={pickupLng} onChangeText={setPickupLng} placeholder="Longitude" style={{padding:12,borderWidth:1,borderColor:'#cbd5e1',marginVertical:5}}/>
+          <TouchableOpacity disabled={savingPin} onPress={savePin}><Text style={{padding:12,color:'#15803d',fontWeight:'700'}}>{savingPin?'Saving...':'Save pickup pin'}</Text></TouchableOpacity>
+          <TouchableOpacity onPress={()=>Linking.openURL('https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(pickupLat+','+pickupLng)).catch(()=>{})}><Text style={{padding:12,color:'#0284c7'}}>Preview in Google Maps</Text></TouchableOpacity>
+        </GlassCard>
         {/* 3. Store Pickup & Location Address Card */}
         <GlassCard style={styles.sectionCard}>
           <View style={styles.cardHeaderRow}>

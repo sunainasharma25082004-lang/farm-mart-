@@ -1,4 +1,6 @@
 import mongoose from 'mongoose';
+import { validCoordinates, canAccessOrder, canTransition, distanceKm, storePoint } from '../utils/deliveryPolicy.js';
+import Rider from '../models/Rider.js';
 import Order from '../models/Order.js';
 import Product from '../models/Product.js';
 import Vendor from '../models/Vendor.js';
@@ -22,15 +24,15 @@ export const createOrder = async (req, res) => {
 
     // 1. Check idempotency if clientOrderId is provided
     if (clientOrderId) {
-      const existingOrder = await Order.findOne({ clientOrderId })
-        .populate('vendor', 'storeName phone address isOpen')
-        .populate('customer', 'name phone');
+      const existingOrder = await Order.findOne({ clientOrderId, customer: req.user.id || req.user._id })
+        .populate('vendor', 'storeName phone address location isOpen')
+        .populate('customer', 'name phone').populate('rider','name phone vehicleType vehicleNumber rating');
       if (existingOrder) {
         return res.json({ success: true, order: existingOrder, isExisting: true });
       }
     }
 
-    if (!items || !items.length) {
+    if (!Array.isArray(items) || !items.length) {
       return res.status(400).json({
         success: false,
         code: 'EMPTY_CART',
@@ -86,6 +88,15 @@ export const createOrder = async (req, res) => {
       });
     }
 
+    if (!validCoordinates(address?.lat, address?.lng) || !address?.line1?.trim() || !address?.name?.trim() || !/^[+\d\s-]{10,16}$/.test(address?.phone || '')) {
+      return res.status(400).json({success:false,code:'DELIVERY_ADDRESS_REQUIRED',message:'Enter recipient, phone, address and confirm a valid delivery pin.'});
+    }
+    if (paymentMethod !== 'COD') {
+      return res.status(400).json({success:false,code:'PAYMENT_NOT_CONFIGURED',message:'Online payment verification is not configured. Please choose Cash on Delivery.'});
+    }
+    if (items.some(i => !Number.isSafeInteger(i.qty ?? i.quantity ?? 1) || (i.qty ?? i.quantity ?? 1) < 1)) {
+      return res.status(400).json({success:false,code:'INVALID_QUANTITY',message:'Item quantities must be positive whole numbers.'});
+    }
     // 3. Fetch all products from DB for single-vendor validation & real price calculation
     const productIds = items.map((it) => it.productId || it.product || it._id);
 
@@ -141,7 +152,7 @@ export const createOrder = async (req, res) => {
     for (const item of items) {
       const prodId = (item.productId || item.product || item._id).toString();
       const dbProd = dbProducts.find((p) => p._id.toString() === prodId);
-      const qty = Math.max(1, parseInt(item.qty ?? item.quantity ?? 1, 10));
+      const qty = item.qty ?? item.quantity ?? 1;
 
       if (dbProd.stockQty < qty) {
         return res.status(400).json({
@@ -184,13 +195,8 @@ export const createOrder = async (req, res) => {
     const orderNumber = `ORD-${Date.now().toString().slice(-6)}-${Math.floor(100 + Math.random() * 900)}`;
 
     const deliveryAddress = {
-      name: address?.name || customerName || 'Rajesh Kumar',
-      phone: address?.phone || customerPhone || '9876543210',
-      line1: address?.line1 || 'Flat 302, Green Avenue, Model Town',
-      city: address?.city || 'Ludhiana',
-      pincode: address?.pincode || '141001',
-      lat: typeof address?.lat === 'number' ? address.lat : parseFloat(address?.lat) || 30.9080,
-      lng: typeof address?.lng === 'number' ? address.lng : parseFloat(address?.lng) || 75.8610
+      name: address.name.trim(), phone: address.phone.trim(), line1: address.line1.trim(),
+      city: address.city || '', pincode: address.pincode || '', lat: address.lat, lng: address.lng
     };
 
     // 11. 🔒 ACID-Compliant Multi-Document Atomic Transaction
@@ -354,8 +360,8 @@ export const createOrder = async (req, res) => {
     }
 
     const populatedOrder = await Order.findById(savedOrder._id)
-      .populate('vendor', 'storeName phone address isOpen')
-      .populate('customer', 'name phone');
+      .populate('vendor', 'storeName phone address location isOpen')
+      .populate('customer', 'name phone').populate('rider','name phone vehicleType vehicleNumber rating');
 
     // 12. 🔴 Real-time Notification Trigger: notify vendor instantly
     notifyNewOrder(populatedOrder);
@@ -364,21 +370,10 @@ export const createOrder = async (req, res) => {
     const orderToAutoAcceptId = savedOrder._id;
     setTimeout(async () => {
       try {
-        const checkOrder = await Order.findById(orderToAutoAcceptId);
-        if (checkOrder && checkOrder.status === 'NEW_ORDER') {
-          console.log(`⏰ [Server Auto-Accept] 60s reached: Automatically accepting order #${checkOrder.orderNumber} for preparation`);
-          checkOrder.status = 'ACCEPTED';
-          checkOrder.statusHistory.push({
-            status: 'ACCEPTED',
-            at: new Date(),
-            by: 'SYSTEM_AUTO_ACCEPT'
-          });
-          await checkOrder.save();
-          const pop = await Order.findById(checkOrder._id)
-            .populate('vendor', 'storeName phone address isOpen')
-            .populate('customer', 'name phone');
-          notifyOrderStatus(pop);
-        }
+        const accepted = await Order.findOneAndUpdate({_id:orderToAutoAcceptId,status:'NEW_ORDER'}, {
+          $set:{status:'ACCEPTED'},$push:{statusHistory:{status:'ACCEPTED',at:new Date(),by:'SYSTEM_AUTO_ACCEPT'}}
+        },{new:true});
+        if(accepted) notifyOrderStatus(accepted);
       } catch (autoErr) {
         console.warn('Server auto-accept failed:', autoErr);
       }
@@ -405,37 +400,14 @@ export const getOrderById = async (req, res) => {
   try {
     const { id } = req.params;
     const order = await Order.findById(id)
-      .populate('vendor', 'storeName phone address isOpen rating')
-      .populate('customer', 'name phone');
+      .populate('vendor', 'storeName phone address location isOpen rating')
+      .populate('customer', 'name phone').populate('rider','name phone vehicleType vehicleNumber rating');
 
     if (!order) {
       return res.status(404).json({ success: false, message: 'Order not found' });
     }
 
-    // 🔴 HARD OWNERSHIP CHECK (FLOW 3):
-    // Order can only be viewed by the customer who placed it, the vendor who fulfills it, or an admin/rider.
-    const requesterId = (req.user?.id || req.user?._id)?.toString();
-    const requesterRole = req.user?.role;
-    const requesterVendorId = req.user?.vendorId?.toString();
-
-    const orderCustomerId = (order.customer?._id || order.customer)?.toString();
-    const orderVendorId = (order.vendor?._id || order.vendor)?.toString();
-
-    const isCustomerOwner = requesterId && orderCustomerId === requesterId;
-    const isVendorOwner =
-      (requesterVendorId && orderVendorId === requesterVendorId) ||
-      (requesterId && orderVendorId === requesterId);
-    const isAdminOrRider = requesterRole === 'ADMIN' || requesterRole === 'RIDER';
-
-    if (!isCustomerOwner && !isVendorOwner && !isAdminOrRider) {
-      return res.status(403).json({
-        ok: false,
-        success: false,
-        code: 'FORBIDDEN',
-        message: 'You do not have permission to view this order.'
-      });
-    }
-
+    if (!canAccessOrder(req.user, order)) return res.status(403).json({success:false,code:'FORBIDDEN',message:'This order belongs to another account.'});
     res.json({ success: true, order });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Error retrieving order' });
@@ -457,8 +429,8 @@ export const getCustomerOrders = async (req, res) => {
     }
 
     const orders = await Order.find({ customer: customerId })
-      .populate('vendor', 'storeName phone logo address isOpen')
-      .populate('customer', 'name phone')
+      .populate('vendor', 'storeName phone logo address location isOpen')
+      .populate('customer', 'name phone').populate('rider','name phone vehicleType vehicleNumber rating')
       .sort({ createdAt: -1 });
 
     res.json({
@@ -498,7 +470,7 @@ export const getVendorOrders = async (req, res) => {
           message: 'You can only view orders assigned to your own store.'
         });
       }
-    } else if (authUser.role !== 'ADMIN' && authUser.role !== 'RIDER') {
+    } else if (authUser.role !== 'ADMIN') {
       // Customers cannot view vendor order queues
       return res.status(403).json({
         ok: false,
@@ -510,7 +482,7 @@ export const getVendorOrders = async (req, res) => {
 
     const targetVendorId = requestedVendorId || authenticatedVendorId;
     const orders = await Order.find({ vendor: targetVendorId })
-      .populate('customer', 'name phone')
+      .populate('customer', 'name phone').populate('rider','name phone vehicleType vehicleNumber rating')
       .sort({ createdAt: -1 });
 
     res.json({ success: true, count: orders.length, orders });
@@ -523,13 +495,13 @@ export const getVendorOrders = async (req, res) => {
 // @route   GET /api/orders/delivery/pending
 export const getDeliveryOrders = async (req, res) => {
   try {
-    const orders = await Order.find({
-      status: { $in: ['READY_FOR_RIDER', 'OUT_FOR_DELIVERY'] }
-    })
-      .populate('vendor', 'storeName address phone')
-      .populate('customer', 'name phone')
-      .sort({ createdAt: -1 });
-
+    const rider = await Rider.findById(req.user.id);
+    if (!rider || rider.status !== 'ONLINE_IDLE' || Date.now()-new Date(rider.locationUpdatedAt).getTime()>120000) return res.json({success:true,orders:[]});
+    const candidates = await Order.find({ status:'READY_FOR_RIDER', rider:null })
+      .select('-pickupOtp -deliveryOtp -deliveryRoute -address.phone -customer')
+      .populate('vendor','storeName address phone').sort({createdAt:1}).limit(100);
+    const point={lat:rider.currentLocation?.coordinates?.[1],lng:rider.currentLocation?.coordinates?.[0]};
+    const orders=candidates.filter(o=>distanceKm(point,storePoint(o.vendor))<=8);
     res.json({ success: true, count: orders.length, orders });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Server Error', error });
@@ -567,44 +539,26 @@ export const updateOrderStatus = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Order not found' });
     }
 
-    // Check if already in terminal state
-    if (['DELIVERED', 'CANCELLED', 'REJECTED'].includes(order.status)) {
-      return res.status(400).json({
-        success: false,
-        code: 'ORDER_FINALIZED',
-        message: `Order is already ${order.status} and cannot be altered.`
+    if (!canTransition(req.user,order,status)) return res.status(403).json({success:false,code:'INVALID_TRANSITION',message:'This account cannot perform this order transition. Delivery requires assigned rider OTP verification.'});
+    const session=await mongoose.startSession();
+    try {
+      await session.withTransaction(async()=>{
+        const updated=await Order.findOneAndUpdate({_id:id,status:order.status}, {
+          $set:{status,rejectionReason:rejectionReason || ''},
+          $push:{statusHistory:{status,at:new Date(),by:req.user.role}}
+        },{new:true,session});
+        if(!updated) throw new Error('Order changed. Refresh before trying again.');
+        if(['CANCELLED','REJECTED'].includes(status)) {
+          for(const item of order.items) await Product.findByIdAndUpdate(item.product,{$inc:{stockQty:item.qty},$set:{inStock:true}},{session});
+        }
       });
+    } finally {await session.endSession();}
+    if(['CANCELLED','REJECTED'].includes(status)) {
+      for(const item of order.items) {const product=await Product.findById(item.product);if(product)notifyProductStock(product);}
     }
-
-    // Rollback stock if cancelled or rejected
-    if (['CANCELLED', 'REJECTED'].includes(status) && !['CANCELLED', 'REJECTED'].includes(order.status)) {
-      for (const item of order.items) {
-        const restored = await Product.findByIdAndUpdate(
-          item.product,
-          {
-            $inc: { stockQty: item.qty },
-            inStock: true
-          },
-          { new: true }
-        );
-        if (restored) notifyProductStock(restored);
-      }
-    }
-
-    order.status = status;
-    if (rejectionReason) order.rejectionReason = rejectionReason;
-
-    order.statusHistory.push({
-      status,
-      at: new Date(),
-      by: req.user?.role || 'VENDOR'
-    });
-
-    await order.save();
-
     const populatedOrder = await Order.findById(order._id)
-      .populate('vendor', 'storeName phone address isOpen')
-      .populate('customer', 'name phone');
+      .populate('vendor', 'storeName phone address location isOpen')
+      .populate('customer', 'name phone').populate('rider','name phone vehicleType vehicleNumber rating');
 
     // 🔴 Notify real-time status change to customer & vendor
     notifyOrderStatus(populatedOrder);

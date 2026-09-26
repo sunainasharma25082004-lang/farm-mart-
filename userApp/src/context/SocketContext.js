@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
-import io from 'socket.io-client/dist/socket.io.js';
+import io from 'socket.io-client';
+import storage from '../services/storage';
 
 import { API_BASE_URL } from '../config/env';
 
@@ -15,11 +16,13 @@ export const SocketProvider = ({ children, token, userId }) => {
   const [riderLocationUpdate, setRiderLocationUpdate] = useState(null);
   const [productStockUpdate, setProductStockUpdate] = useState(null);
   const socketRef = useRef(null);
+  const trackedOrderRef=useRef(null);
 
   useEffect(() => {
+    setActiveOrderUpdate(null);setRiderLocationUpdate(null);setIsConnected(false);
     try {
       const socket = io(SOCKET_SERVER_URL, {
-        auth: { token },
+        auth: async cb=>cb({token:await storage.getAccessToken()}),
         transports: ['websocket', 'polling'],
         reconnectionAttempts: 15,
         reconnectionDelay: 2000
@@ -30,12 +33,14 @@ export const SocketProvider = ({ children, token, userId }) => {
       socket.on('connect', () => {
         console.log('⚡ Customer Socket connected:', socket.id);
         setIsConnected(true);
+        if(trackedOrderRef.current)socket.emit('join:order',trackedOrderRef.current);
         if (userId) {
           socket.emit('join:customer', userId);
         }
       });
 
-      socket.on('disconnect', () => {
+      socket.on('disconnect', (reason) => {
+        if(reason==='io server disconnect')socket.connect();
         setIsConnected(false);
       });
 
@@ -62,6 +67,9 @@ export const SocketProvider = ({ children, token, userId }) => {
   }, [token, userId]);
 
   const trackOrder = (orderId) => {
+    if(trackedOrderRef.current && trackedOrderRef.current!==orderId)socketRef.current?.emit('leave:order',trackedOrderRef.current);
+    trackedOrderRef.current=orderId;
+    setRiderLocationUpdate(null);
     if (socketRef.current && orderId) {
       socketRef.current.emit('join:order', orderId);
       console.log('Joined live order tracking:', orderId);

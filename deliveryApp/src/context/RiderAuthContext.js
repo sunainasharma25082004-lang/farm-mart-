@@ -1,3 +1,4 @@
+import {sendCurrentLocation,startBackgroundLocation,stopBackgroundLocation} from '../services/location';
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import storage from '../services/storage';
 import { riderApi } from '../services/api';
@@ -48,6 +49,8 @@ export const RiderAuthProvider = ({ children }) => {
     const res = await riderApi.login(phone, password);
     const { token, refreshToken, rider: riderData } = res.data;
 
+    disconnectSocket();
+    await stopBackgroundLocation().catch(()=>{});
     await storage.setToken(token);
     if (refreshToken) await storage.setRefreshToken(refreshToken);
     await storage.setRider(riderData);
@@ -63,6 +66,7 @@ export const RiderAuthProvider = ({ children }) => {
     } catch {
       // Ignore network errors on logout
     }
+    await stopBackgroundLocation().catch(()=>{});
     await storage.clearAuth();
     disconnectSocket();
     setRider(null);
@@ -72,11 +76,14 @@ export const RiderAuthProvider = ({ children }) => {
     if (!rider) return;
     const targetStatus = rider.status === 'OFFLINE' ? 'ONLINE_IDLE' : 'OFFLINE';
     try {
+      if(targetStatus==='ONLINE_IDLE')await sendCurrentLocation();
       const res = await riderApi.toggleDuty(targetStatus);
       if (res.data?.success) {
         const updated = { ...rider, status: res.data.status };
         setRider(updated);
         await storage.setRider(updated);
+        if(targetStatus==='ONLINE_IDLE')await startBackgroundLocation().catch(()=>false);
+        else await stopBackgroundLocation().catch(()=>{});
         return updated;
       }
     } catch (err) {

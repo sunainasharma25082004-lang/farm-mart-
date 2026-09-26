@@ -166,7 +166,6 @@ export const OrderTrackingScreen = ({ route, navigation }) => {
       const orderCustPhone = (routeOrder.customer?.phone || routeOrder.customerPhone)?.toString();
 
       const isMine =
-        (!orderCustId && !orderCustPhone) ||
         (currentUserId && orderCustId === currentUserId) ||
         (currentUserPhone && orderCustPhone === currentUserPhone);
 
@@ -187,6 +186,7 @@ export const OrderTrackingScreen = ({ route, navigation }) => {
 
   useEffect(() => {
     if (activeOrder?._id) {
+      setRiderLiveLocation(null);
       trackOrder(activeOrder._id);
     }
   }, [activeOrder?._id]);
@@ -520,7 +520,7 @@ export const OrderTrackingScreen = ({ route, navigation }) => {
                   </View>
                   <View style={{ flex: 1, marginLeft: 12 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Text style={styles.riderName}>{activeOrder.rider?.name || 'Gurmukh Singh'}</Text>
+                      <Text style={styles.riderName}>{activeOrder.rider?.name || 'Assigned rider'}</Text>
                       <View style={styles.riderRatingPill}>
                         <Ionicons name="star" size={10} color="#f59e0b" />
                         <Text style={styles.riderRatingText}>{activeOrder.rider?.rating || '4.9'}</Text>
@@ -532,7 +532,7 @@ export const OrderTrackingScreen = ({ route, navigation }) => {
                   </View>
                   <TouchableOpacity
                     style={styles.callRiderBtn}
-                    onPress={() => callRider(activeOrder.rider?.phone || '9876543220')}
+                    onPress={() => callRider(activeOrder.rider?.phone)}
                     activeOpacity={0.85}
                   >
                     <Ionicons name="call" size={15} color="#ffffff" />
@@ -610,7 +610,7 @@ export const OrderTrackingScreen = ({ route, navigation }) => {
             <View style={styles.actionButtonsRow}>
               <TouchableOpacity
                 style={styles.callStoreBtn}
-                onPress={() => callStore(activeOrder.vendor?.phone || '9876543211')}
+                onPress={() => callStore(activeOrder.vendor?.phone)}
                 activeOpacity={0.85}
               >
                 <Ionicons name="call" size={16} color="#ffffff" />

@@ -20,6 +20,7 @@ const vendorSchema = new mongoose.Schema(
     },
     passwordHash: {
       type: String,
+      select: false,
       required: true
     },
     storeType: {

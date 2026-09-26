@@ -109,6 +109,8 @@ export async function notifyOrderStatus(order) {
       if (customerId) {
         io.to(`customer:${customerId}`).emit('order:status', payload);
       }
+      const riderId=(order.rider?._id || order.rider)?.toString();
+      if(riderId) io.to('rider:'+riderId).emit('order:status',payload);
       if (vendorId) {
         io.to(`vendor:${vendorId}`).emit('order:status', payload);
       }

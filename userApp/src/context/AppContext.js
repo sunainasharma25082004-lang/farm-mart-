@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
-import { apiService, setAuthToken, setForceLogoutHandler } from '../services/api';
+import { apiService, setAuthToken, setForceLogoutHandler, setTokenChangedHandler } from '../services/api';
 import storage from '../services/storage';
 import { showAlert } from '../utils/alert';
 
@@ -74,6 +74,8 @@ export const AppProvider = ({ children }) => {
   // Register force logout with api client interceptor
   useEffect(() => {
     setForceLogoutHandler(forceLogout);
+    setTokenChangedHandler(setToken);
+    return()=>{setForceLogoutHandler(null);setTokenChangedHandler(null);};
   }, [forceLogout]);
 
   // Fetch fresh profile from /api/auth/me
@@ -108,7 +110,10 @@ export const AppProvider = ({ children }) => {
   // Login method
   const loginUser = useCallback(async (userOrPhone, password) => {
     if (typeof userOrPhone === 'object' && userOrPhone !== null) {
-      setUserProfile((prev) => ({ ...prev, ...userOrPhone }));
+      const accessToken=await storage.getAccessToken();
+      if(!accessToken)return null;
+      setToken(accessToken);setAuthToken(accessToken);
+      setUserProfile(userOrPhone);
       setIsAuthenticated(true);
       return userOrPhone;
     }

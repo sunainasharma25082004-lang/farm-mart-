@@ -42,13 +42,14 @@ const riderSchema = new mongoose.Schema(
       },
       coordinates: {
         type: [Number], // [longitude, latitude]
-        default: [75.8573, 30.9010]
+        default: undefined
       }
     },
     locationUpdatedAt: {
       type: Date,
-      default: Date.now
+      default: null
     },
+    locationAccuracy: { type: Number, default: null },
     activeOrderId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Order',

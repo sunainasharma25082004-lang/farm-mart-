@@ -24,9 +24,11 @@ export const DutyScreen = ({ navigation }) => {
     refreshActiveOrder,
     refreshEarnings,
     fetchAvailablePool,
-    acceptOffer
+    acceptOffer,
+    locationError
   } = useDelivery();
 
+  const [dutyError,setDutyError]=useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isTogglingDuty, setIsTogglingDuty] = useState(false);
 
@@ -41,9 +43,9 @@ export const DutyScreen = ({ navigation }) => {
   const handleToggleDuty = async () => {
     setIsTogglingDuty(true);
     try {
-      await toggleDutyStatus();
-    } catch {
-      // Ignored
+      await toggleDutyStatus();setDutyError('');
+    } catch(e) {
+      setDutyError(e.response?.data?.message || e.message);
     } finally {
       setIsTogglingDuty(false);
     }
@@ -92,6 +94,7 @@ export const DutyScreen = ({ navigation }) => {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />}
       >
+        {(dutyError || locationError)?<Text style={{padding:12,color:'#b45309'}}>{dutyError || locationError}</Text>:null}
         {/* Performance & Pay Bar */}
         <View style={styles.statsBar}>
           <View style={styles.statItem}>

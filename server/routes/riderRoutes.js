@@ -1,4 +1,5 @@
 import express from 'express';
+import { orderForRole } from '../utils/deliveryPolicy.js';
 import {
   riderLogin,
   riderRefresh,
@@ -14,14 +15,20 @@ import {
   getRiderProfile,
   getRiderEarnings
 } from '../controllers/riderController.js';
-import { verifyToken } from '../middleware/auth.js';
+import { verifyToken, requireRole } from '../middleware/auth.js';
 
 const router = express.Router();
+router.use((req,res,next) => {
+  const json = res.json.bind(res);
+  res.json = body => { if (body?.order) body.order = orderForRole(body.order, 'RIDER'); return json(body); };
+  next();
+});
 
 // Public auth routes
 router.post('/auth/login', riderLogin);
 router.post('/auth/refresh', riderRefresh);
-router.post('/auth/logout', verifyToken, riderLogout);
+router.use(verifyToken, requireRole('RIDER'));
+router.post('/auth/logout', riderLogout);
 
 // Protected rider operational routes
 router.patch('/status', verifyToken, toggleRiderStatus);

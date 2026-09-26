@@ -95,11 +95,11 @@ function UserAppContainer() {
 
   return (
     <SocketProvider token={token} userId={userProfile?._id || userProfile?.id}>
-      <CartProvider>
+      <CartProvider key={userProfile?._id || userProfile?.id || 'guest'}>
         <AuthGateProvider>
           <View style={styles.container}>
             <StatusBar barStyle="dark-content" backgroundColor={colors.card} />
-            <NavigationContainer linking={linking}>
+            <NavigationContainer key={userProfile?._id || userProfile?.id || 'guest'} linking={linking}>
               <RootNavigator />
             </NavigationContainer>
           </View>

@@ -1,3 +1,5 @@
+import mongoose from 'mongoose';
+import { validCoordinates, activeDeliveryStates, idOf } from '../utils/deliveryPolicy.js';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import Rider from '../models/Rider.js';
@@ -135,7 +137,7 @@ export const toggleRiderStatus = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Rider not found.' });
     }
 
-    if (rider.status === 'ON_DELIVERY' && status === 'OFFLINE') {
+    if (rider.activeOrderId || rider.status === 'ON_DELIVERY') {
       return res.status(400).json({
         success: false,
         code: 'ACTIVE_DELIVERY_IN_PROGRESS',
@@ -144,6 +146,8 @@ export const toggleRiderStatus = async (req, res) => {
     }
 
     const targetStatus = status || (rider.status === 'OFFLINE' ? 'ONLINE_IDLE' : 'OFFLINE');
+    if (!['OFFLINE','ONLINE_IDLE'].includes(targetStatus)) return res.status(400).json({success:false,message:'Invalid duty status.'});
+    if (targetStatus === 'ONLINE_IDLE' && (!rider.locationUpdatedAt || Date.now()-new Date(rider.locationUpdatedAt).getTime()>120000)) return res.status(400).json({success:false,message:'Enable GPS and send a fresh location before going online.'});
     rider.status = targetStatus;
     await rider.save();
 
@@ -164,10 +168,14 @@ export const updateRiderLocation = async (req, res) => {
     const riderId = req.user?.id?.toString();
     const { lat, lng, heading = 0, speed = 0, orderId } = req.body;
 
-    if (typeof lat !== 'number' || typeof lng !== 'number') {
-      return res.status(400).json({ success: false, message: 'Valid lat and lng required.' });
+    const { accuracy, capturedAt } = req.body;
+    if (!validCoordinates(lat,lng) || !Number.isFinite(accuracy) || accuracy<0 || accuracy>100 || !Number.isFinite(capturedAt) || Math.abs(Date.now()-capturedAt)>120000 || !Number.isFinite(speed) || speed<0 || speed>250 || !Number.isFinite(heading) || heading<0 || heading>360) {
+      return res.status(400).json({success:false,message:'A fresh GPS fix with accuracy within 100 metres is required.'});
     }
-
+    const rider=await Rider.findById(riderId);
+    if (!rider) return res.status(404).json({success:false,message:'Rider not found.'});
+    if (orderId && idOf(rider.activeOrderId)!==String(orderId)) return res.status(403).json({success:false,message:'This delivery is not assigned to you.'});
+    const activeOrder = rider.activeOrderId ? await Order.findOne({_id:rider.activeOrderId,rider:riderId,status:{$in:activeDeliveryStates}}) : null;
     const now = Date.now();
     const state = locationRateLimiter.get(riderId) || { lastPingAt: 0, lastBreadcrumbAt: 0 };
 
@@ -180,10 +188,11 @@ export const updateRiderLocation = async (req, res) => {
     // Ephemeral update on Rider model
     await Rider.findByIdAndUpdate(riderId, {
       currentLocation: { type: 'Point', coordinates: [lng, lat] },
-      locationUpdatedAt: new Date()
+      locationUpdatedAt: new Date(capturedAt),
+      locationAccuracy: accuracy
     });
 
-    const activeOrderId = orderId || (await Rider.findById(riderId).select('activeOrderId'))?.activeOrderId;
+    const activeOrderId = activeOrder?._id;
 
     // If rider has an active order, emit live location to that order room
     if (activeOrderId) {
@@ -196,7 +205,7 @@ export const updateRiderLocation = async (req, res) => {
           lng,
           heading,
           speed,
-          at: new Date()
+          accuracy, at: new Date(capturedAt)
         });
       }
 
@@ -204,7 +213,8 @@ export const updateRiderLocation = async (req, res) => {
       if (now - state.lastBreadcrumbAt >= 30000) {
         state.lastBreadcrumbAt = now;
         await Order.findByIdAndUpdate(activeOrderId, {
-          $push: { deliveryRoute: { lat, lng, at: new Date() } }
+          $push: { deliveryRoute: { $each: [{lat,lng,at:new Date(capturedAt)}], $slice: -1000 } },
+          $set: { riderLocation: {lat,lng,speed,heading,accuracy,at:new Date(capturedAt)} }
         });
       }
     }
@@ -246,7 +256,6 @@ export const getActiveDeliveryOrder = async (req, res) => {
         items: order.items,
         pricing: order.pricing,
         payment: order.payment,
-        pickupOtp: order.pickupOtp,
         placedAt: order.placedAt,
         riderAssignedAt: order.riderAssignedAt
       }
@@ -323,111 +332,39 @@ export const arrivedAtStore = async (req, res) => {
 
 // @desc    Verify Pickup from Store
 // @route   POST /api/rider/orders/:id/pickup-verify
-export const verifyPickup = async (req, res) => {
+export const verifyPickup = async (req,res) => {
+  const otp=String(req.body.pickupOtp || '').trim();
+  if(!/^\d{4}$/.test(otp)) return res.status(400).json({success:false,code:'OTP_REQUIRED',message:'Enter the 4-digit pickup OTP from the merchant.'});
   try {
-    const riderId = req.user?.id;
-    const { id } = req.params;
-    const { pickupOtp } = req.body;
-
-    const order = await Order.findOne({ _id: id, rider: riderId });
-    if (!order) {
-      return res.status(404).json({ success: false, message: 'Order not found.' });
-    }
-
-    // Verify pickup OTP if supplied
-    if (pickupOtp && order.pickupOtp && order.pickupOtp !== pickupOtp.toString().trim()) {
-      return res.status(400).json({
-        success: false,
-        code: 'INVALID_PICKUP_OTP',
-        message: 'Invalid Store Pickup OTP.'
-      });
-    }
-
-    order.status = 'OUT_FOR_DELIVERY';
-    order.statusHistory.push({
-      status: 'OUT_FOR_DELIVERY',
-      at: new Date(),
-      by: 'RIDER'
-    });
-    await order.save();
-
-    const populated = await Order.findById(order._id).populate('vendor customer');
-    notifyOrderStatus(populated);
-
-    res.json({
-      success: true,
-      message: 'Parcel picked up! Out for delivery to customer.',
-      order: populated
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'Error verifying pickup', error: error.message });
-  }
+    const order=await Order.findOneAndUpdate({_id:req.params.id,rider:req.user.id,status:'RIDER_ARRIVED_STORE',pickupOtp:otp},{
+      $set:{status:'OUT_FOR_DELIVERY'},$push:{statusHistory:{status:'OUT_FOR_DELIVERY',at:new Date(),by:'RIDER'}}
+    },{new:true}).populate('vendor customer');
+    if(!order)return res.status(409).json({success:false,message:'Invalid OTP, wrong rider or pickup already completed.'});
+    notifyOrderStatus(order);res.json({success:true,order});
+  }catch{res.status(500).json({success:false,message:'Pickup verification failed.'});}
 };
-
-// @desc    Verify Delivery at Customer Doorstep with 4-digit Delivery OTP
-// @route   POST /api/rider/orders/:id/delivery-verify
-export const verifyDelivery = async (req, res) => {
+export const verifyDelivery = async (req,res) => {
+  const otp=String(req.body.deliveryOtp || '').trim();
+  if(!/^\d{4}$/.test(otp))return res.status(400).json({success:false,code:'OTP_REQUIRED',message:'Enter the customer delivery OTP.'});
+  let session;
   try {
-    const riderId = req.user?.id;
-    const { id } = req.params;
-    const { deliveryOtp } = req.body;
-
-    if (!deliveryOtp) {
-      return res.status(400).json({
-        success: false,
-        code: 'OTP_REQUIRED',
-        message: 'Customer 4-digit Delivery OTP is required to complete delivery.'
-      });
-    }
-
-    const order = await Order.findOne({ _id: id, rider: riderId });
-    if (!order) {
-      return res.status(404).json({ success: false, message: 'Active order not found.' });
-    }
-
-    // Strict Server-Side OTP Check:
-    if (order.deliveryOtp && order.deliveryOtp !== deliveryOtp.toString().trim()) {
-      return res.status(400).json({
-        success: false,
-        code: 'INVALID_DELIVERY_OTP',
-        message: 'Invalid Customer Delivery OTP. Please ask customer to check their Order Tracking screen.'
-      });
-    }
-
-    order.status = 'DELIVERED';
-    if (order.payment?.method === 'COD') {
-      order.payment.status = 'PAID';
-    }
-    order.statusHistory.push({
-      status: 'DELIVERED',
-      at: new Date(),
-      by: 'RIDER'
+    session=await mongoose.startSession();
+    let order;
+    await session.withTransaction(async()=>{
+      order=await Order.findOneAndUpdate({_id:req.params.id,rider:req.user.id,status:'OUT_FOR_DELIVERY',deliveryOtp:otp}, {
+        $set:{status:'DELIVERED','payment.status':'PAID'},
+        $push:{statusHistory:{status:'DELIVERED',at:new Date(),by:'RIDER'}}
+      },{new:true,session});
+      if(!order)throw Object.assign(new Error('Invalid OTP, wrong rider or delivery already completed.'),{status:409});
+      const rider=await Rider.findOneAndUpdate({_id:req.user.id,activeOrderId:order._id}, {
+        $set:{status:'ONLINE_IDLE',activeOrderId:null},
+        $inc:{completedDeliveries:1,todayEarningsPaise:6500,totalEarningsPaise:6500}
+      },{new:true,session});
+      if(!rider)throw Object.assign(new Error('Active rider assignment changed. Refresh and retry.'),{status:409});
     });
-    await order.save();
-
-    // Credit ₹65 (6500 paise) to rider earnings
-    await Rider.findByIdAndUpdate(riderId, {
-      status: 'ONLINE_IDLE',
-      activeOrderId: null,
-      $inc: {
-        completedDeliveries: 1,
-        todayEarningsPaise: 6500,
-        totalEarningsPaise: 6500
-      }
-    });
-
-    const populated = await Order.findById(order._id).populate('vendor customer');
-    notifyOrderStatus(populated);
-
-    res.json({
-      success: true,
-      message: 'Delivery confirmed and finalized! Payout of ₹65 credited to your earnings.',
-      earnedAmount: 65,
-      order: populated
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'Error completing delivery', error: error.message });
-  }
+    notifyOrderStatus(order);res.json({success:true,earnedAmount:65,order});
+  }catch(error){res.status(error.status || 500).json({success:false,message:error.message});}
+  finally{if(session)await session.endSession();}
 };
 
 // @desc    Get Rider Profile

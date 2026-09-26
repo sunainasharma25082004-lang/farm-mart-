@@ -13,6 +13,7 @@ import {
   Modal,
   TextInput,
   Image,
+  Linking,
   useWindowDimensions
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -321,6 +322,9 @@ export const VendorDashboardScreen = ({ navigation, initialSection }) => {
                       o.items?.[0]?.product?.name || o.items?.[0]?.name || 'Special Menu Item';
                     const grandTotal = o.pricing?.grandTotal || o.totalAmount || 180;
                     const isProcessing = processingOrderId === o._id;
+                    const custLat = o.address?.lat ?? o.deliveryAddress?.lat;
+                    const custLng = o.address?.lng ?? o.deliveryAddress?.lng;
+                    const apiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
 
                     return (
                       <View key={o._id} style={styles.orderRowCard}>
@@ -399,6 +403,43 @@ export const VendorDashboardScreen = ({ navigation, initialSection }) => {
                             )}
                           </View>
                         </View>
+
+                        {/* Customer Delivery Location & 120x80 Static Map Thumbnail */}
+                        {Number.isFinite(custLat) && Number.isFinite(custLng) && (
+                          <View style={styles.deliveryLocationWrap}>
+                            <View style={{ flex: 1, paddingRight: 10 }}>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                                <Ionicons name="location" size={13} color="#0284c7" />
+                                <Text style={styles.deliveryLocationLabel}>DELIVERY ADDRESS</Text>
+                              </View>
+                              <Text style={styles.deliveryAddressText} numberOfLines={2}>
+                                {o.address?.line1 || o.deliveryAddress?.line1 || `${custLat.toFixed(4)}, ${custLng.toFixed(4)}`}
+                              </Text>
+                              <TouchableOpacity
+                                onPress={() => Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${custLat},${custLng}`).catch(() => {})}
+                                style={{ flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 4 }}
+                              >
+                                <Ionicons name="open-outline" size={11} color="#0284c7" />
+                                <Text style={{ fontSize: 11, fontWeight: '700', color: '#0284c7' }}>View on Maps</Text>
+                              </TouchableOpacity>
+                            </View>
+
+                            {apiKey ? (
+                              <Image
+                                source={{
+                                  uri: `https://maps.googleapis.com/maps/api/staticmap?center=${custLat},${custLng}&zoom=15&size=240x160&scale=2&markers=color:red%7C${custLat},${custLng}&key=${apiKey}`
+                                }}
+                                style={styles.staticMapThumb}
+                                resizeMode="cover"
+                              />
+                            ) : (
+                              <View style={[styles.staticMapThumb, { alignItems: 'center', justifyContent: 'center', backgroundColor: '#e2e8f0' }]}>
+                                <Ionicons name="map-outline" size={24} color="#64748b" />
+                                <Text style={{ fontSize: 9.5, color: '#64748b', fontWeight: '600', marginTop: 2 }}>Map Pin</Text>
+                              </View>
+                            )}
+                          </View>
+                        )}
 
                         {/* Store Pickup OTP & Rider Details Section */}
                         {['READY_FOR_RIDER', 'RIDER_ASSIGNED', 'RIDER_ARRIVED_STORE', 'OUT_FOR_DELIVERY'].includes(o.status) && (
@@ -945,5 +986,35 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#c2410c',
     flex: 1
+  },
+  deliveryLocationWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#f8fafc',
+    borderRadius: 10,
+    padding: 10,
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: '#e2e8f0'
+  },
+  deliveryLocationLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#0284c7',
+    letterSpacing: 0.5
+  },
+  deliveryAddressText: {
+    fontSize: 12,
+    color: '#334155',
+    fontWeight: '600',
+    marginTop: 2
+  },
+  staticMapThumb: {
+    width: 120,
+    height: 80,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#cbd5e1'
   }
 });

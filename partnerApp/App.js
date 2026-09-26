@@ -65,7 +65,7 @@ function PartnerMain() {
   const { vendor, token, fetchOrders } = usePartner();
 
   return (
-    <SocketProvider vendor={vendor} token={token} onOrderReceived={() => fetchOrders(vendor?._id)}>
+    <SocketProvider key={vendor?._id || 'guest'} vendor={vendor} token={token} onOrderReceived={() => fetchOrders(vendor?._id)}>
       <PartnerContent />
     </SocketProvider>
   );
