@@ -18,6 +18,7 @@ import { useAuthGate } from '../../hooks/useAuthGate';
 import { apiService } from '../../services/api';
 import { colors } from '../../theme/colors';
 import { showAlert } from '../../utils/alert';
+import { SafeAreaWrapper } from '../../components/SafeAreaWrapper';
 
 export const CartScreen = ({ navigation }) => {
   const { requireLogin } = useAuthGate();
@@ -86,7 +87,7 @@ export const CartScreen = ({ navigation }) => {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaWrapper style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
       <Header navigation={navigation} title="My Cart" showCart={false} showBack />
 
@@ -282,7 +283,7 @@ export const CartScreen = ({ navigation }) => {
           </View>
         </>
       )}
-    </View>
+    </SafeAreaWrapper>
   );
 };
 

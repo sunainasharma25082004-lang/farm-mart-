@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import {validCoordinates,orderForRole} from '../utils/deliveryPolicy.js';
 import Vendor from '../models/Vendor.js';
 import Product from '../models/Product.js';
@@ -146,6 +147,7 @@ export const getVendorOrders = async (req, res) => {
 export const getVendorStats = async (req, res) => {
   try {
     const vendorId = req.user.vendorId || req.user.id;
+    const vendorObjectId = mongoose.isValidObjectId(vendorId) ? new mongoose.Types.ObjectId(vendorId) : vendorId;
 
     // Start of today in UTC
     const startOfToday = new Date();
@@ -156,7 +158,10 @@ export const getVendorStats = async (req, res) => {
       Order.aggregate([
         {
           $match: {
-            vendor: vendorId,
+            $or: [
+              { vendor: vendorObjectId },
+              { vendor: String(vendorId) }
+            ],
             status: 'DELIVERED',
             createdAt: { $gte: startOfToday }
           }
@@ -171,17 +176,17 @@ export const getVendorStats = async (req, res) => {
       ]),
       // Today's total placed orders
       Order.countDocuments({
-        vendor: vendorId,
+        $or: [{ vendor: vendorObjectId }, { vendor: String(vendorId) }],
         createdAt: { $gte: startOfToday }
       }),
       // Active orders in progress right now
       Order.countDocuments({
-        vendor: vendorId,
+        $or: [{ vendor: vendorObjectId }, { vendor: String(vendorId) }],
         status: { $in: ['NEW_ORDER', 'ACCEPTED', 'PREPARING', 'READY_FOR_RIDER'] }
       }),
       // All-time completed orders
       Order.countDocuments({
-        vendor: vendorId,
+        $or: [{ vendor: vendorObjectId }, { vendor: String(vendorId) }],
         status: 'DELIVERED'
       })
     ]);

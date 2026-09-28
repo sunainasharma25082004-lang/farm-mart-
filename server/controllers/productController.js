@@ -131,11 +131,15 @@ export const createProduct = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Name and price are required' });
     }
 
-    // Determine vendor
-    let vendorId = req.user?.vendorId || req.user?.id || req.body.vendor || req.body.partnerId;
+    // Determine vendor from authenticated user
+    let vendorId;
+    if (req.user?.role === 'ADMIN' && (req.body.vendor || req.body.partnerId)) {
+      vendorId = req.body.vendor || req.body.partnerId;
+    } else {
+      vendorId = req.user?.vendorId || req.user?.id || req.user?._id;
+    }
     if (!vendorId || !vendorId.toString().match(/^[0-9a-fA-F]{24}$/)) {
-      const fallbackVendor = await Vendor.findOne({ isActive: true });
-      vendorId = fallbackVendor?._id;
+      return res.status(403).json({ success: false, message: 'Vendor authentication required to add a product.' });
     }
 
     // Determine category ObjectId
@@ -188,7 +192,18 @@ export const createProduct = async (req, res) => {
 export const updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
+    const existing = await Product.findById(id);
+    if (!existing) {
+      return res.status(404).json({ success: false, message: 'Product not found' });
+    }
+
+    const callerVendorId = String(req.user?.vendorId || req.user?.id || req.user?._id || '');
+    if (req.user?.role !== 'ADMIN' && String(existing.vendor) !== callerVendorId) {
+      return res.status(403).json({ success: false, code: 'FORBIDDEN', message: 'You can only update your own products.' });
+    }
+
     const updateData = { ...req.body };
+    delete updateData.vendor; // Prevent transferring ownership
 
     if (updateData.price !== undefined) updateData.price = Number(updateData.price);
     if (updateData.stockQty !== undefined) {
@@ -200,10 +215,6 @@ export const updateProduct = async (req, res) => {
 
     const product = await Product.findByIdAndUpdate(id, updateData, { new: true })
       .populate('category vendor');
-
-    if (!product) {
-      return res.status(404).json({ success: false, message: 'Product not found' });
-    }
 
     if (updateData.stockQty !== undefined || updateData.inStock !== undefined) {
       notifyProductStock(product);
@@ -229,6 +240,11 @@ export const toggleProductStock = async (req, res) => {
 
     if (!product) {
       return res.status(404).json({ success: false, message: 'Product not found' });
+    }
+
+    const callerVendorId = String(req.user?.vendorId || req.user?.id || req.user?._id || '');
+    if (req.user?.role !== 'ADMIN' && String(product.vendor) !== callerVendorId) {
+      return res.status(403).json({ success: false, code: 'FORBIDDEN', message: 'You can only update stock for your own products.' });
     }
 
     if (req.body.addStock !== undefined) {
@@ -272,11 +288,18 @@ export const toggleProductStock = async (req, res) => {
 export const deleteProduct = async (req, res) => {
   try {
     const { id } = req.params;
-    const product = await Product.findByIdAndDelete(id);
+    const product = await Product.findById(id);
 
     if (!product) {
       return res.status(404).json({ success: false, message: 'Product not found' });
     }
+
+    const callerVendorId = String(req.user?.vendorId || req.user?.id || req.user?._id || '');
+    if (req.user?.role !== 'ADMIN' && String(product.vendor) !== callerVendorId) {
+      return res.status(403).json({ success: false, code: 'FORBIDDEN', message: 'You can only delete your own products.' });
+    }
+
+    await Product.findByIdAndDelete(id);
 
     res.json({
       success: true,

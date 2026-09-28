@@ -179,12 +179,37 @@ export const CheckoutScreen = ({ navigation }) => {
   const handleFetchCurrentLocation=async()=>{
     setIsLocating(true);
     try {
+      let lat = null;
+      let lng = null;
+
       const permission=await Location.requestForegroundPermissionsAsync();
-      if(permission.status!=='granted')throw new Error('Location permission denied. Enter your coordinates or select the delivery pin on the map.');
-      const position=await Location.getCurrentPositionAsync({accuracy:Location.Accuracy.High});
-      if(position.coords.accuracy==null || position.coords.accuracy>100)throw new Error('GPS accuracy is low. Move outdoors or select your building on the map.');
-      selectPin({lat:position.coords.latitude,lng:position.coords.longitude});
-    }catch(e){showAlert('Location unavailable',e.message);}
+      if(permission.status!=='granted') {
+        if (typeof navigator !== 'undefined' && navigator.geolocation) {
+          const webPos = await new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+              enableHighAccuracy: true,
+              timeout: 10000,
+            });
+          });
+          lat = webPos.coords.latitude;
+          lng = webPos.coords.longitude;
+        } else {
+          throw new Error('Location permission denied. Enter your coordinates or select the delivery pin on the map.');
+        }
+      } else {
+        const position=await Location.getCurrentPositionAsync({accuracy:Location.Accuracy.Balanced});
+        lat = position.coords.latitude;
+        lng = position.coords.longitude;
+      }
+
+      if (lat != null && lng != null) {
+        selectPin({lat, lng});
+      } else {
+        throw new Error('Could not retrieve coordinates.');
+      }
+    }catch(e){
+      showAlert('Location unavailable', e.message || 'GPS location unavailable');
+    }
     finally{setIsLocating(false);}
   };
   // Payment Gateway Modal State

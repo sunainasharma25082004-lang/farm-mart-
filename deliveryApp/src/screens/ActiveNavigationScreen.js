@@ -205,6 +205,7 @@ export const ActiveNavigationScreen = ({ navigation }) => {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+
         {/* Status Phase Indicator */}
         <View style={styles.phaseCard}>
           <View style={styles.phaseStepsRow}>
@@ -227,6 +228,7 @@ export const ActiveNavigationScreen = ({ navigation }) => {
             <Text style={styles.phaseLabel}>To Customer</Text>
           </View>
         </View>
+        {/* END phaseCard */}
 
         {/* Live GPS Route Overview & Google Maps Action */}
         <View style={styles.routeCard}>
@@ -241,7 +243,7 @@ export const ActiveNavigationScreen = ({ navigation }) => {
             </TouchableOpacity>
           </View>
 
-            {/* Embedded Navigation Map (~180px) */}
+          {/* Embedded Navigation Map (~180px) */}
           {Platform.OS === 'web' ? (
             <View style={{ height: 180, width: '100%', borderRadius: 12, overflow: 'hidden', marginVertical: 10, backgroundColor: '#f1f5f9', justifyContent: 'center', alignItems: 'center' }}>
               <Text style={{ color: '#64748b', textAlign: 'center' }}>
@@ -253,96 +255,63 @@ export const ActiveNavigationScreen = ({ navigation }) => {
             </View>
           ) : (
             <View style={{ height: 180, width: '100%', borderRadius: 12, overflow: 'hidden', marginVertical: 10, backgroundColor: '#f1f5f9' }}>
-              <MapView
-                ref={mapRef}
-                provider={PROVIDER_GOOGLE}
-                style={{ ...StyleSheet.absoluteFillObject }}
-                initialRegion={{
-                  latitude: Number.isFinite(riderLat) ? riderLat : (targetDestination.lat || 20.59),
-                  longitude: Number.isFinite(riderLng) ? riderLng : (targetDestination.lng || 78.96),
-                  latitudeDelta: 0.02,
-                  longitudeDelta: 0.02,
-                }}
-                showsUserLocation={false}
-                showsMyLocationButton={false}
-              >
-                {/* Target Destination Marker */}
-                {Number.isFinite(targetDestination.lat) && Number.isFinite(targetDestination.lng) && (
-                  <Marker
-                    coordinate={{ latitude: targetDestination.lat, longitude: targetDestination.lng }}
-                    title={targetDestination.name}
-                    description={targetDestination.address}
-                  >
-                    <View style={{
-                      width: 28,
-                      height: 28,
-                      borderRadius: 14,
-                      backgroundColor: targetDestination.role === 'STORE' ? '#ea580c' : '#0284c7',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      borderWidth: 2,
-                      borderColor: '#ffffff',
-                      elevation: 4,
-                    }}>
-                      <Ionicons
-                        name={targetDestination.role === 'STORE' ? 'storefront' : 'home'}
-                        size={14}
-                        color="#ffffff"
-                      />
-                    </View>
-                  </Marker>
-                )}
-
-                {/* Rider Live Position Marker */}
-                {Number.isFinite(riderLat) && Number.isFinite(riderLng) && (
-                  <Marker
-                    coordinate={{ latitude: riderLat, longitude: riderLng }}
-                    title="Your Location"
-                    description="Live GPS"
-                  >
-                    <View style={{
-                      width: 30,
-                      height: 30,
-                      borderRadius: 15,
-                      backgroundColor: '#16a34a',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      borderWidth: 2.5,
-                      borderColor: '#ffffff',
-                      elevation: 5,
-                    }}>
-                      <Ionicons name="bicycle" size={16} color="#ffffff" />
-                    </View>
-                  </Marker>
-                )}
-
-                {/* Route Polyline connecting Rider and Destination */}
-                {Number.isFinite(riderLat) && Number.isFinite(riderLng) && Number.isFinite(targetDestination.lat) && Number.isFinite(targetDestination.lng) && (
-                  apiKey ? (
-                    <MapViewDirections
-                      origin={{ latitude: riderLat, longitude: riderLng }}
-                      destination={{ latitude: targetDestination.lat, longitude: targetDestination.lng }}
-                      apikey={apiKey}
-                      strokeWidth={4}
-                      strokeColor="#16a34a"
-                      mode="DRIVING"
-                      onError={() => {}}
+              {MapView ? (
+                <MapView
+                  ref={mapRef}
+                  provider={PROVIDER_GOOGLE}
+                  style={{ ...StyleSheet.absoluteFillObject }}
+                  initialRegion={{
+                    latitude: Number.isFinite(riderLat) ? riderLat : (targetDestination.lat || 20.59),
+                    longitude: Number.isFinite(riderLng) ? riderLng : (targetDestination.lng || 78.96),
+                    latitudeDelta: 0.02,
+                    longitudeDelta: 0.02,
+                  }}
+                  showsUserLocation={false}
+                  showsMyLocationButton={false}
+                >
+                  {/* Target Destination Marker */}
+                  {Number.isFinite(targetDestination.lat) && Number.isFinite(targetDestination.lng) && (
+                    <Marker
+                      coordinate={{ latitude: targetDestination.lat, longitude: targetDestination.lng }}
+                      title={targetDestination.name}
+                      description={targetDestination.address}
+                    >
+                      <View style={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: 14,
+                        backgroundColor: targetDestination.role === 'STORE' ? '#ea580c' : '#0284c7',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderWidth: 2,
+                        borderColor: '#ffffff',
+                        elevation: 4,
+                      }}>
+                        <Ionicons
+                          name={targetDestination.role === 'STORE' ? 'storefront' : 'home'}
+                          size={14}
+                          color="#ffffff"
+                        />
+                      </View>
+                    </Marker>
+                  )}
+                  {/* Rider Live Position Marker */}
+                  {Number.isFinite(riderLat) && Number.isFinite(riderLng) && (
+                    <Marker
+                      coordinate={{ latitude: riderLat, longitude: riderLng }}
+                      title="Your Location"
                     />
-                  ) : (
-                    <Polyline
-                      coordinates={[
-                        { latitude: riderLat, longitude: riderLng },
-                        { latitude: targetDestination.lat, longitude: targetDestination.lng }
-                      ]}
-                      strokeColor="#16a34a"
-                      strokeWidth={3}
-                    />
-                  )
-                )}
-              </MapView>
+                  )}
+                </MapView>
+              ) : (
+                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                  <Text style={{ color: '#64748b' }}>Map not available on this device.</Text>
+                </View>
+              )}
             </View>
-          )} </View>
+          )}
 
+          {/* Route Stops */}
           <View style={styles.routeStops}>
             {/* Store Stop */}
             <View style={styles.stopRow}>
@@ -394,8 +363,11 @@ export const ActiveNavigationScreen = ({ navigation }) => {
                 </View>
               </View>
             </View>
- 
+          </View>
+          {/* END routeStops */}
+
         </View>
+        {/* END routeCard */}
 
         {/* Payment & COD Badge */}
         <View style={[styles.paymentBanner, isCOD ? styles.paymentCod : styles.paymentPrepaid]}>
@@ -531,6 +503,8 @@ export const ActiveNavigationScreen = ({ navigation }) => {
             </View>
           )}
         </View>
+        {/* END actionCard */}
+
       </ScrollView>
     </View>
   );

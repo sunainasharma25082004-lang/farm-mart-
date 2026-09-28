@@ -14,10 +14,12 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
+import storage from "../services/storage";
 import { colors } from "../theme/colors";
 import { useApp } from "../context/AppContext";
 import { useCart } from "../context/CartContext";
 import { GlassIconBtn } from "./common/GlassIconBtn";
+import { reverseGeocode } from "../utils/maps";
 
 const LOGO = require("../../assets/farmart24_logo.jpg");
 
@@ -45,72 +47,119 @@ export const Header = ({
   );
   const [isLocationLoading, setIsLocationLoading] = useState(true);
 
-  useEffect(() => {
-    const initializeLocation = async () => {
-      const fallbackAddress =
-        userProfile?.address ||
-        userProfile?.city ||
-        "Set your delivery address";
-      setManualAddress(fallbackAddress);
-      setDisplayAddress(fallbackAddress);
-      setLocationSubtitle("Detecting location...");
-      setIsLocationLoading(true);
+  const detectCurrentLocation = async (isManual = false) => {
+    setIsLocationLoading(true);
+    setLocationSubtitle("Detecting location...");
 
-      if (!userProfile) {
-        setLocationSubtitle("Login to save your address");
+    const fallbackAddress =
+      userProfile?.address ||
+      userProfile?.city ||
+      "Set your delivery address";
+
+    try {
+      // 1. Request Permission from user
+      let granted = false;
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === "granted") granted = true;
+      } catch (permErr) {
+        console.warn("Foreground permission error:", permErr.message);
+      }
+
+      if (!granted && typeof navigator !== "undefined" && navigator.geolocation) {
+        // Fallback for Web browser permission prompt
+        granted = true;
+      }
+
+      if (!granted) {
+        setLocationSubtitle(userProfile?.city || "Location permission denied");
+        if (isManual && Platform.OS !== "web") {
+          Alert.alert("Permission Required", "Please enable location permission to detect nearby delivery areas.");
+        }
         setIsLocationLoading(false);
         return;
       }
 
+      // 2. Access user GPS coordinates
+      setLocationSubtitle("Detecting GPS...");
+      let latitude = null;
+      let longitude = null;
+
       try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== "granted") {
-          setLocationSubtitle(
-            userProfile?.city || "Location permission denied",
-          );
-          setDisplayAddress(fallbackAddress);
-          setManualAddress(fallbackAddress);
-          setIsLocationLoading(false);
-          return;
+        const pos = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
+        latitude = pos?.coords?.latitude;
+        longitude = pos?.coords?.longitude;
+      } catch (posErr) {
+        if (typeof navigator !== "undefined" && navigator.geolocation) {
+          const webPos = await new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+              enableHighAccuracy: true,
+              timeout: 10000,
+            });
+          });
+          latitude = webPos?.coords?.latitude;
+          longitude = webPos?.coords?.longitude;
+        } else {
+          throw posErr;
         }
-
-        const currentLocation = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.Low,
-        });
-
-        const [place] = await Location.reverseGeocodeAsync({
-          latitude: currentLocation.coords.latitude,
-          longitude: currentLocation.coords.longitude,
-        });
-
-        const resolvedAddress = [
-          place?.name,
-          place?.street,
-          place?.city,
-          place?.region,
-        ]
-          .filter(Boolean)
-          .join(", ");
-
-        const nextAddress = resolvedAddress || fallbackAddress;
-        setDisplayAddress(nextAddress);
-        setManualAddress(nextAddress);
-        setLocationSubtitle(
-          place?.city
-            ? `${place.city}${place.region ? `, ${place.region}` : ""}`
-            : "Current location",
-        );
-      } catch (error) {
-        setDisplayAddress(fallbackAddress);
-        setManualAddress(fallbackAddress);
-        setLocationSubtitle(userProfile?.city || "Could not detect location");
-      } finally {
-        setIsLocationLoading(false);
       }
-    };
 
-    initializeLocation();
-  }, [userProfile?.address, userProfile?.city]);
+      if (!latitude || !longitude) {
+        throw new Error("Could not retrieve GPS coordinates");
+      }
+
+      // 3. Detect nearby area via Google Maps / High precision geocoder
+      setLocationSubtitle("Finding nearby area...");
+      const geoResult = await reverseGeocode(latitude, longitude);
+
+      const resolvedAddress = geoResult?.address || fallbackAddress;
+      const nearbySubtitle = geoResult?.area
+        ? `${geoResult.area}, ${geoResult.city || ''}`
+        : (geoResult?.city || "Nearby location");
+
+      setDisplayAddress(resolvedAddress);
+      setManualAddress(resolvedAddress);
+      setLocationSubtitle(nearbySubtitle.trim().replace(/^,\s*/, ''));
+
+      // 4. Update user profile and storage
+      if (userProfile) {
+        setUserProfile({
+          ...userProfile,
+          address: resolvedAddress,
+          city: geoResult?.city || userProfile.city || "Ludhiana",
+          lat: latitude,
+          lng: longitude,
+        });
+      }
+      try {
+        await storage.setItem(
+          "farmart_user_location",
+          JSON.stringify({
+            address: resolvedAddress,
+            city: geoResult?.city,
+            area: geoResult?.area,
+            lat: latitude,
+            lng: longitude,
+          })
+        );
+      } catch (e) {
+        // silent
+      }
+    } catch (err) {
+      console.warn("Location detection failed:", err.message);
+      setDisplayAddress(fallbackAddress);
+      setManualAddress(fallbackAddress);
+      setLocationSubtitle(userProfile?.city || "Could not detect location");
+    } finally {
+      setIsLocationLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    detectCurrentLocation(false);
+  }, [userProfile?.phone]);
 
   useEffect(() => {
     if (cartItemCount !== prevCountRef.current) {
@@ -286,7 +335,29 @@ export const Header = ({
               <Text style={styles.modalTitle}>Update delivery address</Text>
             </View>
 
-            <Text style={styles.modalLabel}>Your current delivery address</Text>
+            <TouchableOpacity
+              style={styles.gpsDetectBtn}
+              onPress={() => detectCurrentLocation(true)}
+              activeOpacity={0.8}
+              disabled={isLocationLoading}
+            >
+              {isLocationLoading ? (
+                <ActivityIndicator size="small" color="#16a34a" />
+              ) : (
+                <Ionicons name="navigate" size={18} color="#16a34a" />
+              )}
+              <Text style={styles.gpsDetectBtnText}>
+                {isLocationLoading ? "Detecting nearby location..." : "📍 Use Current GPS Location (Google)"}
+              </Text>
+            </TouchableOpacity>
+
+            <View style={styles.orDivider}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.orText}>OR ENTER MANUALLY</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            <Text style={styles.modalLabel}>Your delivery address</Text>
             <TextInput
               style={styles.modalInput}
               value={manualAddress}
@@ -464,6 +535,40 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     fontSize: 14,
     fontWeight: '500',
+  },
+  gpsDetectBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f0fdf4',
+    borderWidth: 1.5,
+    borderColor: '#86efac',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    gap: 8,
+    marginBottom: 14,
+  },
+  gpsDetectBtnText: {
+    color: '#15803d',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  orDivider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 14,
+    gap: 8,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.border,
+  },
+  orText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.textMuted,
   },
   rightActionsRow: {
     flexDirection: 'row',

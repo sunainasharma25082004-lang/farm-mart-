@@ -28,6 +28,9 @@ module.exports = ({ config }) => {
     ],
     extra: {
       ...config.extra,
+      eas: {
+        projectId: "0ffe353f-1525-4796-afa4-071da4cbbc71"
+      },
       googleMaps: {
         android: !!apiKey,
         ios: !!apiKey

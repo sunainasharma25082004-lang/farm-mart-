@@ -53,13 +53,23 @@ export const connectSocket = async () => {
   const token = await storage.getToken();
   const url = getSocketUrl();
 
+  // If no token is available, skip socket connection to avoid unauthenticated requests
+  if (!token) {
+    console.warn('[delivery:socket] No auth token found, skipping socket connection');
+    return null;
+  }
+
   socket = io(url, {
     transports: ['websocket', 'polling'],
-    auth: async (callback) => callback({token:await storage.getToken()}),
+    // Pass the existing token for authentication
+    auth: (callback) => callback({ token }),
     reconnection: true,
     reconnectionAttempts: 20,
-    reconnectionDelay: 2000,
-    timeout: 20000
+    // Exponential backoff settings
+    reconnectionDelay: 1000,
+    reconnectionDelayMax: 30000,
+    randomizationFactor: 0.5,
+    timeout: 20000,
   });
 
   socket.on('connect', () => {

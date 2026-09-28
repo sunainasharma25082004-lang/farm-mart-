@@ -3,7 +3,7 @@ let mapsPromise;
 function loadMaps(){
  if(window.google?.maps?.Map)return Promise.resolve(window.google.maps);
  if(mapsPromise)return mapsPromise;
- const key=process.env.EXPO_PUBLIC_GOOGLE_MAPS_WEB_KEY;
+ const key = process.env.EXPO_PUBLIC_GOOGLE_MAPS_WEB_KEY || process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
  if(!key)return Promise.reject(new Error('Map preview is unavailable. Use GPS or enter coordinates, then preview your pin in Google Maps.'));
  mapsPromise=new Promise((resolve,reject)=>{
   const script=document.createElement('script');

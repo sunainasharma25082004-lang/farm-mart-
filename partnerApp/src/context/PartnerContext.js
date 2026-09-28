@@ -104,7 +104,7 @@ export const PartnerProvider = ({ children }) => {
   }, [token]);
 
   // Vendor login (Phone & Password) with persistent storage
-  const loginVendor = useCallback(async (phone, password = 'password123') => {
+  const loginVendor = useCallback(async (phone, password) => {
     try {
       setIsLoading(true);
       const res = await fetch(`${API_BASE_URL}/auth/vendor/login`, {

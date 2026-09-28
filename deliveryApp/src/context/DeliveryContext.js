@@ -3,12 +3,13 @@ import {locationPayload} from '../services/location';
 import React, { createContext, useState, useContext, useEffect, useRef, useCallback } from 'react';
 import { useRiderAuth } from './RiderAuthContext';
 import { riderApi } from '../services/api';
-import { getSocket, connectSocket } from '../services/socket';
+import { getSocket, connectSocket, disconnectSocket } from '../services/socket';
+import storage from '../services/storage';
 
 const DeliveryContext = createContext();
 
 export const DeliveryProvider = ({ children }) => {
-  const { rider, isAuthenticated, updateRiderProfile } = useRiderAuth();
+  const { rider, isAuthenticated, updateRiderProfile, logout } = useRiderAuth();
   const [currentTask, setCurrentTask] = useState(null);
   const [pendingOffer, setPendingOffer] = useState(null);
   const [availableOrders, setAvailableOrders] = useState([]);
@@ -24,6 +25,19 @@ export const DeliveryProvider = ({ children }) => {
   const [locationError,setLocationError]=useState('');
   const alive=useRef(true);
   useEffect(()=>{alive.current=true;return()=>{alive.current=false;};},[]);
+useEffect(() => {
+  (async () => {
+    try {
+      const token = await storage.getToken();
+      const refresh = await storage.getRefreshToken?.();
+      if (!token || !refresh) {
+        await logout();
+      }
+    } catch (e) {
+      console.warn('[DeliveryContext] Token guard error:', e.message);
+    }
+  })();
+}, []);
   // Fetch active order and earnings
   const refreshActiveOrder = useCallback(async () => {
     if (!isAuthenticated) return;
@@ -37,8 +51,11 @@ export const DeliveryProvider = ({ children }) => {
       }
     } catch (err) {
       console.warn('[DeliveryContext] Active order fetch error:', err.message);
+      if (err.response?.status === 401 || err.message?.includes('No refresh token')) {
+        logout();
+      }
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, logout]);
 
   const refreshEarnings = useCallback(async () => {
     if (!isAuthenticated) return;
@@ -55,8 +72,11 @@ export const DeliveryProvider = ({ children }) => {
       }
     } catch (err) {
       console.warn('[DeliveryContext] Earnings fetch error:', err.message);
+      if (err.response?.status === 401 || err.message?.includes('No refresh token')) {
+        logout();
+      }
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, logout]);
 
   const fetchAvailablePool = useCallback(async () => {
     if (!isAuthenticated) return;
@@ -66,10 +86,13 @@ export const DeliveryProvider = ({ children }) => {
       if (res.data?.success && Array.isArray(res.data.orders)) {
         setAvailableOrders(res.data.orders);
       }
-    } catch {
-      // Ignore pool error
+    } catch (err) {
+      // Ignore pool error but handle auth issues
+      if (err.response?.status === 401 || err.message?.includes('No refresh token')) {
+        logout();
+      }
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, logout]);
 
   // Initial load on authentication
   useEffect(() => {
@@ -85,9 +108,11 @@ export const DeliveryProvider = ({ children }) => {
 
       return () => clearInterval(pollInterval);
     } else {
+      // Cleanup on unauthenticated: clear state and disconnect socket
       setCurrentTask(null);
       setPendingOffer(null);
       setAvailableOrders([]);
+      disconnectSocket();
     }
   }, [isAuthenticated, refreshActiveOrder, refreshEarnings, fetchAvailablePool]);
 
@@ -167,6 +192,10 @@ export const DeliveryProvider = ({ children }) => {
       }
       return { success: false, message: res.data?.message };
     } catch (err) {
+      if (err.response?.status === 401) {
+        // Auth error – force logout to stop auth loops
+        logout();
+      }
       return { success: false, message: err.response?.data?.message || err.message };
     }
   };

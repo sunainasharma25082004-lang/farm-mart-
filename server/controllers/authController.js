@@ -7,7 +7,7 @@ import RefreshToken from '../models/RefreshToken.js';
 
 const JWT_ACCESS_SECRET =
   process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET || 'sfarmart_jwt_access_secret_2026_super_secure_key';
-const OTP_DEV_MODE = process.env.OTP_DEV_MODE === 'true';
+const OTP_DEV_MODE = process.env.NODE_ENV !== 'production' && process.env.OTP_DEV_MODE === 'true';
 
 // Helper: generate 15-minute access token
 export const generateAccessToken = (user) => {
@@ -127,7 +127,7 @@ export const verifyOtp = async (req, res) => {
 
     // Verify OTP logic
     let isMatch = false;
-    if (cleanPhone === '9876543210' && cleanOtp === '123456') {
+    if (OTP_DEV_MODE && cleanPhone === '9876543210' && cleanOtp === '123456') {
       isMatch = true;
     } else {
       const stored = otpStore.get(cleanPhone);
@@ -453,17 +453,33 @@ export const customerLogin = async (req, res) => {
       });
     }
 
+    if (!password) {
+      return res.status(400).json({
+        ok: false,
+        success: false,
+        code: 'PASSWORD_REQUIRED',
+        message: 'Password is required'
+      });
+    }
+
     const storedHash = user.passwordHash || user.password;
-    if (storedHash && password) {
-      const isMatch = await bcrypt.compare(password, storedHash);
-      if (!isMatch) {
-        return res.status(401).json({
-          ok: false,
-          success: false,
-          code: 'INVALID_CREDENTIALS',
-          message: 'Invalid password. Please check your credentials.'
-        });
-      }
+    if (!storedHash) {
+      return res.status(401).json({
+        ok: false,
+        success: false,
+        code: 'PASSWORD_NOT_CONFIGURED',
+        message: 'Password is not set for this account. Please login using OTP.'
+      });
+    }
+
+    const isMatch = await bcrypt.compare(password, storedHash);
+    if (!isMatch) {
+      return res.status(401).json({
+        ok: false,
+        success: false,
+        code: 'INVALID_CREDENTIALS',
+        message: 'Invalid password. Please check your credentials.'
+      });
     }
 
     const accessToken = generateAccessToken(user);

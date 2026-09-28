@@ -20,10 +20,12 @@ const DEMO_RIDERS = [
   { name: 'Manjinder Singh', phone: '9876543222', vehicle: '🚲 E-Cycle' }
 ];
 
+const IS_DEV = typeof __DEV__ !== 'undefined' ? __DEV__ : process.env.NODE_ENV !== 'production';
+
 export const RiderLoginScreen = () => {
   const { login } = useRiderAuth();
-  const [phone, setPhone] = useState('9876543220');
-  const [password, setPassword] = useState('demo123');
+  const [phone, setPhone] = useState(IS_DEV ? '9876543220' : '');
+  const [password, setPassword] = useState(IS_DEV ? 'demo123' : '');
   const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = async (e) => {
@@ -67,27 +69,29 @@ export const RiderLoginScreen = () => {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Quick Demo Switcher */}
-        <View style={styles.presetSection}>
-          <Text style={styles.presetHeading}>⚡ 1-TAP DEMO RIDER LOGIN</Text>
-          <View style={styles.presetGrid}>
-            {DEMO_RIDERS.map((r) => {
-              const active = phone === r.phone;
-              return (
-                <TouchableOpacity
-                  key={r.phone}
-                  style={[styles.presetCard, active && styles.presetCardActive]}
-                  onPress={() => handleSelectPreset(r)}
-                  activeOpacity={0.8}
-                >
-                  <Text style={[styles.presetName, active && styles.presetTextActive]}>{r.name}</Text>
-                  <Text style={[styles.presetVehicle, active && styles.presetTextActive]}>{r.vehicle}</Text>
-                  <Text style={styles.presetPhone}>{r.phone}</Text>
-                </TouchableOpacity>
-              );
-            })}
+        {/* Quick Demo Switcher (DEV only) */}
+        {IS_DEV && (
+          <View style={styles.presetSection}>
+            <Text style={styles.presetHeading}>⚡ 1-TAP DEMO RIDER LOGIN</Text>
+            <View style={styles.presetGrid}>
+              {DEMO_RIDERS.map((r) => {
+                const active = phone === r.phone;
+                return (
+                  <TouchableOpacity
+                    key={r.phone}
+                    style={[styles.presetCard, active && styles.presetCardActive]}
+                    onPress={() => handleSelectPreset(r)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[styles.presetName, active && styles.presetTextActive]}>{r.name}</Text>
+                    <Text style={[styles.presetVehicle, active && styles.presetTextActive]}>{r.vehicle}</Text>
+                    <Text style={styles.presetPhone}>{r.phone}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           </View>
-        </View>
+        )}
 
         {/* Credentials Form */}
         <View style={styles.formCard}>

@@ -13,33 +13,87 @@
  * @returns {Promise<{address:string, city:string, pincode:string}>}
  */
 export async function reverseGeocode(lat, lng) {
-  const apiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
-  if (!apiKey) {
-    console.warn('Google Maps API key is missing');
-    return { address: '', city: '', pincode: '' };
-  }
-  const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${apiKey}`;
-  try {
-    const resp = await fetch(url);
-    const data = await resp.json();
-    if (data.status !== 'OK' || !data.results.length) {
-      console.warn('Reverse geocode failed', data.status);
-      return { address: '', city: '', pincode: '' };
+  let address = '';
+  let city = '';
+  let pincode = '';
+  let area = '';
+  let state = '';
+
+  // 1. Try Google Maps JS Geocoder if running in browser
+  if (typeof window !== 'undefined' && window.google?.maps?.Geocoder) {
+    try {
+      const geocoder = new window.google.maps.Geocoder();
+      const response = await geocoder.geocode({ location: { lat, lng } });
+      if (response?.results?.length) {
+        const result = response.results[0];
+        address = result.formatted_address || '';
+        result.address_components?.forEach(comp => {
+          if (comp.types.includes('sublocality') || comp.types.includes('neighborhood')) area = comp.long_name;
+          if (comp.types.includes('locality')) city = comp.long_name;
+          if (comp.types.includes('administrative_area_level_1')) state = comp.long_name;
+          if (comp.types.includes('postal_code')) pincode = comp.long_name;
+        });
+        if (address) return { address, area, city, state, pincode, lat, lng };
+      }
+    } catch (gErr) {
+      console.warn('Web Geocoder warning:', gErr.message || gErr);
     }
-    const result = data.results[0];
-    const address = result.formatted_address || '';
-    let city = '';
-    let pincode = '';
-    // Parse address components for city and postal code.
-    result.address_components.forEach(comp => {
-      if (comp.types.includes('locality')) city = comp.long_name;
-      if (comp.types.includes('postal_code')) pincode = comp.long_name;
-    });
-    return { address, city, pincode };
-  } catch (e) {
-    console.error('reverseGeocode error', e);
-    return { address: '', city: '', pincode: '' };
   }
+
+  // 2. Try Google Maps Geocoding REST API
+  const apiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_WEB_KEY || process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
+  if (apiKey) {
+    try {
+      const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${apiKey}`;
+      const resp = await fetch(url);
+      const data = await resp.json();
+      if (data.status === 'OK' && data.results?.length) {
+        const result = data.results[0];
+        address = result.formatted_address || '';
+        result.address_components?.forEach(comp => {
+          if (comp.types.includes('sublocality') || comp.types.includes('neighborhood')) area = comp.long_name;
+          if (comp.types.includes('locality')) city = comp.long_name;
+          if (comp.types.includes('administrative_area_level_1')) state = comp.long_name;
+          if (comp.types.includes('postal_code')) pincode = comp.long_name;
+        });
+        if (address) return { address, area, city, state, pincode, lat, lng };
+      }
+    } catch (e) {
+      console.warn('Google REST geocode error, using fallback:', e.message || e);
+    }
+  }
+
+  // 3. Fallback: High-precision OpenStreetMap Reverse Geocode
+  try {
+    const osmUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`;
+    const osmResp = await fetch(osmUrl, {
+      headers: { 'Accept': 'application/json', 'User-Agent': 'FarmartUserApp/1.0' }
+    });
+    if (osmResp.ok) {
+      const osmData = await osmResp.json();
+      if (osmData && osmData.address) {
+        const a = osmData.address;
+        area = a.suburb || a.neighbourhood || a.residential || a.road || '';
+        city = a.city || a.town || a.village || a.county || '';
+        state = a.state || '';
+        pincode = a.postcode || '';
+        address = [area, city, state].filter(Boolean).join(', ') || osmData.display_name || '';
+        return { address, area, city, state, pincode, lat, lng };
+      }
+    }
+  } catch (osmErr) {
+    console.warn('OSM fallback geocode error:', osmErr.message || osmErr);
+  }
+
+  return {
+    address: address || `Location (${lat.toFixed(4)}, ${lng.toFixed(4)})`,
+    area,
+    city: city || 'Current City',
+    state,
+    pincode,
+    lat,
+    lng
+  };
 }
 
 /**

@@ -9,11 +9,11 @@ import {
   validateCart,
   mergeCart
 } from '../controllers/cartController.js';
-import { requireAuth } from '../middleware/auth.js';
+import { verifyToken } from '../middleware/auth.js';
 
 const router = express.Router();
 
-router.use('/cart', requireAuth);
+router.use('/cart', verifyToken);
 
 router.get('/cart', getCart);
 router.post('/cart/items', addItem);

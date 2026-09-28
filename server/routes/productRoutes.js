@@ -18,9 +18,9 @@ router.get('/products/:id', getProductById);
 router.get('/products/vendor/:vendorId', getVendorProducts);
 
 // Vendor-protected / authenticated routes
-router.post('/products', optionalAuth, createProduct);
-router.put('/products/:id', optionalAuth, updateProduct);
-router.patch('/products/:id/stock', optionalAuth, toggleProductStock);
-router.delete('/products/:id', optionalAuth, deleteProduct);
+router.post('/products', verifyToken, requireRole('VENDOR', 'ADMIN'), createProduct);
+router.put('/products/:id', verifyToken, requireRole('VENDOR', 'ADMIN'), updateProduct);
+router.patch('/products/:id/stock', verifyToken, requireRole('VENDOR', 'ADMIN'), toggleProductStock);
+router.delete('/products/:id', verifyToken, requireRole('VENDOR', 'ADMIN'), deleteProduct);
 
 export default router;

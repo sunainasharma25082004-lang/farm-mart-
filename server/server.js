@@ -3,10 +3,29 @@ import http from 'http';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
+import helmet from 'helmet';
+import mongoSanitize from 'express-mongo-sanitize';
+import rateLimit from 'express-rate-limit';
 
 dotenv.config();
 dotenv.config({ path: path.resolve(process.cwd(), 'server', '.env') });
 
+function validateEnv() {
+  const required = [
+    'MONGODB_URI',
+    'JWT_ACCESS_SECRET',
+    'JWT_REFRESH_SECRET',
+    'RAZORPAY_KEY_ID',
+    'RAZORPAY_KEY_SECRET',
+    'RAZORPAY_WEBHOOK_SECRET'
+  ];
+  const missing = required.filter(key => !process.env[key]);
+  if (missing.length) {
+    console.error('❌ Missing required env vars:', missing.join(', '));
+    process.exit(1);
+  }
+}
+validateEnv();
 import connectDB from './config/db.js';
 import { seedAdmin } from './controllers/adminController.js';
 import { initSocket } from './socket/index.js';
@@ -33,13 +52,72 @@ const PORT = process.env.PORT || 5000;
 // Initialize Socket.io
 const io = initSocket(httpServer);
 
-// Middlewares
-app.use(cors({
-  origin: '*',
-  methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
-app.use(express.json());
+// ---- NEW: Security middleware ----
+app.use(helmet());
+app.use(express.json({ limit: '100kb' }));
+app.use((req, res, next) => {
+  Object.defineProperty(req, 'query', {
+    value: { ...req.query },
+    writable: true,
+    configurable: true,
+    enumerable: true,
+  });
+  next();
+});
+app.use(mongoSanitize());
+app.set('trust proxy', 1);
+
+// CORS with allowlist
+const clientOrigins = process.env.CLIENT_ORIGINS ? process.env.CLIENT_ORIGINS.split(',') : [];
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true); // mobile apps
+      if (process.env.NODE_ENV !== 'production' && /localhost:808[1-5]/.test(origin))
+        return callback(null, true);
+      if (clientOrigins.includes(origin)) return callback(null, true);
+      callback(new Error('Not allowed by CORS'));
+    },
+    methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  })
+);
+
+// Rate limiting per route
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: {
+    ok: false,
+    success: false,
+    code: 'TOO_MANY_REQUESTS',
+    message: 'Too many login attempts, please try later.',
+  },
+});
+const otpLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 10,
+  message: {
+    ok: false,
+    success: false,
+    code: 'TOO_MANY_REQUESTS',
+    message: 'Too many OTP attempts, please try later.',
+  },
+});
+const paymentLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  max: 20,
+  message: {
+    ok: false,
+    success: false,
+    code: 'TOO_MANY_REQUESTS',
+    message: 'Too many payment requests, please try later.',
+  },
+});
+
+// Apply limiters to specific routes after they are mounted
+
+
 
 // Initialize Database Connection
 connectDB().then((isConnected) => {
@@ -61,6 +139,19 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Apply limiters before mounting routes
+// Login limiters on actual routes
+app.use('/api/auth/customer/login', loginLimiter);
+app.use('/api/auth/vendor/login', loginLimiter);
+app.use('/api/rider/auth/login', loginLimiter);
+app.use('/api/admin/login', loginLimiter);
+// OTP limiters on actual routes
+app.use('/api/auth/otp/request', otpLimiter);
+app.use('/api/auth/otp/verify', otpLimiter);
+// Payment limiter on payment routes
+app.use('/api/create-order', paymentLimiter);
+app.use('/api/verify-payment', paymentLimiter);
+// Mount Routes
 // Mount Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/rider', riderRoutes);
