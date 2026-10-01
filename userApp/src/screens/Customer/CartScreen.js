@@ -5,10 +5,7 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Image,
-  StatusBar,
-  Platform,
-  Alert
+  StatusBar
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Header } from '../../components/Header';
@@ -19,6 +16,7 @@ import { apiService } from '../../services/api';
 import { colors } from '../../theme/colors';
 import { showAlert } from '../../utils/alert';
 import { SafeAreaWrapper } from '../../components/SafeAreaWrapper';
+import { SafeImage } from '../../components/common/SafeImage';
 
 export const CartScreen = ({ navigation }) => {
   const { requireLogin } = useAuthGate();
@@ -157,13 +155,12 @@ export const CartScreen = ({ navigation }) => {
 
               return (
                 <View key={prodId} style={[styles.cartCard, isProdOutOfStock && { borderColor: '#fca5a5', backgroundColor: '#fff5f5' }]}>
-                  {prod.image ? (
-                    <Image source={{ uri: prod.image }} style={styles.itemImage} />
-                  ) : (
-                    <View style={styles.itemImagePlaceholder}>
-                      <Ionicons name="fast-food-outline" size={24} color="#94a3b8" />
-                    </View>
-                  )}
+                  <SafeImage
+                    source={{ uri: prod.image }}
+                    style={styles.itemImage}
+                    placeholderIcon="fast-food-outline"
+                    placeholderIconSize={24}
+                  />
 
                   <View style={styles.itemInfo}>
                     <Text style={styles.itemTitle} numberOfLines={1}>
@@ -471,8 +468,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '800',
     color: '#0f172a',
-    minWidth: 20,
-    textAlign: 'center'
+    minWidth: 24,
+    paddingHorizontal: 2,
+    textAlign: 'center',
+    includeFontPadding: false,
+    lineHeight: 16
   },
   billCard: {
     backgroundColor: '#ffffff',

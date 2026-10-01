@@ -515,14 +515,16 @@ export const CartProvider = ({ children }) => {
     });
   };
 
-  const clearEntireCart = async () => {
-    try {
-      const token = await storage.getAccessToken();
-      if (isAuthenticated && token) {
-        await apiService.clearCart();
+  const clearEntireCart = async (localOnly = false) => {
+    if (!localOnly) {
+      try {
+        const token = await storage.getAccessToken();
+        if (isAuthenticated && token) {
+          await apiService.clearCart();
+        }
+      } catch (e) {
+        // silent fallback
       }
-    } catch (e) {
-      // silent fallback
     }
     try {
       await storage.removeItem(GUEST_CART_KEY);

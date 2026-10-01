@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
-import { apiService, setAuthToken, setForceLogoutHandler, setTokenChangedHandler } from '../services/api';
+import { apiService, setAuthToken, setForceLogoutHandler, setTokenChangedHandler, terminateSession, finalizeSessionTermination, initializeSession } from '../services/api';
 import storage from '../services/storage';
 import { showAlert } from '../utils/alert';
 
@@ -57,9 +57,7 @@ export const AppProvider = ({ children }) => {
 
   // Shared force logout helper (for session expiry)
   const forceLogout = useCallback(async (reason = 'Session expired. Please login again.') => {
-    try {
-      await storage.clearTokens();
-    } catch (e) {}
+    await finalizeSessionTermination();
     setAuthToken(null);
     setToken(null);
     setUserProfile(null);
@@ -109,6 +107,7 @@ export const AppProvider = ({ children }) => {
 
   // Login method
   const loginUser = useCallback(async (userOrPhone, password) => {
+    initializeSession();
     if (typeof userOrPhone === 'object' && userOrPhone !== null) {
       const accessToken=await storage.getAccessToken();
       if(!accessToken)return null;
@@ -144,7 +143,7 @@ export const AppProvider = ({ children }) => {
     } catch (e) {
       console.warn('Logout API error:', e);
     } finally {
-      await storage.clearTokens();
+      await finalizeSessionTermination();
       setAuthToken(null);
       setToken(null);
       setUserProfile(null);
@@ -160,6 +159,7 @@ export const AppProvider = ({ children }) => {
         const storedRefreshToken = await storage.getRefreshToken();
 
         if (storedAccessToken || storedRefreshToken) {
+          initializeSession();
           if (storedAccessToken) {
             setAuthToken(storedAccessToken);
             setToken(storedAccessToken);
@@ -170,7 +170,10 @@ export const AppProvider = ({ children }) => {
             return;
           }
           // No valid session stored -> Stay unauthenticated for Guest Browsing (FLOW 3)
+          terminateSession();
           setIsAuthenticated(false);
+        } else {
+          terminateSession();
         }
       } catch (err) {
         console.warn('Session bootstrap error:', err);

@@ -20,6 +20,7 @@ import { useApp } from "../context/AppContext";
 import { useCart } from "../context/CartContext";
 import { GlassIconBtn } from "./common/GlassIconBtn";
 import { reverseGeocode } from "../utils/maps";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const LOGO = require("../../assets/farmart24_logo.jpg");
 
@@ -30,6 +31,7 @@ export const Header = ({
   showBack = false,
 }) => {
   const { userProfile, setUserProfile, isAuthenticated } = useApp();
+  const insets = useSafeAreaInsets();
   const { billSummary } = useCart();
   const cartItemCount = billSummary?.totalCount || 0;
   const canGoBack = Boolean(showBack);
@@ -205,7 +207,7 @@ export const Header = ({
   };
 
   return (
-    <View style={styles.wrapper}>
+    <View style={[styles.wrapper, { paddingTop: insets.top }]}>
       <View style={styles.container}>
         {canGoBack ? (
           <GlassIconBtn
@@ -283,29 +285,39 @@ export const Header = ({
           )}
 
           {showCart ? (
-            <GlassIconBtn
-              size={42}
-              borderRadius={12}
-              onPress={() => navigation && navigation.navigate("Cart")}
-            >
-              <Ionicons
-                name="cart-outline"
-                size={22}
-                color={colors.textPrimary}
-              />
+            <View style={styles.cartBtnContainer}>
+              <GlassIconBtn
+                size={42}
+                borderRadius={12}
+                onPress={() => navigation && navigation.navigate("Cart")}
+                accessibilityLabel="Shopping Cart"
+                accessibilityRole="button"
+              >
+                <Ionicons
+                  name="cart-outline"
+                  size={22}
+                  color={colors.textPrimary}
+                />
+              </GlassIconBtn>
               {cartItemCount > 0 && (
                 <Animated.View
                   style={[
                     styles.badge,
                     { transform: [{ scale: badgeScaleAnim }] },
                   ]}
+                  pointerEvents="none"
                 >
-                  <Text style={styles.badgeText}>
-                    {cartItemCount > 9 ? "9+" : cartItemCount}
+                  <Text
+                    style={styles.badgeText}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit={true}
+                    minimumFontScale={0.8}
+                  >
+                    {cartItemCount > 99 ? "99+" : String(cartItemCount)}
                   </Text>
                 </Animated.View>
               )}
-            </GlassIconBtn>
+            </View>
           ) : (
             <View style={styles.cartPlaceholder} />
           )}
@@ -461,28 +473,40 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  cartBtnContainer: {
+    position: 'relative',
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   cartPlaceholder: {
-    width: 42,
-    height: 42,
+    width: 44,
+    height: 44,
   },
   badge: {
     position: "absolute",
-    top: -4,
-    right: -4,
+    top: -2,
+    right: -2,
     backgroundColor: colors.secondary,
     borderRadius: 10,
-    minWidth: 18,
-    height: 18,
+    minWidth: 20,
+    height: 20,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 4,
     borderWidth: 1.5,
     borderColor: "#ffffff",
+    zIndex: 10,
+    elevation: 4,
   },
   badgeText: {
     color: "#ffffff",
-    fontSize: 9,
-    fontWeight: "500",
+    fontSize: 10,
+    fontWeight: "700",
+    textAlign: "center",
+    includeFontPadding: false,
+    lineHeight: 12,
   },
   modalOverlay: {
     flex: 1,

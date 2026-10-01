@@ -1,11 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   View,
   Text,
   StyleSheet,
   TextInput,
   TouchableOpacity,
-  SafeAreaView,
+  Pressable,
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
@@ -13,6 +13,7 @@ import {
   ScrollView,
   StatusBar,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "../../theme/colors";
 import { useApp } from "../../context/AppContext";
@@ -31,6 +32,10 @@ export const SignupScreen = ({ navigation }) => {
   const [focusedInput, setFocusedInput] = useState(null);
   const [loading, setLoading] = useState(false);
   const { loginUser } = useApp();
+  const nameInputRef = useRef(null);
+  const phoneInputRef = useRef(null);
+  const cityInputRef = useRef(null);
+  const passwordInputRef = useRef(null);
 
   const skipSignup = () => {
     loginUser({ name: "Guest", phone: "" });
@@ -100,7 +105,7 @@ export const SignupScreen = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
       <StatusBar barStyle="dark-content" backgroundColor="#f0fdf4" />
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -165,19 +170,22 @@ export const SignupScreen = ({ navigation }) => {
               {/* Full Name */}
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Full Name</Text>
-                <View
+                <Pressable
                   style={[
                     styles.inputWrap,
                     focusedInput === "name" && styles.inputWrapFocused,
                   ]}
+                  onPress={() => nameInputRef.current?.focus()}
                 >
                   <Ionicons
                     name="person-outline"
                     size={20}
                     color={focusedInput === "name" ? colors.primary : "#94a3b8"}
                     style={styles.inputIcon}
+                    pointerEvents="none"
                   />
                   <TextInput
+                    ref={nameInputRef}
                     style={styles.input}
                     placeholder="Enter your name"
                     value={name}
@@ -186,17 +194,18 @@ export const SignupScreen = ({ navigation }) => {
                     onBlur={() => setFocusedInput(null)}
                     placeholderTextColor="#94a3b8"
                   />
-                </View>
+                </Pressable>
               </View>
 
               {/* Phone Number */}
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Phone Number</Text>
-                <View
+                <Pressable
                   style={[
                     styles.inputWrap,
                     focusedInput === "phone" && styles.inputWrapFocused,
                   ]}
+                  onPress={() => phoneInputRef.current?.focus()}
                 >
                   <Ionicons
                     name="call-outline"
@@ -205,8 +214,10 @@ export const SignupScreen = ({ navigation }) => {
                       focusedInput === "phone" ? colors.primary : "#94a3b8"
                     }
                     style={styles.inputIcon}
+                    pointerEvents="none"
                   />
                   <TextInput
+                    ref={phoneInputRef}
                     style={styles.input}
                     placeholder="Enter 10-digit mobile"
                     keyboardType="phone-pad"
@@ -216,25 +227,28 @@ export const SignupScreen = ({ navigation }) => {
                     onBlur={() => setFocusedInput(null)}
                     placeholderTextColor="#94a3b8"
                   />
-                </View>
+                </Pressable>
               </View>
 
               {/* City */}
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>City / Location</Text>
-                <View
+                <Pressable
                   style={[
                     styles.inputWrap,
                     focusedInput === "city" && styles.inputWrapFocused,
                   ]}
+                  onPress={() => cityInputRef.current?.focus()}
                 >
                   <Ionicons
                     name="location-outline"
                     size={20}
                     color={focusedInput === "city" ? colors.primary : "#94a3b8"}
                     style={styles.inputIcon}
+                    pointerEvents="none"
                   />
                   <TextInput
+                    ref={cityInputRef}
                     style={styles.input}
                     placeholder="e.g. Ludhiana, Punjab"
                     value={city}
@@ -243,17 +257,18 @@ export const SignupScreen = ({ navigation }) => {
                     onBlur={() => setFocusedInput(null)}
                     placeholderTextColor="#94a3b8"
                   />
-                </View>
+                </Pressable>
               </View>
 
               {/* Password */}
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Create Password</Text>
-                <View
+                <Pressable
                   style={[
                     styles.inputWrap,
                     focusedInput === "password" && styles.inputWrapFocused,
                   ]}
+                  onPress={() => passwordInputRef.current?.focus()}
                 >
                   <Ionicons
                     name="lock-closed-outline"
@@ -262,8 +277,10 @@ export const SignupScreen = ({ navigation }) => {
                       focusedInput === "password" ? colors.primary : "#94a3b8"
                     }
                     style={styles.inputIcon}
+                    pointerEvents="none"
                   />
                   <TextInput
+                    ref={passwordInputRef}
                     style={styles.input}
                     placeholder="Choose a strong password"
                     secureTextEntry={!showPassword}
@@ -277,6 +294,7 @@ export const SignupScreen = ({ navigation }) => {
                     onPress={() => setShowPassword(!showPassword)}
                     style={styles.eyeBtn}
                     activeOpacity={0.7}
+                    hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                   >
                     <Ionicons
                       name={showPassword ? "eye-off-outline" : "eye-outline"}
@@ -284,7 +302,7 @@ export const SignupScreen = ({ navigation }) => {
                       color="#64748b"
                     />
                   </TouchableOpacity>
-                </View>
+                </Pressable>
               </View>
 
               {/* Terms Hint */}
@@ -345,8 +363,8 @@ const styles = StyleSheet.create({
   },
   scrollContainer: {
     paddingHorizontal: 20,
-    paddingTop: Platform.OS === "ios" ? 12 : 20,
-    paddingBottom: 30,
+    paddingTop: Platform.OS === "ios" ? 12 : 16,
+    paddingBottom: Platform.OS === "ios" ? 40 : 80,
   },
   headerBar: {
     flexDirection: "row",
@@ -493,6 +511,8 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
+    height: "100%",
+    paddingVertical: 0,
     fontSize: 15,
     color: "#0f172a",
     fontWeight: "500",

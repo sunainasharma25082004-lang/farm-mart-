@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import io from 'socket.io-client';
 import storage from '../services/storage';
+import { refreshAuthToken, isCurrentSessionTerminated, isSessionTeardownSuspended } from '../services/api';
 
 import { API_BASE_URL } from '../config/env';
 
@@ -17,12 +18,51 @@ export const SocketProvider = ({ children, token, userId }) => {
   const [productStockUpdate, setProductStockUpdate] = useState(null);
   const socketRef = useRef(null);
   const trackedOrderRef=useRef(null);
+  const isIntentionalDisconnectRef = useRef(false);
+
+  const [reconnectCount, setReconnectCount] = useState(0);
+
+  const disconnectSocket = useCallback((isIntentional = true) => {
+    if (isIntentional) {
+      isIntentionalDisconnectRef.current = true;
+    }
+    if (socketRef.current) {
+      socketRef.current.disconnect();
+    }
+  }, []);
+
+  const restoreSocket = useCallback(() => {
+    isIntentionalDisconnectRef.current = false;
+    if (socketRef.current && !isCurrentSessionTerminated() && !isSessionTeardownSuspended()) {
+      if (!socketRef.current.connected) {
+        socketRef.current.connect();
+      }
+    }
+  }, []);
 
   useEffect(() => {
-    setActiveOrderUpdate(null);setRiderLocationUpdate(null);setIsConnected(false);
+    setActiveOrderUpdate(null);
+    setRiderLocationUpdate(null);
+    setIsConnected(false);
+
+    if (token) {
+      isIntentionalDisconnectRef.current = false;
+    }
+
     try {
       const socket = io(SOCKET_SERVER_URL, {
-        auth: async cb=>cb({token:await storage.getAccessToken()}),
+        auth: async (cb) => {
+          try {
+            if (isIntentionalDisconnectRef.current || isCurrentSessionTerminated() || isSessionTeardownSuspended()) {
+              cb({ token: null });
+              return;
+            }
+            const tok = await storage.getAccessToken();
+            cb({ token: tok });
+          } catch {
+            cb({ token: null });
+          }
+        },
         transports: ['websocket', 'polling'],
         reconnectionAttempts: 15,
         reconnectionDelay: 2000
@@ -33,15 +73,87 @@ export const SocketProvider = ({ children, token, userId }) => {
       socket.on('connect', () => {
         console.log('⚡ Customer Socket connected:', socket.id);
         setIsConnected(true);
-        if(trackedOrderRef.current)socket.emit('join:order',trackedOrderRef.current);
+        setReconnectCount((c) => c + 1);
+
+        if (trackedOrderRef.current) {
+          socket.emit('join:order', trackedOrderRef.current, (ack) => {
+            if (ack && !ack.ok) {
+              console.warn('⚡ [CustomerSocket] Room join denied for order:', trackedOrderRef.current);
+            } else if (ack?.snapshot?.riderLocation) {
+              setRiderLocationUpdate({
+                orderId: trackedOrderRef.current,
+                riderId: ack.snapshot.rider?._id || ack.snapshot.rider,
+                lat: ack.snapshot.riderLocation.lat,
+                lng: ack.snapshot.riderLocation.lng,
+                heading: ack.snapshot.riderLocation.heading || 0,
+                speed: ack.snapshot.riderLocation.speed || 0,
+                at: ack.snapshot.riderLocation.at || new Date().toISOString(),
+                isSnapshot: true,
+                deliveryRoute: ack.snapshot.deliveryRoute
+              });
+            }
+          });
+        }
         if (userId) {
           socket.emit('join:customer', userId);
         }
       });
 
-      socket.on('disconnect', (reason) => {
-        if(reason==='io server disconnect')socket.connect();
+      socket.on('disconnect', async (reason) => {
+        console.log('🔌 Customer Socket disconnected:', reason);
         setIsConnected(false);
+
+        // Intentional logout/deletion or teardown suspension check
+        if (
+          isIntentionalDisconnectRef.current ||
+          isCurrentSessionTerminated() ||
+          isSessionTeardownSuspended() ||
+          !token
+        ) {
+          console.log('⚡ [CustomerSocket] Intentional disconnect/teardown in progress; skipping refresh and reconnect.');
+          return;
+        }
+
+        if (reason === 'io server disconnect') {
+          // Server explicitly disconnected us (e.g. token expired or kicked).
+          // Do NOT blindly reconnect with the old expired token! Use the single-flight refresh mutex.
+          try {
+            const storedRefreshToken = await storage.getRefreshToken();
+            if (
+              !storedRefreshToken ||
+              isIntentionalDisconnectRef.current ||
+              isCurrentSessionTerminated() ||
+              isSessionTeardownSuspended()
+            ) {
+              console.log('⚡ [CustomerSocket] No refresh token or session terminated/suspended; skipping refresh.');
+              return;
+            }
+
+            console.log('⚡ [CustomerSocket] Disconnected by server. Executing single-flight token refresh...');
+            const freshAccessToken = await refreshAuthToken();
+            if (
+              freshAccessToken &&
+              !isIntentionalDisconnectRef.current &&
+              !isCurrentSessionTerminated() &&
+              !isSessionTeardownSuspended()
+            ) {
+              console.log('⚡ [CustomerSocket] Token refreshed successfully via single-flight mutex. Reconnecting socket...');
+              socket.connect();
+            }
+          } catch (e) {
+            if (
+              isIntentionalDisconnectRef.current ||
+              isCurrentSessionTerminated() ||
+              isSessionTeardownSuspended() ||
+              e?.code === 'SESSION_TERMINATED' ||
+              e?.code === 'TEARDOWN_SUSPENDED' ||
+              e?.code === 'NO_REFRESH_TOKEN'
+            ) {
+              return;
+            }
+            console.warn('⚡ [CustomerSocket] Single-flight refresh failed on disconnect:', e.message || e);
+          }
+        }
       });
 
       socket.on('order:status', (data) => {
@@ -59,6 +171,7 @@ export const SocketProvider = ({ children, token, userId }) => {
       });
 
       return () => {
+        isIntentionalDisconnectRef.current = true;
         socket.disconnect();
       };
     } catch (e) {
@@ -66,26 +179,72 @@ export const SocketProvider = ({ children, token, userId }) => {
     }
   }, [token, userId]);
 
-  const trackOrder = (orderId) => {
-    if(trackedOrderRef.current && trackedOrderRef.current!==orderId)socketRef.current?.emit('leave:order',trackedOrderRef.current);
-    trackedOrderRef.current=orderId;
-    setRiderLocationUpdate(null);
-    if (socketRef.current && orderId) {
-      socketRef.current.emit('join:order', orderId);
-      console.log('Joined live order tracking:', orderId);
+  const trackOrder = useCallback((orderId) => {
+    if (!orderId) return;
+    const strId = String(orderId);
+    if (trackedOrderRef.current === strId) {
+      return;
     }
-  };
+    if (trackedOrderRef.current && trackedOrderRef.current !== strId) {
+      socketRef.current?.emit('leave:order', trackedOrderRef.current);
+    }
+    trackedOrderRef.current = strId;
+    setRiderLocationUpdate(null);
+    if (socketRef.current && socketRef.current.connected) {
+      socketRef.current.emit('join:order', strId, (ack) => {
+        if (ack?.snapshot?.riderLocation) {
+          setRiderLocationUpdate({
+            orderId: strId,
+            riderId: ack.snapshot.rider?._id || ack.snapshot.rider,
+            lat: ack.snapshot.riderLocation.lat,
+            lng: ack.snapshot.riderLocation.lng,
+            heading: ack.snapshot.riderLocation.heading || 0,
+            speed: ack.snapshot.riderLocation.speed || 0,
+            at: ack.snapshot.riderLocation.at || new Date().toISOString(),
+            isSnapshot: true,
+            deliveryRoute: ack.snapshot.deliveryRoute
+          });
+        }
+      });
+      console.log('Joined live order tracking:', strId);
+    }
+  }, []);
+
+  // Expose a leaveOrder helper for cleanup, optionally specifying the orderId to leave
+  const leaveOrder = useCallback((orderId) => {
+    const targetId = orderId ? String(orderId) : trackedOrderRef.current;
+    if (targetId && trackedOrderRef.current === targetId) {
+      socketRef.current?.emit('leave:order', targetId);
+      console.log('Left live order tracking:', targetId);
+      trackedOrderRef.current = null;
+      setRiderLocationUpdate(null);
+    }
+  }, []);
+
+  const contextValue = useMemo(() => ({
+    isConnected,
+    reconnectCount,
+    activeOrderUpdate,
+    riderLocationUpdate,
+    productStockUpdate,
+    trackOrder,
+    leaveOrder,
+    disconnectSocket,
+    restoreSocket
+  }), [
+    isConnected,
+    reconnectCount,
+    activeOrderUpdate,
+    riderLocationUpdate,
+    productStockUpdate,
+    trackOrder,
+    leaveOrder,
+    disconnectSocket,
+    restoreSocket
+  ]);
 
   return (
-    <SocketContext.Provider
-      value={{
-        isConnected,
-        activeOrderUpdate,
-        riderLocationUpdate,
-        productStockUpdate,
-        trackOrder
-      }}
-    >
+    <SocketContext.Provider value={contextValue}>
       {children}
     </SocketContext.Provider>
   );

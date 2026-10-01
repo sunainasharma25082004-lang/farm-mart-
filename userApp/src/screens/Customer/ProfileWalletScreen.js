@@ -17,7 +17,7 @@ import { useApp } from '../../context/AppContext';
 import { useCart } from '../../context/CartContext';
 import { useCustomerSocket } from '../../context/SocketContext';
 import { colors } from '../../theme/colors';
-import { apiService } from '../../services/api';
+import { apiService, terminateSession, initializeSession } from '../../services/api';
 import { useAuthGate } from '../../hooks/useAuthGate';
 import { showAlert } from '../../utils/alert';
 
@@ -32,6 +32,8 @@ export const ProfileWalletScreen = ({ navigation }) => {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showLogoutAllModal, setShowLogoutAllModal] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   // Compute display wallet rupees
   const walletDisplay =
@@ -46,12 +48,12 @@ export const ProfileWalletScreen = ({ navigation }) => {
   const confirmLogout = async () => {
     setShowLogoutModal(false);
     setIsLoggingOut(true);
+    if (socket && typeof socket.disconnectSocket === 'function') {
+      socket.disconnectSocket(true);
+    }
     try {
       if (typeof clearCart === 'function') {
         clearCart();
-      }
-      if (socket && typeof socket.disconnect === 'function') {
-        socket.disconnect();
       }
       await logoutUser();
       if (navigation && navigation.reset) {
@@ -70,10 +72,12 @@ export const ProfileWalletScreen = ({ navigation }) => {
   const confirmLogoutAll = async () => {
     setShowLogoutAllModal(false);
     setIsLoggingOut(true);
+    if (socket && typeof socket.disconnectSocket === 'function') {
+      socket.disconnectSocket(true);
+    }
     try {
       await apiService.logoutAll();
       if (typeof clearCart === 'function') clearCart();
-      if (socket && typeof socket.disconnect === 'function') socket.disconnect();
       await logoutUser();
       if (navigation && navigation.reset) {
         navigation.reset({
@@ -85,6 +89,56 @@ export const ProfileWalletScreen = ({ navigation }) => {
       showAlert('Error', 'Could not log out from all devices. Please try again.');
     } finally {
       setIsLoggingOut(false);
+    }
+  };
+
+  const confirmDeleteAccount = async () => {
+    setIsDeletingAccount(true);
+    // Tell socket that a teardown is in flight so server disconnection does not attempt refresh
+    if (socket && typeof socket.disconnectSocket === 'function') {
+      socket.disconnectSocket(true);
+    }
+
+    try {
+      const res = await apiService.deleteAccount();
+      if (res && (res.success || res.ok)) {
+        setShowDeleteModal(false);
+        if (typeof clearCart === 'function') clearCart(true);
+        await logoutUser();
+        showAlert('Account Deleted', 'Your account and personal data have been permanently removed.');
+        if (navigation && navigation.reset) {
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'Login' }]
+          });
+        }
+      } else {
+        // If server returned non-success response, restore socket and notify
+        if (socket && typeof socket.restoreSocket === 'function') {
+          socket.restoreSocket();
+        }
+        showAlert('Deletion Failed', res?.message || 'Could not delete your account. Please try again.');
+      }
+    } catch (err) {
+      // Re-enable and reconnect socket on rejection or network failure
+      if (socket && typeof socket.restoreSocket === 'function') {
+        socket.restoreSocket();
+      }
+      if (err?.code === 'ACTIVE_ORDER_EXISTS') {
+        showAlert(
+          'Cannot Delete Account',
+          err.message || 'Cannot delete account while an order is currently active. Please wait until your order is completed or cancelled.'
+        );
+      } else if (err?.isNetworkError) {
+        showAlert(
+          'Network Error',
+          'Connection failed while requesting account deletion. Your account was not deleted and remains active. Please check your internet connection and retry.'
+        );
+      } else {
+        showAlert('Deletion Failed', err?.message || 'Failed to delete account. Please try again.');
+      }
+    } finally {
+      setIsDeletingAccount(false);
     }
   };
 
@@ -222,12 +276,13 @@ export const ProfileWalletScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
 
-        {/* Danger / Logout Section */}
+        {/* Danger / Logout & Account Deletion Section */}
         <View style={[styles.sectionBox, { marginTop: 14 }]}>
           <TouchableOpacity
             style={styles.logoutRow}
             onPress={() => setShowLogoutModal(true)}
             activeOpacity={0.75}
+            disabled={isLoggingOut || isDeletingAccount}
           >
             <View style={styles.logoutIconCircle}>
               <Ionicons name="log-out-outline" size={20} color="#dc2626" />
@@ -240,6 +295,28 @@ export const ProfileWalletScreen = ({ navigation }) => {
               <ActivityIndicator size="small" color="#dc2626" />
             ) : (
               <Ionicons name="arrow-forward" size={18} color="#dc2626" />
+            )}
+          </TouchableOpacity>
+
+          <View style={styles.menuDivider} />
+
+          <TouchableOpacity
+            style={[styles.logoutRow, { backgroundColor: '#fef2f2' }]}
+            onPress={() => setShowDeleteModal(true)}
+            activeOpacity={0.75}
+            disabled={isLoggingOut || isDeletingAccount}
+          >
+            <View style={[styles.logoutIconCircle, { backgroundColor: '#fee2e2' }]}>
+              <Ionicons name="trash-outline" size={20} color="#b91c1c" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.logoutTitle, { color: '#b91c1c' }]}>Delete Account</Text>
+              <Text style={styles.logoutSub}>Permanently delete account & personal data</Text>
+            </View>
+            {isDeletingAccount ? (
+              <ActivityIndicator size="small" color="#b91c1c" />
+            ) : (
+              <Ionicons name="chevron-forward" size={18} color="#b91c1c" />
             )}
           </TouchableOpacity>
         </View>
@@ -320,6 +397,61 @@ export const ProfileWalletScreen = ({ navigation }) => {
           </Pressable>
         </Pressable>
       </Modal>
+
+      {/* 3. Delete Account Confirmation Modal */}
+      <Modal
+        visible={showDeleteModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => !isDeletingAccount && setShowDeleteModal(false)}
+      >
+        <Pressable
+          style={styles.modalBackdrop}
+          onPress={() => !isDeletingAccount && setShowDeleteModal(false)}
+        >
+          <Pressable style={styles.modalDialog} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.modalIconWrapRed}>
+              <Ionicons name="trash" size={32} color="#dc2626" />
+            </View>
+            <Text style={[styles.modalTitle, { color: '#b91c1c' }]}>Permanently Delete Account?</Text>
+            <Text style={[styles.modalDesc, { marginBottom: 10 }]}>
+              This action is permanent and cannot be undone.
+            </Text>
+
+            <View style={styles.consequencesBox}>
+              <Text style={styles.consequenceText}>• Name, phone number, and delivery addresses will be permanently deleted.</Text>
+              <Text style={styles.consequenceText}>• All active sessions across devices will be revoked immediately.</Text>
+              <Text style={styles.consequenceText}>• Unspent promotional wallet credits (₹{walletDisplay}) will be permanently forfeited.</Text>
+              <Text style={styles.consequenceText}>• Past order receipts will be irreversibly anonymized.</Text>
+              <Text style={styles.consequenceText}>• You cannot delete while an order is currently in delivery.</Text>
+            </View>
+
+            <View style={[styles.modalButtonsRow, { marginTop: 16 }]}>
+              <TouchableOpacity
+                style={styles.modalCancelBtn}
+                onPress={() => setShowDeleteModal(false)}
+                disabled={isDeletingAccount}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.modalDestructiveBtn, { backgroundColor: '#dc2626' }]}
+                onPress={confirmDeleteAccount}
+                disabled={isDeletingAccount}
+                activeOpacity={0.85}
+              >
+                {isDeletingAccount ? (
+                  <ActivityIndicator size="small" color="#ffffff" />
+                ) : (
+                  <Text style={styles.modalDestructiveText}>Delete Account</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 };
@@ -331,7 +463,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 16,
-    paddingBottom: 40
+    paddingBottom: 90
   },
   brandRow: {
     alignItems: 'center',
@@ -711,5 +843,24 @@ const styles = StyleSheet.create({
     color: '#15803d',
     fontSize: 13.5,
     fontWeight: '700',
+  },
+  menuDivider: {
+    height: 1,
+    backgroundColor: '#f1f5f9',
+    marginVertical: 4
+  },
+  consequencesBox: {
+    backgroundColor: '#fff1f2',
+    borderWidth: 1,
+    borderColor: '#fecdd3',
+    borderRadius: 12,
+    padding: 12,
+    width: '100%',
+    gap: 6
+  },
+  consequenceText: {
+    fontSize: 12,
+    color: '#9f1239',
+    lineHeight: 17
   },
 });

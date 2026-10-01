@@ -18,6 +18,7 @@ import { useCustomerSocket } from '../../context/SocketContext';
 import { ClearCartModal } from '../../components/ClearCartModal';
 import { colors } from '../../theme/colors';
 import { showAlert } from '../../utils/alert';
+import { SafeImage, isValidImageUri } from '../../components/common/SafeImage';
 
 export const VendorStoreScreen = ({ route, navigation }) => {
   const initialVendor = route.params?.vendor || {};
@@ -127,13 +128,16 @@ export const VendorStoreScreen = ({ route, navigation }) => {
 
       {/* Store Banner Hero Header */}
       <View style={styles.heroBanner}>
-        <Image
+        <SafeImage
           source={{
             uri:
-              vendor?.banner ||
-              'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=800&auto=format&fit=crop&q=80'
+              isValidImageUri(vendor?.banner)
+                ? vendor.banner
+                : 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=800&auto=format&fit=crop&q=80'
           }}
           style={styles.heroImg}
+          placeholderIcon="storefront-outline"
+          placeholderIconSize={48}
         />
         <View style={styles.heroOverlay} />
 
@@ -298,13 +302,12 @@ export const VendorStoreScreen = ({ route, navigation }) => {
 
                   <View style={styles.productRight}>
                     <View style={styles.prodImgContainer}>
-                      {product.image ? (
-                        <Image source={{ uri: product.image }} style={styles.prodImg} />
-                      ) : (
-                        <View style={styles.prodImgPlaceholder}>
-                          <Ionicons name="restaurant-outline" size={28} color="#94a3b8" />
-                        </View>
-                      )}
+                      <SafeImage
+                        source={{ uri: product.image }}
+                        style={styles.prodImg}
+                        placeholderIcon="restaurant-outline"
+                        placeholderIconSize={28}
+                      />
                       {isOutOfStock && (
                         <View style={styles.soldOutImageOverlay}>
                           <Text style={styles.soldOutImageBadgeText}>SOLD OUT</Text>

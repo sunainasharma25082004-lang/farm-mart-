@@ -22,7 +22,7 @@ apiClient.interceptors.request.use(
   async (config) => {
     try {
       const token = await storage.getAccessToken();
-      if (token && !config.headers.Authorization) {
+      if (token && (!config.headers.Authorization || config._forceFreshToken)) {
         config.headers.Authorization = `Bearer ${token}`;
       }
     } catch (e) {
@@ -33,19 +33,135 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response Interceptor: Single-Flight Refresh Queue & 401 Handling
-let isRefreshing = false;
-let failedQueue = [];
+// Session lifecycle & termination guards
+let sessionEpoch = 0;
+let isSessionTerminated = false;
+let isTeardownSuspended = false;
 
-const processQueue = (error, token = null) => {
-  failedQueue.forEach((prom) => {
-    if (error) {
-      prom.reject(error);
-    } else {
-      prom.resolve(token);
+export const suspendSessionForTeardown = () => {
+  isTeardownSuspended = true;
+  sessionEpoch += 1;
+  inFlightRefreshPromise = null;
+  // NOTE: We intentionally PRESERVE apiClient.defaults.headers.common['Authorization']
+  // and storage tokens so the in-flight delete-account or logout request includes the valid Bearer token!
+};
+
+export const resumeSession = () => {
+  isTeardownSuspended = false;
+  isSessionTerminated = false;
+  sessionEpoch += 1;
+};
+
+export const finalizeSessionTermination = async () => {
+  isSessionTerminated = true;
+  isTeardownSuspended = false;
+  sessionEpoch += 1;
+  inFlightRefreshPromise = null;
+  delete apiClient.defaults.headers.common['Authorization'];
+  try {
+    await storage.clearTokens();
+  } catch (e) {
+    console.warn('Storage token clear error during teardown:', e);
+  }
+};
+
+export const terminateSession = async () => {
+  await finalizeSessionTermination();
+};
+
+export const initializeSession = () => {
+  isSessionTerminated = false;
+  isTeardownSuspended = false;
+  sessionEpoch += 1;
+};
+
+export const isCurrentSessionTerminated = () => isSessionTerminated;
+export const isSessionTeardownSuspended = () => isTeardownSuspended;
+
+// Single-Flight Refresh Mutex shared across REST and socket reconnection
+let inFlightRefreshPromise = null;
+
+export const refreshAuthToken = () => {
+  if (isSessionTerminated || isTeardownSuspended) {
+    const err = new Error('Session terminated or teardown in progress');
+    err.code = isSessionTerminated ? 'SESSION_TERMINATED' : 'TEARDOWN_SUSPENDED';
+    return Promise.reject(err);
+  }
+
+  if (inFlightRefreshPromise) {
+    return inFlightRefreshPromise;
+  }
+
+  const currentEpoch = sessionEpoch;
+
+  inFlightRefreshPromise = (async () => {
+    try {
+      const storedRefreshToken = await storage.getRefreshToken();
+      const deviceId = await storage.getDeviceId();
+
+      if (!storedRefreshToken || isSessionTerminated || isTeardownSuspended || sessionEpoch !== currentEpoch) {
+        const err = new Error('No refresh token available or session teardown initiated');
+        err.code = isSessionTerminated ? 'SESSION_TERMINATED' : isTeardownSuspended ? 'TEARDOWN_SUSPENDED' : 'NO_REFRESH_TOKEN';
+        throw err;
+      }
+
+      // Dedicated unintercepted call to refresh
+      const refreshResponse = await axios.post(
+        `${API_BASE_URL}/auth/refresh`,
+        { refreshToken: storedRefreshToken, deviceId },
+        { timeout: 15000 }
+      );
+
+      // Verify session was not terminated or replaced while request was in-flight
+      if (isSessionTerminated || isTeardownSuspended || sessionEpoch !== currentEpoch) {
+        console.log('⚡ [API] In-flight token refresh discarded: session terminated or teardown in progress');
+        return null;
+      }
+
+      const newAccessToken = refreshResponse.data?.accessToken;
+      const newRefreshToken = refreshResponse.data?.refreshToken;
+
+      if (!newAccessToken) {
+        throw new Error('Refresh response missing access token');
+      }
+
+      const latestRefreshToken = await storage.getRefreshToken();
+      if (storedRefreshToken !== latestRefreshToken || isSessionTerminated || isTeardownSuspended || sessionEpoch !== currentEpoch) {
+        console.log('⚡ [API] Account changed or terminated during refresh; aborting store');
+        return null;
+      }
+
+      await storage.setAccessToken(newAccessToken);
+      tokenChangedHandler?.(newAccessToken);
+      if (newRefreshToken) {
+        await storage.setRefreshToken(newRefreshToken);
+      }
+
+      apiClient.defaults.headers.common['Authorization'] = `Bearer ${newAccessToken}`;
+      return newAccessToken;
+    } catch (refreshErr) {
+      if (
+        isSessionTerminated ||
+        isTeardownSuspended ||
+        sessionEpoch !== currentEpoch ||
+        refreshErr.code === 'SESSION_TERMINATED' ||
+        refreshErr.code === 'TEARDOWN_SUSPENDED'
+      ) {
+        throw refreshErr;
+      }
+      await storage.clearTokens();
+      if (typeof forceLogoutHandler === 'function') {
+        forceLogoutHandler('Session expired. Please login again.');
+      }
+      throw refreshErr;
+    } finally {
+      if (sessionEpoch === currentEpoch) {
+        inFlightRefreshPromise = null;
+      }
     }
-  });
-  failedQueue = [];
+  })();
+
+  return inFlightRefreshPromise;
 };
 
 apiClient.interceptors.response.use(
@@ -64,9 +180,7 @@ apiClient.interceptors.response.use(
       return Promise.reject(normalized);
     }
 
-    const { status, data } = error.response;
-    const isTokenExpired =
-      status === 401 && (data?.code === 'TOKEN_EXPIRED' || data?.code === 'INVALID_TOKEN');
+    const { status } = error.response;
 
     // Do not attempt refresh on auth endpoints themselves (e.g. login, verify, refresh)
     const isAuthRoute =
@@ -74,65 +188,14 @@ apiClient.interceptors.response.use(
       originalRequest?.url?.includes('/auth/refresh') ||
       originalRequest?.url?.includes('/auth/customer/login');
 
-    if (isTokenExpired && !originalRequest._retry && !isAuthRoute) {
-      if (isRefreshing) {
-        // Queue parallel requests until refresh completes
-        return new Promise((resolve, reject) => {
-          failedQueue.push({ resolve, reject });
-        })
-          .then((token) => {
-            originalRequest.headers.Authorization = `Bearer ${token}`;
-            return apiClient(originalRequest);
-          })
-          .catch((err) => Promise.reject(err));
-      }
-
+    if (status === 401 && !originalRequest._retry && !isAuthRoute) {
       originalRequest._retry = true;
-      isRefreshing = true;
-
       try {
-        const storedRefreshToken = await storage.getRefreshToken();
-        const deviceId = await storage.getDeviceId();
-
-        if (!storedRefreshToken) {
-          throw new Error('No refresh token available');
-        }
-
-        // Dedicated unintercepted call to refresh
-        const refreshResponse = await axios.post(
-          `${API_BASE_URL}/auth/refresh`,
-          { refreshToken: storedRefreshToken, deviceId },
-          { timeout: 15000 }
-        );
-
-        const newAccessToken = refreshResponse.data?.accessToken;
-        const newRefreshToken = refreshResponse.data?.refreshToken;
-
-        if (!newAccessToken) {
-          throw new Error('Refresh response missing access token');
-        }
-
-        if(storedRefreshToken !== await storage.getRefreshToken())throw new Error('Account changed during refresh');
-        await storage.setAccessToken(newAccessToken);
-        tokenChangedHandler?.(newAccessToken);
-        if (newRefreshToken) {
-          await storage.setRefreshToken(newRefreshToken);
-        }
-
-        apiClient.defaults.headers.common['Authorization'] = `Bearer ${newAccessToken}`;
-        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-
-        processQueue(null, newAccessToken);
+        const freshAccessToken = await refreshAuthToken();
+        originalRequest.headers.Authorization = `Bearer ${freshAccessToken}`;
         return apiClient(originalRequest);
       } catch (refreshErr) {
-        processQueue(refreshErr, null);
-        await storage.clearTokens();
-        if (typeof forceLogoutHandler === 'function') {
-          forceLogoutHandler('Session expired. Please login again.');
-        }
         return Promise.reject(refreshErr);
-      } finally {
-        isRefreshing = false;
       }
     }
 
@@ -160,6 +223,7 @@ export const apiService = {
     const deviceId = await storage.getDeviceId();
     const res = await apiClient.post('/auth/otp/verify', { phone, otp, deviceId });
     if (res.data?.accessToken) {
+      initializeSession();
       await storage.setAccessToken(res.data.accessToken);
     }
     if (res.data?.refreshToken) {
@@ -179,23 +243,43 @@ export const apiService = {
   },
 
   logout: async () => {
+    suspendSessionForTeardown();
     try {
       const refreshToken = await storage.getRefreshToken();
-      await apiClient.post('/auth/logout', { refreshToken }, { timeout: 3000 });
+      await apiClient.post('/auth/logout', { refreshToken }, { timeout: 4000 });
     } catch (e) {
       // fire-and-forget logout
     } finally {
-      await storage.clearTokens();
+      await finalizeSessionTermination();
     }
     return { ok: true, success: true };
   },
 
   logoutAll: async () => {
+    suspendSessionForTeardown();
     try {
-      const res = await apiClient.post('/auth/logout-all', {}, { timeout: 3000 });
+      const res = await apiClient.post('/auth/logout-all', {}, { timeout: 4000 });
       return res.data;
     } finally {
-      await storage.clearTokens();
+      await finalizeSessionTermination();
+    }
+  },
+
+  deleteAccount: async () => {
+    suspendSessionForTeardown();
+    try {
+      const res = await apiClient.post('/auth/account/delete');
+      await finalizeSessionTermination();
+      return res.data;
+    } catch (err) {
+      resumeSession();
+      const normalizedErr = new Error(
+        err?.message || err?.response?.data?.message || 'Could not delete account. Please try again.'
+      );
+      normalizedErr.code =
+        err?.code || err?.response?.data?.code || (err?.isNetworkError ? 'NETWORK_ERROR' : 'DELETION_FAILED');
+      normalizedErr.isNetworkError = Boolean(err?.isNetworkError);
+      throw normalizedErr;
     }
   },
 
@@ -211,6 +295,7 @@ export const apiService = {
       }
       const data = response?.data;
       if (data && (data.success || data.ok)) {
+        initializeSession();
         const tok = data.accessToken || data.token;
         if (tok) {
           await storage.setAccessToken(tok);
@@ -245,8 +330,14 @@ export const apiService = {
       const response = await apiClient.get(`/categories/${slug}/vendors`);
       return response.data;
     } catch (error) {
-      console.warn('Failed to fetch category vendors:', error.message);
-      return { success: false, vendors: [] };
+      console.warn('Failed to fetch category vendors:', error.message || error);
+      return {
+        success: false,
+        vendors: [],
+        isNetworkError: Boolean(error?.isNetworkError || !error?.response),
+        notFound: error?.response?.status === 404,
+        message: error?.message || 'Could not load stores for this category.'
+      };
     }
   },
 
@@ -385,6 +476,34 @@ export const apiService = {
     }
   },
 
+  createPaymentOrder: async (orderId) => {
+    try {
+      const res = await apiClient.post('/create-order', { orderId });
+      return res.data;
+    } catch (err) {
+      console.error('Failed to create Razorpay order:', err.response?.data || err);
+      throw err.response?.data || err;
+    }
+  },
+
+  verifyPayment: async ({
+    razorpay_order_id,
+    razorpay_payment_id,
+    razorpay_signature,
+  }) => {
+    try {
+      const res = await apiClient.post('/verify-payment', {
+        razorpay_order_id,
+        razorpay_payment_id,
+        razorpay_signature,
+      });
+      return res.data;
+    } catch (err) {
+      console.error('Payment verification failed:', err.response?.data || err);
+      throw err.response?.data || err;
+    }
+  },
+
   getCustomerOrders: async () => {
     try {
       const response = await apiClient.get('/orders/customer/my');
@@ -400,6 +519,24 @@ export const apiService = {
       return response.data;
     } catch (error) {
       return { success: false, order: null };
+    }
+  },
+
+  getOrderLocation: async (id) => {
+    try {
+      const response = await apiClient.get(`/orders/${id}/location`);
+      return response.data;
+    } catch (error) {
+      return { success: false, riderLocation: null, deliveryRoute: [] };
+    }
+  },
+
+  getOrderRouteEta: async (id) => {
+    try {
+      const response = await apiClient.get(`/orders/${id}/route-eta`);
+      return response.data;
+    } catch (error) {
+      return error.response?.data || { success: false, message: error.message };
     }
   }
 };

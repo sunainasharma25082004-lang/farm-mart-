@@ -1,20 +1,18 @@
 import * as Location from 'expo-location';
 import GoogleMap from '../../components/GoogleMap';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  SafeAreaView,
   ActivityIndicator,
   TextInput,
-  Image,
   Modal,
   Platform,
   Animated,
-  Linking
+  KeyboardAvoidingView
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
@@ -23,9 +21,25 @@ import { useApp } from '../../context/AppContext';
 import { apiService } from '../../services/api';
 import { showAlert } from '../../utils/alert';
 import { TactileButton } from '../../components/common/TactileButton';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
-import { MapView, Marker } from '../../components/MapViewWrapper';
 import { reverseGeocode } from '../../utils/maps';
+import { SafeImage } from '../../components/common/SafeImage';
+
+export const calculateHaversineDistanceKm = (lat1, lon1, lat2, lon2) => {
+  if (!Number.isFinite(lat1) || !Number.isFinite(lon1) || !Number.isFinite(lat2) || !Number.isFinite(lon2)) {
+    return null;
+  }
+  const R = 6371; // Earth radius in km
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+};
 const StaggeredBillRow = ({ children, delay = 0, style }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const transY = useRef(new Animated.Value(8)).current;
@@ -136,81 +150,412 @@ export const CheckoutScreen = ({ navigation }) => {
   const { items, vendorId, vendorName, billSummary, placeOrder } = useCart();
   const { userProfile } = useApp();
 
+  const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
-  const [paymentMethod,setPaymentMethod]=useState('COD');
-  const [pinConfirmed,setPinConfirmed]=useState(false);
-  const [pinLat,setPinLat]=useState(''),[pinLng,setPinLng]=useState('');
-  const [deliveryAddress,setDeliveryAddress]=useState({name:userProfile?.name || '',phone:userProfile?.phone || '',line1:'',city:'',pincode:'',lat:null,lng:null});
-  const selectPin = async (point) => {
-    setDeliveryAddress(p => ({ ...p, ...point }));
-    setPinLat(String(point.lat));
-    setPinLng(String(point.lng));
-    setPinConfirmed(false);
+  const [paymentMethod, setPaymentMethod] = useState('COD');
+  const [vendorDetails, setVendorDetails] = useState(null);
+
+  // Consolidated address picker modal state
+  const [showAddressPicker, setShowAddressPicker] = useState(false);
+  const [showAdvancedCoords, setShowAdvancedCoords] = useState(false);
+
+  // Coordinate validation helper (handles valid (0, 0) coordinates correctly)
+  const isFiniteCoord = useCallback((val, maxAbs = 180) => {
+    return val != null && typeof val === 'number' && Number.isFinite(val) && Math.abs(val) <= maxAbs;
+  }, []);
+
+  // Address and pin states: Check if existing saved address has verified GPS coordinates
+  const savedAddress = userProfile?.addresses?.find((a) => a.isDefault) || userProfile?.addresses?.[0];
+
+  const hasValidSavedPin = Boolean(
+    savedAddress &&
+    isFiniteCoord(savedAddress.lat, 90) &&
+    isFiniteCoord(savedAddress.lng, 180)
+  );
+
+  const [deliveryAddress, setDeliveryAddress] = useState({
+    name: userProfile?.name || '',
+    phone: userProfile?.phone || '',
+    line1: savedAddress?.line1 || '',
+    landmark: savedAddress?.landmark || '',
+    city: savedAddress?.city || '',
+    pincode: savedAddress?.pincode || '',
+    lat: hasValidSavedPin ? savedAddress.lat : null,
+    lng: hasValidSavedPin ? savedAddress.lng : null
+  });
+
+  const [pinConfirmed, setPinConfirmed] = useState(hasValidSavedPin);
+  const [isSavedAddressReused, setIsSavedAddressReused] = useState(hasValidSavedPin);
+
+  // Explicitly selected delivery pin: null until user drops a pin, uses GPS, or selects an address
+  const [selectedPin, setSelectedPin] = useState(
+    hasValidSavedPin ? { lat: savedAddress.lat, lng: savedAddress.lng } : null
+  );
+
+  // Map viewing center: used solely for viewport camera, NEVER treated as selected pin
+  const getInitialMapCenter = useCallback(() => {
+    if (hasValidSavedPin) {
+      return { lat: savedAddress.lat, lng: savedAddress.lng };
+    }
+    if (vendorDetails?.location?.coordinates?.length === 2) {
+      const vLng = vendorDetails.location.coordinates[0];
+      const vLat = vendorDetails.location.coordinates[1];
+      if (isFiniteCoord(vLat, 90) && isFiniteCoord(vLng, 180)) {
+        return { lat: vLat, lng: vLng };
+      }
+    }
+    return { lat: 30.9010, lng: 75.8573 };
+  }, [hasValidSavedPin, savedAddress?.lat, savedAddress?.lng, vendorDetails?.location?.coordinates, isFiniteCoord]);
+
+  const [mapCenter, setMapCenter] = useState(getInitialMapCenter);
+
+  const [tempAddress, setTempAddress] = useState({
+    line1: savedAddress?.line1 || '',
+    landmark: savedAddress?.landmark || '',
+    city: savedAddress?.city || '',
+    pincode: savedAddress?.pincode || ''
+  });
+
+  const [manualLat, setManualLat] = useState(hasValidSavedPin ? String(savedAddress.lat) : '');
+  const [manualLng, setManualLng] = useState(hasValidSavedPin ? String(savedAddress.lng) : '');
+
+  // Sync recipient details from authenticated profile while respecting existing manual input
+  useEffect(() => {
+    if (userProfile) {
+      const saved = userProfile?.addresses?.find((a) => a.isDefault) || userProfile?.addresses?.[0];
+      const hasSavedPin = Boolean(
+        saved &&
+        isFiniteCoord(saved.lat, 90) &&
+        isFiniteCoord(saved.lng, 180)
+      );
+
+      setDeliveryAddress((prev) => {
+        if (!prev.line1 && saved) {
+          return {
+            name: prev.name || userProfile.name || '',
+            phone: prev.phone || userProfile.phone || '',
+            line1: saved.line1 || '',
+            landmark: saved.landmark || '',
+            city: saved.city || '',
+            pincode: saved.pincode || '',
+            lat: hasSavedPin ? saved.lat : null,
+            lng: hasSavedPin ? saved.lng : null
+          };
+        }
+        return {
+          ...prev,
+          name: prev.name || userProfile.name || '',
+          phone: prev.phone || userProfile.phone || ''
+        };
+      });
+
+      if (hasSavedPin) {
+        setPinConfirmed(true);
+        setIsSavedAddressReused(true);
+        setSelectedPin({ lat: saved.lat, lng: saved.lng });
+      }
+    }
+  }, [userProfile, isFiniteCoord]);
+
+  // Fetch vendor details for live serviceability check
+  useEffect(() => {
+    if (vendorId) {
+      apiService.getVendorById(vendorId).then((res) => {
+        if (res?.success && res.vendor) {
+          setVendorDetails(res.vendor);
+        }
+      }).catch((e) => {
+        console.warn('Could not fetch vendor details for serviceability check:', e);
+      });
+    }
+  }, [vendorId]);
+
+  // Versioning and asynchronous lookup guards
+  const lookupVersionRef = useRef(0);
+  const isPickerOpenRef = useRef(false);
+  const [isResolvingAddress, setIsResolvingAddress] = useState(false);
+  const [geocodeError, setGeocodeError] = useState('');
+  const [pinChangeNotice, setPinChangeNotice] = useState('');
+  const [suggestedRoad, setSuggestedRoad] = useState('');
+  const [mapTilesReady, setMapTilesReady] = useState(false);
+  const [hasReviewedRetainedAddress, setHasReviewedRetainedAddress] = useState(true);
+
+  // Open the consolidated address picker modal
+  const openAddressPicker = () => {
+    lookupVersionRef.current += 1;
+    isPickerOpenRef.current = true;
+    setIsLocating(false);
+    setIsResolvingAddress(false);
+    setGeocodeError('');
+    setPinChangeNotice('');
+    setSuggestedRoad('');
+    setHasReviewedRetainedAddress(true);
+
+    // If a valid pin was already confirmed, populate picker with it
+    if (isFiniteCoord(deliveryAddress.lat, 90) && isFiniteCoord(deliveryAddress.lng, 180)) {
+      const confirmedCoord = { lat: deliveryAddress.lat, lng: deliveryAddress.lng };
+      setSelectedPin(confirmedCoord);
+      setMapCenter(confirmedCoord);
+      setManualLat(String(deliveryAddress.lat));
+      setManualLng(String(deliveryAddress.lng));
+    } else {
+      // No pin confirmed yet: require explicit selection! Map center is NOT a selected pin
+      setSelectedPin(null);
+      setMapCenter(getInitialMapCenter());
+      setManualLat('');
+      setManualLng('');
+    }
+
+    setTempAddress({
+      line1: deliveryAddress.line1 || '',
+      landmark: deliveryAddress.landmark || '',
+      city: deliveryAddress.city || '',
+      pincode: deliveryAddress.pincode || ''
+    });
+    setShowAddressPicker(true);
+  };
+
+  // Close and cancel picker: invalidates all pending async GPS and geocoding operations
+  const closeAddressPicker = () => {
+    lookupVersionRef.current += 1;
+    isPickerOpenRef.current = false;
+    setIsLocating(false);
+    setIsResolvingAddress(false);
+    setGeocodeError('');
+    setPinChangeNotice('');
+    setSuggestedRoad('');
+    setShowAddressPicker(false);
+  };
+
+  // Move or drop pin on picker map upon explicit interaction
+  const handleSelectPin = async (point) => {
+    if (!point || !isFiniteCoord(point.lat, 90) || !isFiniteCoord(point.lng, 180)) {
+      showAlert('Invalid Location', 'Coordinates must be valid numbers (Latitude -90 to 90, Longitude -180 to 180).');
+      return;
+    }
+    const validatedPoint = { lat: point.lat, lng: point.lng };
+
+    lookupVersionRef.current += 1;
+    const currentVersion = lookupVersionRef.current;
+
+    setSelectedPin(validatedPoint);
+    setMapCenter(validatedPoint);
+    setManualLat(String(point.lat));
+    setManualLng(String(point.lng));
+    setIsResolvingAddress(true);
+    setGeocodeError('');
+
+    // Check if moving to a new area compared to confirmed or saved address
+    const refLat = deliveryAddress.lat ?? (hasValidSavedPin ? savedAddress.lat : null);
+    const refLng = deliveryAddress.lng ?? (hasValidSavedPin ? savedAddress.lng : null);
+    if (refLat !== null && refLng !== null && isFiniteCoord(refLat, 90) && isFiniteCoord(refLng, 180)) {
+      const distFromPrevious = calculateHaversineDistanceKm(refLat, refLng, point.lat, point.lng);
+      if (distFromPrevious !== null && distFromPrevious > 0.3) {
+        setPinChangeNotice(
+          `Pin moved ${distFromPrevious.toFixed(1)} km from your previous address. Please review your house / building details below.`
+        );
+        setHasReviewedRetainedAddress(false);
+      } else {
+        setPinChangeNotice('');
+        setHasReviewedRetainedAddress(true);
+      }
+    } else {
+      setPinChangeNotice('');
+      setHasReviewedRetainedAddress(true);
+    }
+
     try {
-      const { address, city, pincode } = await reverseGeocode(point.lat, point.lng);
-      setDeliveryAddress(prev => ({
-        ...prev,
-        line1: address,
-        city,
-        pincode,
-      }));
+      const geo = await reverseGeocode(point.lat, point.lng);
+      if (lookupVersionRef.current !== currentVersion || !isPickerOpenRef.current) {
+        return; // Discard stale or cancelled response!
+      }
+
+      const newCity = (geo && geo.city) ? geo.city.trim() : '';
+      const newPincode = (geo && geo.pincode) ? geo.pincode.trim() : '';
+      const detectedRoad = (geo && (geo.address || geo.area)) ? (geo.address || geo.area).trim() : '';
+
+      setSuggestedRoad(detectedRoad);
+
+      // Requirement 4: Replace location-derived city/pincode together!
+      // Missing geocoding fields must NEVER retain unrelated old values from another location.
+      setTempAddress((prev) => {
+        const hasExistingLine1 = prev.line1.trim().length > 0;
+        return {
+          ...prev,
+          city: newCity,
+          pincode: newPincode,
+          line1: hasExistingLine1 ? prev.line1 : detectedRoad
+        };
+      });
+
+      if (!newCity || !newPincode) {
+        setGeocodeError(
+          !newCity && !newPincode
+            ? 'Could not auto-detect city and pincode for this pin. Please enter them manually below.'
+            : !newCity
+            ? 'Could not auto-detect city. Please enter your city manually below.'
+            : 'Could not auto-detect pincode. Please enter postal pincode manually below.'
+        );
+      }
     } catch (e) {
-      console.warn('Reverse geocode failed', e);
+      if (lookupVersionRef.current !== currentVersion || !isPickerOpenRef.current) return;
+      console.warn('Reverse geocode failed on pin selection:', e);
+      // Requirement 4: Missing geocoding fields must not retain unrelated old values
+      setTempAddress((prev) => ({
+        ...prev,
+        city: '',
+        pincode: ''
+      }));
+      setGeocodeError('Could not auto-detect address details for this pin. Please fill in City and Pincode manually below.');
+    } finally {
+      if (lookupVersionRef.current === currentVersion) {
+        setIsResolvingAddress(false);
+      }
     }
   };
-// DUPLICATE BLOCK - DISABLED (kept for reference, safe to delete later)
-//      setDeliveryAddress(p => ({ ...p, ...point }));
-//      setPinLat(String(point.lat));
-//      setPinLng(String(point.lng));
-//      setPinConfirmed(false);
-//      try {
-//        const { address, city, pincode } = await reverseGeocode(point.lat, point.lng);
-//        setDeliveryAddress(prev => ({
-//          ...prev,
-//          line1: address,
-//          city,
-//          pincode,
-//        }));
-//      } catch (e) {
-//        console.warn('Reverse geocode failed', e);
-//      }
-//    };setDeliveryAddress(p=>({...p,...point}));setPinLat(String(point.lat));setPinLng(String(point.lng));setPinConfirmed(false);};
-  const handleFetchCurrentLocation=async()=>{
+
+  // Fetch current GPS location (explicit user tap only, no automatic fallback)
+  const handleFetchCurrentLocation = async () => {
+    lookupVersionRef.current += 1;
+    const currentVersion = lookupVersionRef.current;
     setIsLocating(true);
+    setGeocodeError('');
     try {
       let lat = null;
       let lng = null;
 
-      const permission=await Location.requestForegroundPermissionsAsync();
-      if(permission.status!=='granted') {
+      const permission = await Location.requestForegroundPermissionsAsync();
+      if (lookupVersionRef.current !== currentVersion || !isPickerOpenRef.current) return;
+
+      if (permission.status !== 'granted') {
         if (typeof navigator !== 'undefined' && navigator.geolocation) {
           const webPos = await new Promise((resolve, reject) => {
             navigator.geolocation.getCurrentPosition(resolve, reject, {
               enableHighAccuracy: true,
-              timeout: 10000,
+              timeout: 10000
             });
           });
+          if (lookupVersionRef.current !== currentVersion || !isPickerOpenRef.current) return;
           lat = webPos.coords.latitude;
           lng = webPos.coords.longitude;
         } else {
-          throw new Error('Location permission denied. Enter your coordinates or select the delivery pin on the map.');
+          showAlert(
+            'Location Permission Denied',
+            'Location permission was denied. Please allow permissions in device settings, or search your address.'
+          );
+          return;
         }
       } else {
-        const position=await Location.getCurrentPositionAsync({accuracy:Location.Accuracy.Balanced});
+        const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        if (lookupVersionRef.current !== currentVersion || !isPickerOpenRef.current) return;
         lat = position.coords.latitude;
         lng = position.coords.longitude;
       }
 
-      if (lat != null && lng != null) {
-        selectPin({lat, lng});
+      if (lookupVersionRef.current !== currentVersion || !isPickerOpenRef.current) return;
+
+      if (isFiniteCoord(lat, 90) && isFiniteCoord(lng, 180)) {
+        await handleSelectPin({ lat, lng });
       } else {
-        throw new Error('Could not retrieve coordinates.');
+        showAlert('GPS Unavailable', 'Could not detect accurate GPS coordinates. Please search or enter coordinates.');
       }
-    }catch(e){
-      showAlert('Location unavailable', e.message || 'GPS location unavailable');
+    } catch (e) {
+      if (lookupVersionRef.current === currentVersion && isPickerOpenRef.current) {
+        showAlert('GPS Unavailable', e.message || 'Could not retrieve device location. Please search or pick on map.');
+      }
+    } finally {
+      if (lookupVersionRef.current === currentVersion) {
+        setIsLocating(false);
+      }
     }
-    finally{setIsLocating(false);}
+  };
+
+  // Apply manual lat/lng from advanced inputs
+  const handleApplyManualCoords = () => {
+    const lat = parseFloat(manualLat);
+    const lng = parseFloat(manualLng);
+    if (!isFiniteCoord(lat, 90) || !isFiniteCoord(lng, 180)) {
+      showAlert('Invalid Coordinates', 'Latitude must be between -90 and 90, and longitude between -180 and 180.');
+      return;
+    }
+    handleSelectPin({ lat, lng });
+  };
+
+  // Check whether address confirmation can proceed
+  const canConfirmAddress = Boolean(
+    !isLocating &&
+    !isResolvingAddress &&
+    selectedPin &&
+    isFiniteCoord(selectedPin.lat, 90) &&
+    isFiniteCoord(selectedPin.lng, 180) &&
+    tempAddress.line1.trim().length > 0 &&
+    tempAddress.city.trim().length > 0 &&
+    tempAddress.pincode.trim().length > 0 &&
+    hasReviewedRetainedAddress
+  );
+
+  const getConfirmButtonText = () => {
+    if (isLocating) return "Detecting GPS Location...";
+    if (isResolvingAddress) return "Resolving Address for Pin...";
+    if (!selectedPin) return "Drop or Select Delivery Pin";
+    if (!tempAddress.line1.trim()) return "Enter House / Flat Details";
+    if (!tempAddress.city.trim()) return "Enter City";
+    if (!tempAddress.pincode.trim()) return "Enter Postal Pincode";
+    if (!hasReviewedRetainedAddress) return "Review Retained House Details";
+    return "Confirm Pin & Use This Address";
+  };
+
+  // Confirm and save address from picker
+  const handleConfirmAddressPicker = () => {
+    if (!selectedPin || !isFiniteCoord(selectedPin.lat, 90) || !isFiniteCoord(selectedPin.lng, 180)) {
+      showAlert('Delivery Pin Required', 'Please drop a pin on the map, use current location, or search your address.');
+      return;
+    }
+    if (isLocating || isResolvingAddress) {
+      showAlert('Resolving Location', 'Please wait while your pin coordinates and address are verified.');
+      return;
+    }
+    if (!tempAddress.line1.trim()) {
+      showAlert('House / Flat Required', 'Please enter your flat, apartment or house number to proceed.');
+      return;
+    }
+    if (!tempAddress.city.trim()) {
+      showAlert('City Required', 'Please enter your city to complete delivery details.');
+      return;
+    }
+    if (!tempAddress.pincode.trim()) {
+      showAlert('Pincode Required', 'Please enter your postal pincode.');
+      return;
+    }
+    if (!hasReviewedRetainedAddress) {
+      showAlert('Review Retained Address', 'Pin has moved. Please review and confirm your house and street details.');
+      return;
+    }
+
+    // Serviceability distance check
+    if (vendorDetails?.location?.coordinates?.length === 2) {
+      const vLng = vendorDetails.location.coordinates[0];
+      const vLat = vendorDetails.location.coordinates[1];
+      const dist = calculateHaversineDistanceKm(vLat, vLng, selectedPin.lat, selectedPin.lng);
+      const maxRadius = vendorDetails.deliveryRadiusKm || 10;
+      if (dist !== null && dist > maxRadius) {
+        showAlert(
+          'Location May Be Out of Delivery Range',
+          `Your selected pin is ${dist.toFixed(1)} km away from ${vendorDetails.storeName || 'the store'}. This vendor delivers up to ${maxRadius} km.`
+        );
+      }
+    }
+
+    setDeliveryAddress((prev) => ({
+      ...prev,
+      ...tempAddress,
+      lat: selectedPin.lat,
+      lng: selectedPin.lng
+    }));
+    setPinConfirmed(true);
+    setIsSavedAddressReused(false);
+    closeAddressPicker();
   };
   // Payment Gateway Modal State
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -248,11 +593,39 @@ export const CheckoutScreen = ({ navigation }) => {
 
   const grandTotal = billSummary?.grandTotal ?? billSummary?.total ?? 0;
 
-  // Trigger Payment / Order Flow with Single-Execution & Closed-Store Guards
   const handleInitiatePayment = async () => {
     if (loading || paymentSubmitting) return;
-    if (!pinConfirmed || !deliveryAddress.line1.trim() || !deliveryAddress.name.trim() || !deliveryAddress.phone.trim()) {
-      showAlert('Confirm delivery address','Enter recipient details and house address, then confirm your delivery pin.');return;
+
+    if (
+      !pinConfirmed ||
+      !isFiniteCoord(deliveryAddress.lat, 90) ||
+      !isFiniteCoord(deliveryAddress.lng, 180) ||
+      !deliveryAddress.line1.trim() ||
+      !deliveryAddress.city.trim() ||
+      !deliveryAddress.pincode.trim() ||
+      !deliveryAddress.name.trim() ||
+      !deliveryAddress.phone.trim()
+    ) {
+      showAlert(
+        'Delivery Pin & Address Required',
+        'Please confirm your exact delivery pin on the map and complete your recipient contact and house details before proceeding to payment.'
+      );
+      return;
+    }
+
+    // Preserve vendor serviceability range validation
+    if (vendorDetails?.location?.coordinates?.length === 2) {
+      const vLng = vendorDetails.location.coordinates[0];
+      const vLat = vendorDetails.location.coordinates[1];
+      const dist = calculateHaversineDistanceKm(vLat, vLng, deliveryAddress.lat, deliveryAddress.lng);
+      const maxRadius = vendorDetails.deliveryRadiusKm || 10;
+      if (dist !== null && dist > maxRadius) {
+        showAlert(
+          'Location Out of Delivery Range',
+          `Your delivery location is ${dist.toFixed(1)} km away from ${vendorDetails.storeName || 'the store'}. This store delivers within a ${maxRadius} km radius.`
+        );
+        return;
+      }
     }
 
     if (items.length === 0) {
@@ -291,22 +664,48 @@ export const CheckoutScreen = ({ navigation }) => {
     }
   };
 
-  // Simulate authentic Payment Gateway verification then place order
+  // Real Payment Gateway integration with Razorpay
   const handleConfirmGatewayPayment = async () => {
     if (paymentSubmitting || loading) return;
     setPaymentSubmitting(true);
 
-    // 1. Simulate 1.2s bank gateway communication
-    setTimeout(async () => {
-      setPaymentSubmitting(false);
-      setPaymentSuccess(true);
+    try {
+      const actualPaymentMethod = paymentMethod === 'UPI' ? 'ONLINE_UPI' : 'CARD';
+      const order = await placeOrder(deliveryAddress, actualPaymentMethod);
 
-      // 2. Wait 0.8s to show green checkmark, then create order on server
-      setTimeout(async () => {
-        setShowPaymentModal(false);
-        await executeOrderPlacement(paymentMethod === 'UPI' ? 'ONLINE_UPI' : 'CARD');
-      }, 900);
-    }, 1200);
+      if (!order || !order._id) {
+        throw new Error('Order creation failed. Please try again.');
+      }
+
+      setShowPaymentModal(false);
+      setPaymentSubmitting(false);
+
+      navigation.navigate('RazorpayCheckout', {
+        orderId: order._id,
+        onSuccess: async (paymentResponse) => {
+          try {
+            const verification = await apiService.verifyPayment(paymentResponse);
+            if (!verification?.success) {
+              showAlert('Payment Verification Failed', verification?.message || 'Payment could not be verified.');
+              return;
+            }
+            navigation.navigate('OrderTracking', {
+              orderId: order._id,
+              order,
+            });
+          } catch (error) {
+            showAlert('Payment Verification Failed', error?.message || 'Payment could not be verified.');
+          }
+        },
+        onFailure: () => {
+          showAlert('Payment Pending', 'Payment was not completed. Your order is still pending; please contact support before trying again.');
+        },
+      });
+    } catch (err) {
+      setPaymentSubmitting(false);
+      const msg = err?.message || 'Failed to initiate payment. Please try again.';
+      showAlert('Payment Error', msg);
+    }
   };
 
   const executeOrderPlacement = async (actualPaymentMethod) => {
@@ -335,7 +734,7 @@ export const CheckoutScreen = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
@@ -404,13 +803,12 @@ export const CheckoutScreen = ({ navigation }) => {
               const lineTotal = (p.price || 0) * qty;
               return (
                 <View key={p._id || p.id || it.productId || idx} style={styles.itemVerifyRow}>
-                  {p.image ? (
-                    <Image source={{ uri: p.image }} style={styles.itemVerifyImg} />
-                  ) : (
-                    <View style={styles.itemVerifyImgPlaceholder}>
-                      <Ionicons name="leaf-outline" size={20} color="#16a34a" />
-                    </View>
-                  )}
+                  <SafeImage
+                    source={{ uri: p.image }}
+                    style={styles.itemVerifyImg}
+                    placeholderIcon="leaf-outline"
+                    placeholderIconSize={20}
+                  />
 
                   <View style={{ flex: 1, marginLeft: 12 }}>
                     <Text style={styles.itemVerifyName} numberOfLines={1}>
@@ -439,179 +837,133 @@ export const CheckoutScreen = ({ navigation }) => {
           </View>
         </View>
 
-        {/* 2. DELIVERY ADDRESS VERIFICATION */}
+        {/* 2. CONSOLIDATED DELIVERY ADDRESS SUMMARY CARD */}
         <View style={styles.card}>
           <View style={styles.cardHeaderRow}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               <Ionicons name="location-outline" size={18} color={colors.primary} />
-              <Text style={styles.cardTitle}>DELIVERY ADDRESS & GOOGLE MAPS PIN</Text>
+              <Text style={styles.cardTitle}>DELIVERY ADDRESS</Text>
             </View>
-            <Text style={styles.homeTag}>HOME</Text>
+            <TouchableOpacity
+              style={styles.changeAddressBtn}
+              onPress={openAddressPicker}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.changeAddressBtnText}>
+                {pinConfirmed && deliveryAddress.line1 ? 'Change' : 'Set Pin / Address'}
+              </Text>
+              <Ionicons name="create-outline" size={14} color={colors.primary} />
+            </TouchableOpacity>
           </View>
 
           <View style={styles.addressBox}>
-            <TextInput style={styles.addressInput} placeholder="Recipient name" value={deliveryAddress.name} onChangeText={name=>setDeliveryAddress(p=>({...p,name}))}/>
-            <TextInput style={styles.addressInput} placeholder="Phone number" keyboardType="phone-pad" value={deliveryAddress.phone} onChangeText={phone=>setDeliveryAddress(p=>({...p,phone}))}/>
-            <TextInput
-              style={styles.addressInput}
-              value={deliveryAddress.line1}
-              onChangeText={(txt) => setDeliveryAddress((prev) => ({ ...prev, line1: txt }))}
-              placeholder="House/Flat No, Apartment, Street name"
-            />
-            <Text style={styles.addressCity}>
-              {deliveryAddress.city} {deliveryAddress.pincode}
-            </Text>
-
-            <TextInput style={styles.addressInput} placeholder="City" value={deliveryAddress.city} onChangeText={city=>setDeliveryAddress(p=>({...p,city}))}/>
-            <TextInput style={styles.addressInput} placeholder="Pincode" value={deliveryAddress.pincode} onChangeText={pincode=>setDeliveryAddress(p=>({...p,pincode}))}/>
-            <GoogleMap points={Number.isFinite(deliveryAddress.lat)?[{...deliveryAddress,label:'Delivery',id:'delivery'}]:[]} onSelect={selectPin}/>
-            <Text style={{paddingVertical:10}}>Tap the map or enter coordinates for the building entrance. GPS accuracy can vary.</Text>
-            <TextInput style={styles.addressInput} placeholder="Latitude" value={pinLat} onChangeText={v=>{setPinLat(v);setPinConfirmed(false);}}/>
-            <TextInput style={styles.addressInput} placeholder="Longitude" value={pinLng} onChangeText={v=>{setPinLng(v);setPinConfirmed(false);}}/>
-            <TouchableOpacity onPress={()=>{
-              const lat=Number(pinLat),lng=Number(pinLng);
-              if(!pinLat.trim() || !pinLng.trim() || !Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat)>90 || Math.abs(lng)>180){showAlert('Invalid pin','Enter valid latitude and longitude.');return;}
-              setDeliveryAddress(p=>({...p,lat,lng}));setPinConfirmed(true);
-            }}><Text style={{padding:12,color:'#15803d',fontWeight:'700'}}>{pinConfirmed?'Delivery pin confirmed':'Confirm this delivery pin'}</Text></TouchableOpacity>
-            {/* GPS Verification Action & Google Maps Badge */}
-            <View style={{ marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#f1f5f9' }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-                <TouchableOpacity
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    backgroundColor: '#f0fdf4',
-                    paddingHorizontal: 12,
-                    paddingVertical: 7,
-                    borderRadius: 10,
-                    borderWidth: 1,
-                    borderColor: '#bbf7d0',
-                    gap: 5
-                  }}
-                  onPress={handleFetchCurrentLocation}
-                  disabled={isLocating}
-                  activeOpacity={0.8}
-                >
-                  <Ionicons name={isLocating ? 'reload-outline' : 'navigate'} size={15} color="#16a34a" />
-                  <Text style={{ fontSize: 12, fontWeight: '800', color: '#16a34a' }}>
-                    {isLocating ? 'Locating...' : '📍 Use Real GPS Location (Google Maps)'}
-                  </Text>
-                </TouchableOpacity>
-
-                {Number.isFinite(deliveryAddress.lat) && (
-                  <TouchableOpacity
-                    style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
-                    onPress={() => Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${deliveryAddress.lat},${deliveryAddress.lng}`).catch(() => showAlert("Maps unavailable", "Please try again."))}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons name="map-outline" size={13} color="#0284c7" />
-                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#0284c7' }}>
-                      Preview on Map
-                    </Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-
-              {/* Google Places Autocomplete */}
-              <View style={{ marginTop: 10, zIndex: 1000 }}>
-                <GooglePlacesAutocomplete
-                  placeholder="Search delivery address"
-                  fetchDetails={true}
-                  onPress={(data, details = null) => {
-                    const lat = details?.geometry?.location?.lat;
-                    const lng = details?.geometry?.location?.lng;
-                    if (lat && lng) {
-                      selectPin({ lat, lng });
-                    }
-                  }}
-                  query={{
-                    key: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,
-                    language: 'en',
-                  }}
-                  styles={{
-                    container: {
-                      width: '100%',
-                      zIndex: 1000,
-                    },
-                    textInputContainer: {
-                      backgroundColor: 'transparent',
-                    },
-                    textInput: {
-                      height: 44,
-                      color: '#0f172a',
-                      fontSize: 13.5,
-                      backgroundColor: '#f8fafc',
-                      borderRadius: 10,
-                      borderWidth: 1.5,
-                      borderColor: '#cbd5e1',
-                      paddingHorizontal: 12,
-                    },
-                    listView: {
-                      backgroundColor: '#ffffff',
-                      borderRadius: 10,
-                      elevation: 5,
-                      shadowColor: '#000',
-                      shadowOffset: { width: 0, height: 2 },
-                      shadowOpacity: 0.12,
-                      shadowRadius: 6,
-                      zIndex: 1001,
-                      marginTop: 4,
-                    },
-                    row: {
-                      padding: 12,
-                    },
-                    description: {
-                      fontSize: 13,
-                      color: '#334155',
-                    },
-                  }}
-                  enablePoweredByContainer={false}
-                  keyboardShouldPersistTaps="handled"
+            {/* Recipient Contact - Pre-filled from profile, editable */}
+            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.fieldMicroLabel}>Recipient Name</Text>
+                <TextInput
+                  style={styles.addressInput}
+                  placeholder="Recipient name"
+                  value={deliveryAddress.name}
+                  onChangeText={(name) => setDeliveryAddress((p) => ({ ...p, name }))}
                 />
               </View>
-
-{Platform.OS === 'web' ? (
-  <View style={{ padding: 12, backgroundColor: '#f1f5f9' }}>
-    <Text>🗺️ Live map preview available in the mobile app</Text>
-    <Text>Lat: {deliveryAddress.lat?.toFixed(4) ?? 'N/A'}, Lng: {deliveryAddress.lng?.toFixed(4) ?? 'N/A'}</Text>
-  </View>
-) : (
-  <MapView
-    style={{ flex: 1 }}
-    initialRegion={{
-      latitude: deliveryAddress.lat ?? 20.59,
-      longitude: deliveryAddress.lng ?? 78.96,
-      latitudeDelta: 0.02,
-      longitudeDelta: 0.02,
-    }}
-    onPress={e => {
-      const { latitude, longitude } = e.nativeEvent.coordinate;
-      selectPin({ lat: latitude, lng: longitude });
-    }}
-  >
-    {Number.isFinite(deliveryAddress.lat) && Number.isFinite(deliveryAddress.lng) && (
-      <Marker
-        coordinate={{ latitude: deliveryAddress.lat, longitude: deliveryAddress.lng }}
-        draggable
-        onDragEnd={e => {
-          const { latitude, longitude } = e.nativeEvent.coordinate;
-          selectPin({ lat: latitude, lng: longitude });
-        }}
-      />
-    )}
-  </MapView>
-)}
+              <View style={{ flex: 1 }}>
+                <Text style={styles.fieldMicroLabel}>Phone Number</Text>
+                <TextInput
+                  style={styles.addressInput}
+                  placeholder="Phone number"
+                  keyboardType="phone-pad"
+                  value={deliveryAddress.phone}
+                  onChangeText={(phone) => setDeliveryAddress((p) => ({ ...p, phone }))}
+                />
               </View>
+            </View>
 
-              {Number.isFinite(deliveryAddress.lat) && (
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6 }}>
-                  <Ionicons name="checkmark-circle" size={13} color="#16a34a" />
-                  <Text style={{ fontSize: 11, color: '#15803d', fontWeight: '600' }}>
-                    Selected pin: {deliveryAddress.lat.toFixed(4)}, {deliveryAddress.lng.toFixed(4)} (Rider will navigate to this exact pin)
+            {/* Address Summary */}
+            {pinConfirmed && deliveryAddress.line1 && isFiniteCoord(deliveryAddress.lat, 90) && isFiniteCoord(deliveryAddress.lng, 180) ? (
+              <View style={styles.savedAddressSummary}>
+                <View style={styles.addressSourceBadgeRow}>
+                  <View style={styles.addressSourceBadge}>
+                    <Ionicons name={isSavedAddressReused ? "bookmark" : "location"} size={11} color="#15803d" />
+                    <Text style={styles.addressSourceBadgeText}>
+                      {isSavedAddressReused ? `Saved Address (${savedAddress?.label || 'Home'})` : 'Confirmed Delivery Pin'}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginTop: 4 }}>
+                  <Ionicons name="home" size={16} color="#15803d" style={{ marginTop: 2 }} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.savedAddressLine1}>
+                      {deliveryAddress.line1}
+                      {deliveryAddress.landmark ? ` (Near ${deliveryAddress.landmark})` : ''}
+                    </Text>
+                    <Text style={styles.savedAddressCity}>
+                      {deliveryAddress.city}{deliveryAddress.city && deliveryAddress.pincode ? ', ' : ''}{deliveryAddress.pincode}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.pinConfirmedPill}>
+                  <Ionicons name="checkmark-circle" size={13} color="#15803d" />
+                  <Text style={styles.pinConfirmedPillText}>
+                    Rider Drop Pin: {deliveryAddress.lat.toFixed(4)}, {deliveryAddress.lng.toFixed(4)}
                   </Text>
                 </View>
-              )}
+              </View>
+            ) : deliveryAddress.line1 ? (
+              <View style={styles.savedAddressWithMissingPin}>
+                <View style={styles.addressSourceBadgeRow}>
+                  <View style={styles.savedDetailsBadge}>
+                    <Ionicons name="home-outline" size={11} color="#475569" />
+                    <Text style={styles.savedDetailsBadgeText}>
+                      {savedAddress ? `Saved Address (${savedAddress?.label || 'Home'})` : 'Address Details'}
+                    </Text>
+                  </View>
+                  <View style={styles.missingPinTag}>
+                    <Ionicons name="warning" size={11} color="#b45309" />
+                    <Text style={styles.missingPinTagText}>Pin Not Confirmed</Text>
+                  </View>
+                </View>
 
+                <View style={{ marginTop: 4 }}>
+                  <Text style={styles.savedAddressLine1}>
+                    {deliveryAddress.line1}
+                    {deliveryAddress.landmark ? ` (Near ${deliveryAddress.landmark})` : ''}
+                  </Text>
+                  <Text style={styles.savedAddressCity}>
+                    {deliveryAddress.city}{deliveryAddress.city && deliveryAddress.pincode ? ', ' : ''}{deliveryAddress.pincode}
+                  </Text>
+                </View>
+
+                <TouchableOpacity
+                  style={styles.setPinActionBtn}
+                  onPress={openAddressPicker}
+                  activeOpacity={0.85}
+                >
+                  <Ionicons name="map" size={15} color="#ffffff" />
+                  <Text style={styles.setPinActionBtnText}>Set Exact Pin on Map</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.noAddressPrompt}>
+                <Ionicons name="map-outline" size={24} color="#f59e0b" />
+                <View style={{ flex: 1, marginLeft: 10 }}>
+                  <Text style={styles.noAddressTitle}>Delivery Pin Not Set</Text>
+                  <Text style={styles.noAddressSub}>
+                    Choose your exact delivery location on the map so the rider can find your building entrance easily.
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.selectPinActionBtn}
+                  onPress={openAddressPicker}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.selectPinActionBtnText}>Select Pin</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
         </View>
 
@@ -719,9 +1071,11 @@ export const CheckoutScreen = ({ navigation }) => {
             ) : (
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
                 <Text style={styles.payBtnText}>
-                  {paymentMethod === 'COD' ? 'Confirm COD Order' : `Pay ₹${grandTotal} & Place Order`}
+                  {!pinConfirmed
+                    ? 'Set Delivery Pin to Pay'
+                    : (paymentMethod === 'COD' ? 'Confirm COD Order' : `Pay ₹${grandTotal} & Place Order`)}
                 </Text>
-                <Ionicons name="arrow-forward" size={18} color="#ffffff" />
+                <Ionicons name={!pinConfirmed ? "location-outline" : "arrow-forward"} size={18} color="#ffffff" />
               </View>
             )}
           </TactileButton>
@@ -769,7 +1123,7 @@ export const CheckoutScreen = ({ navigation }) => {
                 </View>
                 <Text style={styles.successTitle}>Payment of ₹{grandTotal} Received!</Text>
                 <Text style={styles.successSub}>
-                  Ref #UPI-{Math.floor(100000 + Math.random() * 900000)} • Verified by NPCI
+                  Payment processed securely
                 </Text>
               </View>
             ) : (
@@ -990,6 +1344,327 @@ export const CheckoutScreen = ({ navigation }) => {
             </TactileButton>
           </Animated.View>
         </View>
+      </Modal>
+
+      {/* 7. CONSOLIDATED SINGLE ADDRESS PICKER MODAL */}
+      <Modal
+        visible={showAddressPicker}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={closeAddressPicker}
+      >
+        <SafeAreaView style={styles.pickerModalContainer} edges={['top', 'left', 'right', 'bottom']}>
+          <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          >
+            {/* Modal Header */}
+            <View style={styles.pickerModalHeader}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.pickerModalTitle}>Select Delivery Pin & Address</Text>
+                <Text style={styles.pickerModalSubtitle}>Pin drop location will be used by the delivery rider</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.pickerCloseBtn}
+                onPress={closeAddressPicker}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="close" size={22} color="#0f172a" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView
+              style={styles.pickerScroll}
+              contentContainerStyle={styles.pickerScrollContent}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
+              {/* GPS Action Button */}
+              <TouchableOpacity
+                style={styles.gpsActionBtn}
+                onPress={handleFetchCurrentLocation}
+                disabled={isLocating}
+                activeOpacity={0.8}
+              >
+                <Ionicons
+                  name={isLocating ? 'reload-outline' : 'navigate'}
+                  size={16}
+                  color="#15803d"
+                />
+                <Text style={styles.gpsActionBtnText}>
+                  {isLocating ? 'Detecting Real GPS Location...' : '📍 Use Current Location (Real GPS)'}
+                </Text>
+              </TouchableOpacity>
+
+              {/* Address Search via GooglePlacesAutocomplete */}
+              <View style={styles.searchWrapper}>
+                <GooglePlacesAutocomplete
+                  placeholder="Search delivery area, building or road"
+                  fetchDetails={true}
+                  onPress={(data, details = null) => {
+                    const lat = details?.geometry?.location?.lat;
+                    const lng = details?.geometry?.location?.lng;
+                    if (lat && lng && Number.isFinite(lat) && Number.isFinite(lng)) {
+                      handleSelectPin({ lat, lng });
+                    }
+                  }}
+                  query={{
+                    key: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,
+                    language: 'en'
+                  }}
+                  styles={{
+                    container: { width: '100%', zIndex: 1000 },
+                    textInputContainer: { backgroundColor: 'transparent' },
+                    textInput: styles.searchPlacesInput,
+                    listView: styles.searchPlacesListView,
+                    row: { padding: 12 },
+                    description: { fontSize: 13, color: '#334155' }
+                  }}
+                  enablePoweredByContainer={false}
+                  keyboardShouldPersistTaps="handled"
+                />
+              </View>
+
+              {/* The ONE and ONLY Google Map in Checkout */}
+              <View style={styles.pickerMapCard}>
+                <GoogleMap
+                  points={
+                    selectedPin && isFiniteCoord(selectedPin.lat, 90) && isFiniteCoord(selectedPin.lng, 180)
+                      ? [{ ...selectedPin, label: 'Delivery Pin', id: 'checkout_delivery_pin' }]
+                      : []
+                  }
+                  initialCenter={mapCenter}
+                  onSelect={handleSelectPin}
+                  onTilesLoadedChange={setMapTilesReady}
+                />
+                <View style={styles.mapHintOverlay}>
+                  <Text style={styles.mapHintText}>
+                    {mapTilesReady
+                      ? '👆 Tap map or drag marker to set your exact entrance pin'
+                      : '⚠️ If map appears dark, tap "Use Current Location (GPS)" or search above.'}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Selected Pin & Serviceability Details */}
+              <View style={styles.pinDetailsBox}>
+                <View style={styles.pinDetailRow}>
+                  <Ionicons
+                    name={selectedPin ? "location" : "location-outline"}
+                    size={16}
+                    color={selectedPin ? "#15803d" : "#f59e0b"}
+                  />
+                  <Text style={[styles.pinDetailText, !selectedPin && { color: "#b45309" }]}>
+                    {selectedPin && isFiniteCoord(selectedPin.lat, 90) && isFiniteCoord(selectedPin.lng, 180)
+                      ? `Selected Coordinates: ${selectedPin.lat.toFixed(4)}, ${selectedPin.lng.toFixed(4)}`
+                      : 'No pin dropped yet (Tap map, search address, or click GPS)'}
+                  </Text>
+                </View>
+
+                {/* Live Distance to Vendor / Serviceability indicator */}
+                {vendorDetails?.location?.coordinates?.length === 2 &&
+                  selectedPin && isFiniteCoord(selectedPin.lat, 90) && isFiniteCoord(selectedPin.lng, 180) && (
+                    (() => {
+                      const vLng = vendorDetails.location.coordinates[0];
+                      const vLat = vendorDetails.location.coordinates[1];
+                      const dist = calculateHaversineDistanceKm(vLat, vLng, selectedPin.lat, selectedPin.lng);
+                      const maxRadius = vendorDetails.deliveryRadiusKm || 10;
+                      const isOutOfRange = dist !== null && dist > maxRadius;
+                      return (
+                        <View
+                          style={[
+                            styles.serviceabilityBadge,
+                            isOutOfRange ? styles.serviceabilityBadgeWarning : styles.serviceabilityBadgeOk
+                          ]}
+                        >
+                          <Ionicons
+                            name={isOutOfRange ? 'warning-outline' : 'checkmark-circle-outline'}
+                            size={14}
+                            color={isOutOfRange ? '#b45309' : '#15803d'}
+                          />
+                          <Text
+                            style={[
+                              styles.serviceabilityText,
+                              isOutOfRange ? { color: '#b45309' } : { color: '#15803d' }
+                            ]}
+                          >
+                            {dist !== null ? `${dist.toFixed(1)} km from store` : ''} • Store radius: {maxRadius} km {isOutOfRange ? '(Out of range)' : '(Serviceable)'}
+                          </Text>
+                        </View>
+                      );
+                    })()
+                  )}
+              </View>
+
+              {/* Resolving spinner or explicit geocoding notice */}
+              {isResolvingAddress && (
+                <View style={styles.resolvingBox}>
+                  <ActivityIndicator size="small" color="#16a34a" />
+                  <Text style={styles.resolvingText}>Resolving address details for selected pin...</Text>
+                </View>
+              )}
+
+              {Boolean(geocodeError) && (
+                <View style={styles.geocodeErrorBox}>
+                  <Ionicons name="warning-outline" size={16} color="#b45309" />
+                  <Text style={styles.geocodeErrorText}>{geocodeError}</Text>
+                </View>
+              )}
+
+              {/* Required Essentials: House/Flat, Landmark, City, Pincode */}
+              <View style={styles.essentialsCard}>
+                <Text style={styles.essentialsTitle}>ADDRESS DETAILS</Text>
+
+                {/* Retained House Review Notice if pin moved significantly */}
+                {Boolean(pinChangeNotice) && !hasReviewedRetainedAddress && (
+                  <View style={styles.retainedNoticeCard}>
+                    <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+                      <Ionicons name="information-circle" size={18} color="#b45309" style={{ marginTop: 1 }} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.retainedNoticeText}>{pinChangeNotice}</Text>
+                        <View style={{ flexDirection: 'row', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+                          {Boolean(suggestedRoad) && (
+                            <TouchableOpacity
+                              style={styles.retainedActionBtnPrimary}
+                              onPress={() => {
+                                setTempAddress((p) => ({ ...p, line1: suggestedRoad }));
+                                setHasReviewedRetainedAddress(true);
+                              }}
+                              activeOpacity={0.8}
+                            >
+                              <Text style={styles.retainedActionBtnPrimaryText}>
+                                Use "{suggestedRoad}"
+                              </Text>
+                            </TouchableOpacity>
+                          )}
+                          <TouchableOpacity
+                            style={styles.retainedActionBtnSecondary}
+                            onPress={() => setHasReviewedRetainedAddress(true)}
+                            activeOpacity={0.8}
+                          >
+                            <Text style={styles.retainedActionBtnSecondaryText}>
+                              Keep "{tempAddress.line1}"
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    </View>
+                  </View>
+                )}
+
+                <Text style={styles.pickerFieldLabel}>House / Flat / Apartment / Street *</Text>
+                <TextInput
+                  style={styles.pickerInput}
+                  placeholder="e.g. Flat 302, Green Valley Apartments"
+                  value={tempAddress.line1}
+                  onChangeText={(txt) => {
+                    setTempAddress((p) => ({ ...p, line1: txt }));
+                    setHasReviewedRetainedAddress(true);
+                  }}
+                />
+
+                <Text style={styles.pickerFieldLabel}>Landmark (Optional)</Text>
+                <TextInput
+                  style={styles.pickerInput}
+                  placeholder="e.g. Near Rose Garden, Opposite Metro Station"
+                  value={tempAddress.landmark}
+                  onChangeText={(txt) => setTempAddress((p) => ({ ...p, landmark: txt }))}
+                />
+
+                <View style={{ flexDirection: 'row', gap: 10 }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.pickerFieldLabel}>City *</Text>
+                    <TextInput
+                      style={styles.pickerInput}
+                      placeholder="City"
+                      value={tempAddress.city}
+                      onChangeText={(txt) => setTempAddress((p) => ({ ...p, city: txt }))}
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.pickerFieldLabel}>Pincode *</Text>
+                    <TextInput
+                      style={styles.pickerInput}
+                      placeholder="Pincode"
+                      keyboardType="number-pad"
+                      value={tempAddress.pincode}
+                      onChangeText={(txt) => setTempAddress((p) => ({ ...p, pincode: txt }))}
+                    />
+                  </View>
+                </View>
+
+                {/* Advanced: Manual Lat / Lng Entry behind toggle */}
+                <TouchableOpacity
+                  style={styles.advancedToggleBtn}
+                  onPress={() => setShowAdvancedCoords(!showAdvancedCoords)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name={showAdvancedCoords ? 'chevron-down' : 'chevron-forward'}
+                    size={15}
+                    color="#64748b"
+                  />
+                  <Text style={styles.advancedToggleBtnText}>
+                    {showAdvancedCoords ? 'Hide Manual Coordinates Entry' : 'Advanced: Enter Coordinates Manually'}
+                  </Text>
+                </TouchableOpacity>
+
+                {showAdvancedCoords && (
+                  <View style={styles.advancedBox}>
+                    <Text style={styles.advancedHelpText}>
+                      Enter precise latitude and longitude values (-90 to 90, -180 to 180):
+                    </Text>
+                    <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
+                      <TextInput
+                        style={[styles.pickerInput, { flex: 1, marginBottom: 0 }]}
+                        placeholder="Latitude (e.g. 30.9010)"
+                        keyboardType="numeric"
+                        value={manualLat}
+                        onChangeText={setManualLat}
+                      />
+                      <TextInput
+                        style={[styles.pickerInput, { flex: 1, marginBottom: 0 }]}
+                        placeholder="Longitude (e.g. 75.8573)"
+                        keyboardType="numeric"
+                        value={manualLng}
+                        onChangeText={setManualLng}
+                      />
+                      <TouchableOpacity
+                        style={styles.applyCoordsBtn}
+                        onPress={handleApplyManualCoords}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={styles.applyCoordsBtnText}>Apply</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                )}
+              </View>
+            </ScrollView>
+
+            {/* Confirm Button Accessible Above Keyboard & Safe Area */}
+            <View style={[styles.pickerFooter, { paddingBottom: Math.max(insets.bottom, 14) }]}>
+              <TouchableOpacity
+                style={[
+                  styles.confirmPinActionBtn,
+                  !canConfirmAddress && styles.confirmPinActionBtnDisabled
+                ]}
+                onPress={handleConfirmAddressPicker}
+                disabled={!canConfirmAddress}
+                activeOpacity={0.85}
+              >
+                <Ionicons
+                  name={canConfirmAddress ? "checkmark-circle" : "alert-circle-outline"}
+                  size={18}
+                  color="#ffffff"
+                />
+                <Text style={styles.confirmPinActionBtnText}>
+                  {getConfirmButtonText()}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </KeyboardAvoidingView>
+        </SafeAreaView>
       </Modal>
     </SafeAreaView>
   );
@@ -1755,5 +2430,466 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 14.5,
     fontWeight: '800'
+  },
+  // Address Summary & Picker Styles
+  changeAddressBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#f0fdf4',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#bbf7d0'
+  },
+  changeAddressBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.primary
+  },
+  fieldMicroLabel: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: '#64748b',
+    marginBottom: 3,
+    textTransform: 'uppercase'
+  },
+  addressSourceBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 6
+  },
+  addressSourceBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#f0fdf4',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#bbf7d0'
+  },
+  addressSourceBadgeText: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: '#15803d'
+  },
+  savedDetailsBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#f1f5f9',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6
+  },
+  savedDetailsBadgeText: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: '#475569'
+  },
+  missingPinTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: '#fef3c7',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6
+  },
+  missingPinTagText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#b45309'
+  },
+  savedAddressSummary: {
+    backgroundColor: '#ffffff',
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    marginTop: 4
+  },
+  savedAddressWithMissingPin: {
+    backgroundColor: '#fffdf5',
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#fde68a',
+    marginTop: 4
+  },
+  setPinActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: colors.primary,
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    marginTop: 10
+  },
+  setPinActionBtnText: {
+    color: '#ffffff',
+    fontSize: 12.5,
+    fontWeight: '800'
+  },
+  savedAddressLine1: {
+    fontSize: 13.5,
+    fontWeight: '700',
+    color: '#0f172a',
+    lineHeight: 18
+  },
+  savedAddressCity: {
+    fontSize: 12,
+    color: '#64748b',
+    marginTop: 2
+  },
+  pinConfirmedPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#f1f5f9'
+  },
+  pinConfirmedPillText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#15803d'
+  },
+  noAddressPrompt: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fffbeb',
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#fef3c7',
+    marginTop: 4
+  },
+  noAddressTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#92400e'
+  },
+  noAddressSub: {
+    fontSize: 11,
+    color: '#b45309',
+    marginTop: 1
+  },
+  selectPinActionBtn: {
+    backgroundColor: '#f59e0b',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 8,
+    marginLeft: 8
+  },
+  selectPinActionBtnText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '700'
+  },
+  // Picker Modal Styles
+  pickerModalContainer: {
+    flex: 1,
+    backgroundColor: '#ffffff'
+  },
+  pickerModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
+    backgroundColor: '#ffffff'
+  },
+  pickerModalTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0f172a'
+  },
+  pickerModalSubtitle: {
+    fontSize: 11.5,
+    color: '#64748b',
+    marginTop: 1
+  },
+  pickerCloseBtn: {
+    padding: 6,
+    borderRadius: 8,
+    backgroundColor: '#f1f5f9'
+  },
+  pickerScroll: {
+    flex: 1,
+    backgroundColor: '#f8fafc'
+  },
+  pickerScrollContent: {
+    padding: 14,
+    paddingBottom: 24
+  },
+  gpsActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#f0fdf4',
+    borderWidth: 1.5,
+    borderColor: '#bbf7d0',
+    paddingVertical: 11,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    marginBottom: 12
+  },
+  gpsActionBtnText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#15803d'
+  },
+  searchWrapper: {
+    marginBottom: 12,
+    zIndex: 1000
+  },
+  searchPlacesInput: {
+    height: 44,
+    color: '#0f172a',
+    fontSize: 13.5,
+    backgroundColor: '#ffffff',
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: '#cbd5e1',
+    paddingHorizontal: 12
+  },
+  searchPlacesListView: {
+    backgroundColor: '#ffffff',
+    borderRadius: 10,
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    zIndex: 1001,
+    marginTop: 4
+  },
+  pickerMapCard: {
+    borderRadius: 14,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    backgroundColor: '#e2e8f0',
+    marginBottom: 12,
+    position: 'relative'
+  },
+  mapHintOverlay: {
+    backgroundColor: 'rgba(15, 23, 42, 0.75)',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    alignItems: 'center'
+  },
+  mapHintText: {
+    color: '#ffffff',
+    fontSize: 11,
+    fontWeight: '600'
+  },
+  pinDetailsBox: {
+    backgroundColor: '#ffffff',
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    marginBottom: 12
+  },
+  pinDetailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6
+  },
+  pinDetailText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#0f172a',
+    flex: 1
+  },
+  serviceabilityBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 8,
+    padding: 8,
+    borderRadius: 8
+  },
+  serviceabilityBadgeOk: {
+    backgroundColor: '#f0fdf4'
+  },
+  serviceabilityBadgeWarning: {
+    backgroundColor: '#fef3c7'
+  },
+  serviceabilityText: {
+    fontSize: 11.5,
+    fontWeight: '600'
+  },
+  essentialsCard: {
+    backgroundColor: '#ffffff',
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0'
+  },
+  essentialsTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#334155',
+    marginBottom: 10,
+    letterSpacing: 0.5
+  },
+  pickerFieldLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#475569',
+    marginBottom: 4,
+    marginTop: 4
+  },
+  pickerInput: {
+    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    fontSize: 13,
+    color: '#0f172a',
+    marginBottom: 8
+  },
+  advancedToggleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 8,
+    marginTop: 4
+  },
+  advancedToggleBtnText: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: '#64748b'
+  },
+  advancedBox: {
+    backgroundColor: '#f1f5f9',
+    padding: 10,
+    borderRadius: 8,
+    marginTop: 4
+  },
+  advancedHelpText: {
+    fontSize: 10.5,
+    color: '#64748b'
+  },
+  applyCoordsBtn: {
+    backgroundColor: '#0f172a',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    borderRadius: 8
+  },
+  applyCoordsBtnText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '700'
+  },
+  pickerFooter: {
+    padding: 14,
+    backgroundColor: '#ffffff',
+    borderTopWidth: 1,
+    borderTopColor: '#e2e8f0'
+  },
+  confirmPinActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#16a34a',
+    paddingVertical: 14,
+    borderRadius: 12
+  },
+  confirmPinActionBtnText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '800'
+  },
+  confirmPinActionBtnDisabled: {
+    backgroundColor: '#94a3b8'
+  },
+  resolvingBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#f0fdf4',
+    borderWidth: 1,
+    borderColor: '#bbf7d0',
+    padding: 10,
+    borderRadius: 10,
+    marginBottom: 12
+  },
+  resolvingText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#15803d'
+  },
+  geocodeErrorBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#fffbeb',
+    borderWidth: 1,
+    borderColor: '#fde68a',
+    padding: 10,
+    borderRadius: 10,
+    marginBottom: 12
+  },
+  geocodeErrorText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#b45309',
+    flex: 1
+  },
+  retainedNoticeCard: {
+    backgroundColor: '#fef3c7',
+    borderWidth: 1,
+    borderColor: '#fde68a',
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 12
+  },
+  retainedNoticeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#92400e',
+    lineHeight: 16
+  },
+  retainedActionBtnPrimary: {
+    backgroundColor: '#16a34a',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6
+  },
+  retainedActionBtnPrimaryText: {
+    color: '#ffffff',
+    fontSize: 11.5,
+    fontWeight: '700'
+  },
+  retainedActionBtnSecondary: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6
+  },
+  retainedActionBtnSecondaryText: {
+    color: '#334155',
+    fontSize: 11.5,
+    fontWeight: '700'
   }
 });

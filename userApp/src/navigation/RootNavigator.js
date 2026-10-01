@@ -2,6 +2,7 @@ import React, { useRef, useEffect } from 'react';
 import { View, StyleSheet, Platform, Animated } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { HomeScreen } from '../screens/Customer/HomeScreen';
@@ -33,19 +34,19 @@ const tabIcons = {
 };
 
 const AnimatedTabIcon = ({ focused, icons, color }) => {
-  const scaleAnim = useRef(new Animated.Value(focused ? 1.05 : 1.0)).current;
+  const scaleAnim = useRef(new Animated.Value(1.0)).current;
 
   useEffect(() => {
     if (focused) {
       Animated.sequence([
         Animated.timing(scaleAnim, {
-          toValue: 1.2,
-          duration: 120,
+          toValue: 1.08,
+          duration: 100,
           useNativeDriver: Platform.OS !== 'web'
         }),
         Animated.spring(scaleAnim, {
           toValue: 1.0,
-          friction: 3.5,
+          friction: 4,
           tension: 200,
           useNativeDriver: Platform.OS !== 'web'
         })
@@ -54,36 +55,58 @@ const AnimatedTabIcon = ({ focused, icons, color }) => {
   }, [focused]);
 
   return (
-    <Animated.View style={[{ transform: [{ scale: scaleAnim }] }, focused ? styles.activeIconWrap : null]}>
-      <Ionicons name={focused ? icons.active : icons.inactive} size={22} color={color} />
+    <Animated.View
+      style={[
+        styles.tabIconWrapper,
+        focused ? styles.tabIconWrapperFocused : null,
+        { transform: [{ scale: scaleAnim }] }
+      ]}
+    >
+      <Ionicons name={focused ? icons.active : icons.inactive} size={20} color={color} />
     </Animated.View>
   );
 };
 
 const MainTabs = () => {
+  const insets = useSafeAreaInsets();
+  // Safe-area bottom padding tuned for Android 3-button (minimal 6dp cushion) vs gesture / iOS
+  const bottomPadding = Math.max(insets.bottom, Platform.OS === 'ios' ? 20 : 6);
+  const tabContentHeight = 54;
+  const tabTotalHeight = tabContentHeight + bottomPadding;
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textMuted,
+        tabBarHideOnKeyboard: true,
+        tabBarAllowFontScaling: true,
         tabBarLabelStyle: {
           fontSize: 10,
           fontWeight: '600',
-          marginTop: 2
+          marginTop: 1,
+          marginBottom: 1,
+          lineHeight: 13,
+          includeFontPadding: false
+        },
+        tabBarItemStyle: {
+          paddingVertical: 2,
+          justifyContent: 'center',
+          alignItems: 'center'
         },
         tabBarStyle: {
           backgroundColor: colors.card,
           borderTopWidth: 1,
           borderTopColor: colors.border,
-          height: Platform.OS === 'ios' ? 84 : 64,
-          paddingBottom: Platform.OS === 'ios' ? 24 : 10,
-          paddingTop: 8,
-          elevation: 12,
+          height: tabTotalHeight,
+          paddingBottom: bottomPadding,
+          paddingTop: 4,
+          elevation: 10,
           shadowColor: '#000',
           shadowOffset: { width: 0, height: -2 },
           shadowOpacity: 0.06,
-          shadowRadius: 8
+          shadowRadius: 6
         },
         tabBarIcon: ({ color, focused }) => {
           const icons = tabIcons[route.name] || tabIcons.Home;
@@ -146,10 +169,15 @@ export const RootNavigator = () => {
 };
 
 const styles = StyleSheet.create({
-  activeIconWrap: {
-    backgroundColor: colors.primaryLight,
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 4
+  tabIconWrapper: {
+    height: 28,
+    minWidth: 42,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent'
+  },
+  tabIconWrapperFocused: {
+    backgroundColor: colors.primaryLight
   }
 });

@@ -3,7 +3,7 @@ import storage from '../services/storage';
 import { useApp } from '../context/AppContext';
 import { AuthModal } from '../components/AuthModal';
 
-const PENDING_INTENT_KEY = '@pending_intent';
+const PENDING_INTENT_KEY = 'pending_intent';
 const PENDING_INTENT_TTL_MS = 15 * 60 * 1000; // 15 minutes
 
 const INTENT_COPY_MAP = {

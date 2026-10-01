@@ -7,15 +7,16 @@ import {
   ScrollView,
   TouchableOpacity,
   Dimensions,
-  SafeAreaView,
   Platform,
   ActivityIndicator
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { useCart } from '../../context/CartContext';
 import { apiService } from '../../services/api';
 import { ProductCard } from '../../components/ProductCard';
+import { SafeImage } from '../../components/common/SafeImage';
 
 const { width } = Dimensions.get('window');
 
@@ -68,7 +69,7 @@ export const ProductDetailsScreen = ({ route, navigation }) => {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+      <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]} edges={['top', 'left', 'right', 'bottom']}>
         <ActivityIndicator size="large" color={colors.primary} />
         <Text style={{ marginTop: 12, color: colors.textSecondary }}>Loading product details...</Text>
       </SafeAreaView>
@@ -77,7 +78,7 @@ export const ProductDetailsScreen = ({ route, navigation }) => {
 
   if (!product) {
     return (
-      <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center', padding: 24 }]}>
+      <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center', padding: 24 }]} edges={['top', 'left', 'right', 'bottom']}>
         <Ionicons name="alert-circle-outline" size={54} color={colors.textMuted} />
         <Text style={{ fontSize: 18, fontWeight: '700', color: colors.textPrimary, marginTop: 12 }}>Product Not Found</Text>
         <Text style={{ fontSize: 13, color: colors.textSecondary, textAlign: 'center', marginTop: 6, marginBottom: 20 }}>
@@ -95,7 +96,7 @@ export const ProductDetailsScreen = ({ route, navigation }) => {
   const qtyInCart = cartItem ? cartItem.quantity : 0;
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
       {/* Premium Solid Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.goBack()}>
@@ -115,7 +116,7 @@ export const ProductDetailsScreen = ({ route, navigation }) => {
         
         {/* Product Image - Square and Contained */}
         <View style={styles.imageWrap}>
-          <Image source={{ uri: product.image }} style={styles.image} resizeMode="contain" />
+          <SafeImage source={{ uri: product.image }} style={styles.image} resizeMode="contain" placeholderIcon="leaf-outline" placeholderIconSize={48} />
           {product.discount && (
             <View style={styles.discountBadge}>
               <Text style={styles.discountText}>{product.discount} OFF</Text>
@@ -401,7 +402,12 @@ const styles = StyleSheet.create({
   qtyText: {
     color: '#ffffff',
     fontSize: 14,
-    fontWeight: '500'
+    fontWeight: '700',
+    minWidth: 24,
+    paddingHorizontal: 2,
+    textAlign: 'center',
+    includeFontPadding: false,
+    lineHeight: 18
   },
   divider: {
     height: 8,

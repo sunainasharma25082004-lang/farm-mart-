@@ -10,8 +10,10 @@ import {
   ActivityIndicator,
   Platform,
   Image,
-  Animated
+  Animated,
+  Pressable,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { useApp } from '../context/AppContext';
@@ -29,11 +31,14 @@ export const AuthModal = ({
   onSuccess
 }) => {
   const { loginUser } = useApp();
+  const insets = useSafeAreaInsets();
   const [step, setStep] = useState('PHONE'); // 'PHONE' | 'OTP'
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
   const [devOtpHint, setDevOtpHint] = useState(null);
+  const phoneInputRef = useRef(null);
+  const otpInputRef = useRef(null);
 
   const slideAnim = useRef(new Animated.Value(260)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -131,7 +136,10 @@ export const AuthModal = ({
         <Animated.View
           style={[
             styles.sheet,
-            { transform: [{ translateY: slideAnim }] }
+            {
+              paddingBottom: Math.max(insets.bottom + 14, Platform.OS === 'ios' ? 40 : 24),
+              transform: [{ translateY: slideAnim }]
+            }
           ]}
         >
           {/* Top Handle & Close */}
@@ -158,10 +166,14 @@ export const AuthModal = ({
           {step === 'PHONE' ? (
             <View style={styles.form}>
               <Text style={styles.inputLabel}>Mobile Number</Text>
-              <View style={styles.phoneInputWrap}>
+              <Pressable
+                style={styles.phoneInputWrap}
+                onPress={() => phoneInputRef.current?.focus()}
+              >
                 <Text style={styles.countryCode}>+91</Text>
                 <View style={styles.verticalDivider} />
                 <TextInput
+                  ref={phoneInputRef}
                   style={styles.phoneInput}
                   placeholder="9876543210"
                   keyboardType="phone-pad"
@@ -171,7 +183,7 @@ export const AuthModal = ({
                   placeholderTextColor="#94a3b8"
                   autoFocus
                 />
-              </View>
+              </Pressable>
 
               <TactileButton
                 style={[styles.primaryBtn, loading && styles.disabledBtn]}
@@ -209,6 +221,7 @@ export const AuthModal = ({
               ) : null}
 
               <TextInput
+                ref={otpInputRef}
                 style={styles.otpInput}
                 placeholder="Enter 6-digit OTP"
                 keyboardType="number-pad"
@@ -347,6 +360,8 @@ const styles = StyleSheet.create({
   },
   phoneInput: {
     flex: 1,
+    height: '100%',
+    paddingVertical: 0,
     fontSize: 16,
     color: '#0f172a',
     fontWeight: '600',

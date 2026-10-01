@@ -1,14 +1,54 @@
-import React from 'react';
-import { View, SafeAreaView, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
+import { apiService } from '../../services/api';
 
 export const RazorpayCheckoutWebView = ({ route, navigation }) => {
-  const { order = {}, onSuccess, onFailure } = route?.params || {};
+  const { orderId, onSuccess, onFailure } = route?.params || {};
+  const [loading, setLoading] = useState(true);
+  const [orderDetails, setOrderDetails] = useState(null);
 
-  // This HTML will load Razorpay checkout in the WebView.
-  // It simulates what normally happens on a web frontend.
+  useEffect(() => {
+    const init = async () => {
+      if (!orderId) {
+        Alert.alert('Payment Init Failed', 'Order ID is missing.');
+        setLoading(false);
+        navigation.goBack();
+        if (onFailure) onFailure();
+        return;
+      }
+      try {
+        const data = await apiService.createPaymentOrder(orderId);
+        if (!data.success) {
+          throw new Error(data.message || 'Could not start payment');
+        }
+        setOrderDetails(data);
+      } catch (e) {
+        Alert.alert('Payment Init Failed', e?.message || 'Unable to start payment.');
+        navigation.goBack();
+        if (onFailure) onFailure();
+      } finally {
+        setLoading(false);
+      }
+    };
+    init();
+  }, [orderId]);
+
+  if (loading || !orderDetails) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
+        <ActivityIndicator
+          size="large"
+          color={colors.primary}
+          style={{ flex: 1, justifyContent: 'center' }}
+        />
+      </SafeAreaView>
+    );
+  }
+
   const razorpayHtml = `
     <!DOCTYPE html>
     <html>
@@ -30,14 +70,21 @@ export const RazorpayCheckoutWebView = ({ route, navigation }) => {
         <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
         <script>
             var options = {
-                "key": "dummy_key", // This should be replaced dynamically or using a test key
-                "amount": "${order.amount}",
-                "currency": "${order.currency}",
+                "key": "${orderDetails.key_id}",
+                "amount": "${orderDetails.amount}",
+                "currency": "INR",
                 "name": "S-farmart",
                 "description": "Order Payment",
-                "order_id": "${order.id}",
+                "order_id": "${orderDetails.razorpay_order_id}",
                 "handler": function (response) {
-                    window.ReactNativeWebView.postMessage(JSON.stringify({ event: 'success', data: response }));
+                  window.ReactNativeWebView.postMessage(JSON.stringify({
+                    event: 'success',
+                    data: {
+                      razorpay_payment_id: response.razorpay_payment_id,
+                      razorpay_order_id: response.razorpay_order_id,
+                      razorpay_signature: response.razorpay_signature
+                    }
+                  }));
                 },
                 "modal": {
                     "ondismiss": function() {
@@ -63,22 +110,21 @@ export const RazorpayCheckoutWebView = ({ route, navigation }) => {
   const handleMessage = (event) => {
     try {
       const parsedData = JSON.parse(event.nativeEvent.data);
+
       if (parsedData.event === 'success') {
-        // Here you would typically call your backend /api/verify-payment
-        // For simplicity in the app, we pass the payment id to onSuccess
         navigation.goBack();
-        onSuccess(parsedData.data.razorpay_payment_id);
+        if (onSuccess) onSuccess(parsedData.data);
       } else if (parsedData.event === 'dismissed') {
         navigation.goBack();
         if (onFailure) onFailure();
       }
     } catch (error) {
-      console.log("Error parsing webview message", error);
+      console.error('Failed to parse Razorpay response:', error);
     }
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.closeBtn} onPress={() => { navigation.goBack(); if(onFailure) onFailure(); }}>
           <Ionicons name="close" size={24} color={colors.textPrimary} />

@@ -1,11 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   View,
   Text,
   StyleSheet,
   TextInput,
   TouchableOpacity,
-  SafeAreaView,
+  Pressable,
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
@@ -14,6 +14,7 @@ import {
   Image,
   StatusBar,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "../../theme/colors";
 import { useApp } from "../../context/AppContext";
@@ -28,6 +29,8 @@ export const LoginScreen = ({ navigation }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [focusedInput, setFocusedInput] = useState(null);
   const [loading, setLoading] = useState(false);
+  const phoneInputRef = useRef(null);
+  const passwordInputRef = useRef(null);
 
   const navigateAfterLogin = () => {
     if (navigation && typeof navigation.navigate === 'function') {
@@ -72,7 +75,7 @@ export const LoginScreen = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
       <StatusBar barStyle="dark-content" backgroundColor="#f0fdf4" />
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -142,11 +145,12 @@ export const LoginScreen = ({ navigation }) => {
               {/* Phone Input */}
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Phone Number</Text>
-                <View
+                <Pressable
                   style={[
                     styles.inputWrap,
                     focusedInput === "phone" && styles.inputWrapFocused,
                   ]}
+                  onPress={() => phoneInputRef.current?.focus()}
                 >
                   <Ionicons
                     name="call-outline"
@@ -155,8 +159,10 @@ export const LoginScreen = ({ navigation }) => {
                       focusedInput === "phone" ? colors.primary : "#94a3b8"
                     }
                     style={styles.inputIcon}
+                    pointerEvents="none"
                   />
                   <TextInput
+                    ref={phoneInputRef}
                     style={styles.input}
                     placeholder="Enter phone number"
                     keyboardType="phone-pad"
@@ -166,17 +172,18 @@ export const LoginScreen = ({ navigation }) => {
                     onBlur={() => setFocusedInput(null)}
                     placeholderTextColor="#94a3b8"
                   />
-                </View>
+                </Pressable>
               </View>
 
               {/* Password Input */}
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Password</Text>
-                <View
+                <Pressable
                   style={[
                     styles.inputWrap,
                     focusedInput === "password" && styles.inputWrapFocused,
                   ]}
+                  onPress={() => passwordInputRef.current?.focus()}
                 >
                   <Ionicons
                     name="lock-closed-outline"
@@ -185,8 +192,10 @@ export const LoginScreen = ({ navigation }) => {
                       focusedInput === "password" ? colors.primary : "#94a3b8"
                     }
                     style={styles.inputIcon}
+                    pointerEvents="none"
                   />
                   <TextInput
+                    ref={passwordInputRef}
                     style={styles.input}
                     placeholder="Enter password"
                     secureTextEntry={!showPassword}
@@ -200,6 +209,7 @@ export const LoginScreen = ({ navigation }) => {
                     onPress={() => setShowPassword(!showPassword)}
                     style={styles.eyeBtn}
                     activeOpacity={0.7}
+                    hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                   >
                     <Ionicons
                       name={showPassword ? "eye-off-outline" : "eye-outline"}
@@ -207,7 +217,7 @@ export const LoginScreen = ({ navigation }) => {
                       color="#64748b"
                     />
                   </TouchableOpacity>
-                </View>
+                </Pressable>
               </View>
 
               {/* Forgot Password Link */}
@@ -261,8 +271,8 @@ const styles = StyleSheet.create({
   },
   scrollContainer: {
     paddingHorizontal: 20,
-    paddingTop: Platform.OS === "ios" ? 12 : 20,
-    paddingBottom: 30,
+    paddingTop: Platform.OS === "ios" ? 12 : 16,
+    paddingBottom: Platform.OS === "ios" ? 40 : 80,
   },
   heroDemoLoginBtn: {
     flexDirection: 'row',
@@ -476,6 +486,8 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
+    height: "100%",
+    paddingVertical: 0,
     fontSize: 15,
     color: "#0f172a",
     fontWeight: "500",

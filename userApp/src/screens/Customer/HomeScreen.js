@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,28 +6,27 @@ import {
   ScrollView,
   TextInput,
   TouchableOpacity,
-  Image,
-  Dimensions,
-  StatusBar,
-  Platform
+  ActivityIndicator,
+  RefreshControl
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Header } from '../../components/Header';
 import { ShoppingFromBanner } from '../../components/ShoppingFromBanner';
 import { apiService } from '../../services/api';
 import { useCart } from '../../context/CartContext';
-import { useApp } from '../../context/AppContext';
 import { ClearCartModal } from '../../components/ClearCartModal';
 import { colors } from '../../theme/colors';
-
-const { width } = Dimensions.get('window');
+import { SafeImage, isValidImageUri } from '../../components/common/SafeImage';
+import { resolveBrowseCategories } from '../../config/categories';
 
 export const HomeScreen = ({ navigation }) => {
-  const { isAuthenticated, loginUser } = useApp();
-  const [categories, setCategories] = useState([]);
+  const [categories, setCategories] = useState(() => resolveBrowseCategories([]));
   const [vendors, setVendors] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [apiError, setApiError] = useState(null);
+  const [hasCategoriesLoaded, setHasCategoriesLoaded] = useState(false);
 
   const {
     billSummary,
@@ -36,30 +35,63 @@ export const HomeScreen = ({ navigation }) => {
     cancelReplaceCart
   } = useCart();
 
-  useEffect(() => {
-    loadHomeData();
-  }, []);
-
-  const loadHomeData = async () => {
-    try {
+  const loadHomeData = useCallback(async (isPullToRefresh = false) => {
+    if (isPullToRefresh) {
+      setIsRefreshing(true);
+    } else {
       setIsLoading(true);
-      const [catRes, vendRes] = await Promise.all([
+    }
+
+    try {
+      // Use Promise.allSettled to eliminate unhandled promise rejections
+      const [catResult, vendResult] = await Promise.allSettled([
         apiService.getCategories(),
         apiService.getVendors()
       ]);
-      console.log('HomeScreen loadHomeData:', { catSuccess: catRes?.success, vendSuccess: vendRes?.success, vendCount: vendRes?.vendors?.length });
-      if (catRes.success && Array.isArray(catRes.categories)) {
-        setCategories(catRes.categories);
+
+      const catRes = catResult.status === 'fulfilled' ? catResult.value : null;
+      const vendRes = vendResult.status === 'fulfilled' ? vendResult.value : null;
+
+      let catFetchSucceeded = false;
+      let vendFetchSucceeded = false;
+
+      // Handle categories response
+      if (catRes && catRes.success && Array.isArray(catRes.categories)) {
+        catFetchSucceeded = true;
+        setCategories(resolveBrowseCategories(catRes.categories));
+        setHasCategoriesLoaded(true);
+      } else if (catRes && !catRes.success) {
+        console.warn('HomeScreen: Categories API unreachable or failed:', catRes);
+        // On failure, preserve previously loaded categories and do not mark as coming soon
       }
-      if (vendRes.success && Array.isArray(vendRes.vendors)) {
+
+      // Handle vendors response
+      if (vendRes && vendRes.success && Array.isArray(vendRes.vendors)) {
+        vendFetchSucceeded = true;
         setVendors(vendRes.vendors);
+      } else if (vendRes && !vendRes.success) {
+        console.warn('HomeScreen: Vendors API unreachable or failed:', vendRes);
+        // On failure, preserve previously loaded vendors
+      }
+
+      // Track error state for retry banner without wiping existing data
+      if (!catFetchSucceeded || !vendFetchSucceeded) {
+        setApiError('Unable to sync latest live data. Tap to retry.');
+      } else {
+        setApiError(null);
       }
     } catch (err) {
-      console.warn('Failed to load home data:', err);
+      console.warn('HomeScreen loadHomeData unexpected exception:', err);
+      setApiError('Unable to load stores and produce. Tap to retry.');
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadHomeData(false);
+  }, [loadHomeData]);
 
   const isSearching = searchQuery.trim().length > 0;
 
@@ -91,6 +123,14 @@ export const HomeScreen = ({ navigation }) => {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={() => loadHomeData(true)}
+            colors={[colors.primary]}
+            tintColor={colors.primary}
+          />
+        }
         contentContainerStyle={[
           styles.scrollContent,
           billSummary.totalCount > 0 && { paddingBottom: 90 }
@@ -112,6 +152,30 @@ export const HomeScreen = ({ navigation }) => {
             </TouchableOpacity>
           )}
         </View>
+
+        {/* Retryable Error Banner on API Failure */}
+        {apiError && (
+          <TouchableOpacity
+            style={styles.errorBanner}
+            onPress={() => loadHomeData(false)}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="alert-circle-outline" size={18} color="#b91c1c" />
+            <Text style={styles.errorBannerText}>{apiError}</Text>
+            <View style={styles.errorRetryBtn}>
+              <Text style={styles.errorRetryBtnText}>Retry</Text>
+              <Ionicons name="refresh" size={12} color="#b91c1c" />
+            </View>
+          </TouchableOpacity>
+        )}
+
+        {/* Initial Loading Indicator */}
+        {isLoading && !isRefreshing && vendors.length === 0 && (
+          <View style={styles.initialLoadingContainer}>
+            <ActivityIndicator size="small" color={colors.primary} />
+            <Text style={styles.initialLoadingText}>Loading fresh local produce & stores...</Text>
+          </View>
+        )}
 
         {/* Dynamic Search Results Banner when user is typing */}
         {isSearching ? (
@@ -143,7 +207,16 @@ export const HomeScreen = ({ navigation }) => {
                       onPress={() => navigation.navigate('VendorStore', { vendor: v })}
                       activeOpacity={0.9}
                     >
-                      <Image source={{ uri: v.banner || 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=800' }} style={styles.featuredImg} />
+                      <SafeImage
+                        source={{
+                          uri: isValidImageUri(v.banner)
+                            ? v.banner
+                            : 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=800'
+                        }}
+                        style={styles.featuredImg}
+                        placeholderIcon="storefront-outline"
+                        placeholderIconSize={36}
+                      />
                       <View style={styles.featuredInfo}>
                         <View style={styles.featuredHeader}>
                           <Text style={styles.featuredTitle}>{v.storeName}</Text>
@@ -171,11 +244,13 @@ export const HomeScreen = ({ navigation }) => {
           <>
             {/* Promo Top Banner */}
             <View style={styles.bannerWrapper}>
-              <Image
+              <SafeImage
                 source={{
                   uri: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&auto=format&fit=crop&q=80'
                 }}
                 style={styles.bannerImg}
+                placeholderIcon="leaf-outline"
+                placeholderIconSize={48}
               />
               <View style={styles.bannerOverlay}>
                 <View style={styles.pillBadge}>
@@ -187,29 +262,64 @@ export const HomeScreen = ({ navigation }) => {
               </View>
             </View>
 
-            {/* 1. Category-First Grid (8 Categories from MongoDB) */}
+            {/* 1. Category-First Grid (Dynamic Categories count from MongoDB) */}
             <View style={styles.categorySection}>
               <View style={styles.sectionHeaderRow}>
                 <Text style={styles.sectionHeading}>WHAT ARE YOU LOOKING FOR?</Text>
-                <Text style={styles.sectionBadge}>8 Categories</Text>
+                <Text style={styles.sectionBadge}>
+                  {filteredCategories.length} {filteredCategories.length === 1 ? 'Category' : 'Categories'}
+                </Text>
               </View>
 
               <View style={styles.categoryGrid}>
-                {categories.map((cat) => (
-                  <TouchableOpacity
-                    key={cat._id}
-                    style={styles.catCard}
-                    onPress={() => navigation.navigate('CategoryVendors', { category: cat })}
-                    activeOpacity={0.8}
-                  >
-                    <View style={styles.catIconWrap}>
-                      <Text style={styles.catIconText}>{cat.icon || '🥦'}</Text>
-                    </View>
-                    <Text style={styles.catName} numberOfLines={2}>
-                      {cat.name}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                {filteredCategories.map((cat) => {
+                  // Only mark as unavailable if real categories were actually loaded from API
+                  // and this specific category was verified to be missing from the database.
+                  const isVerifiedUnavailable = hasCategoriesLoaded && cat.isAvailableInDb === false;
+                  return (
+                    <TouchableOpacity
+                      key={cat.key || cat.canonicalSlug || cat._id}
+                      style={[
+                        styles.catCard,
+                        isVerifiedUnavailable && styles.catCardUnavailable
+                      ]}
+                      onPress={() => navigation.navigate('CategoryVendors', { category: cat })}
+                      activeOpacity={0.8}
+                    >
+                      <View
+                        style={[
+                          styles.catIconWrap,
+                          cat.bgColor ? { backgroundColor: cat.bgColor } : null,
+                          isVerifiedUnavailable && styles.catIconWrapUnavailable
+                        ]}
+                      >
+                        {cat.vectorIcon ? (
+                          <Ionicons
+                            name={cat.vectorIcon}
+                            size={22}
+                            color={isVerifiedUnavailable ? '#94a3b8' : (cat.accentColor || colors.primary)}
+                          />
+                        ) : (
+                          <Text style={styles.catIconText}>{cat.icon || '🥦'}</Text>
+                        )}
+                      </View>
+                      <Text
+                        style={[
+                          styles.catName,
+                          isVerifiedUnavailable && styles.catNameUnavailable
+                        ]}
+                        numberOfLines={2}
+                      >
+                        {cat.name}
+                      </Text>
+                      {isVerifiedUnavailable && (
+                        <View style={styles.unavailableBadge}>
+                          <Text style={styles.unavailableBadgeText}>Soon</Text>
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             </View>
 
@@ -230,11 +340,15 @@ export const HomeScreen = ({ navigation }) => {
                       onPress={() => navigation.navigate('VendorStore', { vendor: v })}
                       activeOpacity={0.85}
                     >
-                      <Image
+                      <SafeImage
                         source={{
-                          uri: v.banner || 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400'
+                          uri: isValidImageUri(v.banner)
+                            ? v.banner
+                            : 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400'
                         }}
                         style={styles.railImg}
+                        placeholderIcon="storefront-outline"
+                        placeholderIconSize={28}
                       />
                       <View style={styles.railRatingBadge}>
                         <Ionicons name="star" size={10} color="#ffffff" />
@@ -275,11 +389,15 @@ export const HomeScreen = ({ navigation }) => {
                 onPress={() => navigation.navigate('VendorStore', { vendor: v })}
                 activeOpacity={0.9}
               >
-                <Image
+                <SafeImage
                   source={{
-                    uri: v.banner || 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=800'
+                    uri: isValidImageUri(v.banner)
+                      ? v.banner
+                      : 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=800'
                   }}
                   style={styles.featuredImg}
+                  placeholderIcon="restaurant-outline"
+                  placeholderIconSize={36}
                 />
                 <View style={styles.featuredInfo}>
                   <View style={styles.featuredHeader}>
@@ -317,11 +435,15 @@ export const HomeScreen = ({ navigation }) => {
                   onPress={() => navigation.navigate('VendorStore', { vendor: v })}
                   activeOpacity={0.9}
                 >
-                  <Image
+                  <SafeImage
                     source={{
-                      uri: v.banner || 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800'
+                      uri: isValidImageUri(v.banner)
+                        ? v.banner
+                        : 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=800'
                     }}
                     style={styles.farmerImg}
+                    placeholderIcon="leaf-outline"
+                    placeholderIconSize={36}
                   />
                   <View style={styles.farmerInfo}>
                     <Text style={styles.farmerStoreName} numberOfLines={1}>{v.storeName}</Text>
@@ -394,6 +516,54 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#0f172a',
     padding: 0
+  },
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#fef2f2',
+    borderWidth: 1,
+    borderColor: '#fecaca',
+    marginHorizontal: 16,
+    marginBottom: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: 12,
+    gap: 8
+  },
+  errorBannerText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#991b1b'
+  },
+  errorRetryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#fee2e2',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6
+  },
+  errorRetryBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#b91c1c'
+  },
+  initialLoadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    marginHorizontal: 16,
+    marginBottom: 12
+  },
+  initialLoadingText: {
+    fontSize: 12.5,
+    fontWeight: '600',
+    color: '#64748b'
   },
   bannerWrapper: {
     height: 130,
@@ -469,15 +639,15 @@ const styles = StyleSheet.create({
   categoryGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    gap: 8,
     justifyContent: 'space-between'
   },
   catCard: {
     width: '23%',
     backgroundColor: '#ffffff',
     borderRadius: 14,
-    paddingVertical: 12,
-    paddingHorizontal: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 3,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#e2e8f0',
@@ -500,11 +670,39 @@ const styles = StyleSheet.create({
     fontSize: 22
   },
   catName: {
-    fontSize: 10.5,
+    fontSize: 10,
     fontWeight: '700',
     color: '#1e293b',
     textAlign: 'center',
-    lineHeight: 14
+    lineHeight: 13,
+    includeFontPadding: false,
+    minHeight: 26
+  },
+  catCardUnavailable: {
+    opacity: 0.72,
+    backgroundColor: '#fafafa',
+    borderColor: '#f1f5f9'
+  },
+  catIconWrapUnavailable: {
+    backgroundColor: '#f1f5f9'
+  },
+  catNameUnavailable: {
+    color: '#64748b'
+  },
+  unavailableBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: '#e2e8f0',
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    borderRadius: 4
+  },
+  unavailableBadgeText: {
+    fontSize: 8,
+    fontWeight: '800',
+    color: '#475569',
+    textTransform: 'uppercase'
   },
   vendorSection: {
     marginBottom: 22,

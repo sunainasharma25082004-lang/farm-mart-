@@ -4,16 +4,15 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  Image,
   Dimensions,
-  ActivityIndicator,
-  TouchableOpacity
+  ActivityIndicator
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Header } from '../../components/Header';
 import { ProductCard } from '../../components/ProductCard';
 import { apiService } from '../../services/api';
 import { colors } from '../../theme/colors';
+import { SafeImage } from '../../components/common/SafeImage';
 
 const { width } = Dimensions.get('window');
 const GAP = 10;
@@ -131,7 +130,7 @@ export const HomeRestroScreen = ({ navigation }) => {
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chefScroll}>
           {chefs.map((chef) => (
             <View key={chef.name} style={styles.chefCard}>
-              <Image source={{ uri: chef.image }} style={styles.chefAvatar} />
+              <SafeImage source={{ uri: chef.image }} style={styles.chefAvatar} placeholderIcon="person-outline" placeholderIconSize={28} />
               <Text style={styles.chefName}>{chef.name}</Text>
               <Text style={styles.chefRole}>{chef.role}</Text>
               <View style={styles.chefMeta}>

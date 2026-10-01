@@ -1,14 +1,15 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { useCart } from '../context/CartContext';
 import { showAlert } from '../utils/alert';
 import { TactileButton } from './common/TactileButton';
+import { SafeImage } from './common/SafeImage';
 
 export const ProductCard = ({ product, onPress, compact = false }) => {
-  if (!product) return null;
   const { addToCart, updateQuantity, items, vendorId: currentCartVendorId } = useCart();
+  if (!product) return null;
   const prodId = product._id || product.id;
   const cartItem = items?.find((item) => (item.product?._id || item.product?.id || item.productId) === prodId);
   const qty = cartItem ? cartItem.quantity : 0;
@@ -27,7 +28,7 @@ export const ProductCard = ({ product, onPress, compact = false }) => {
       activeOpacity={0.92}
     >
       <View style={[styles.imageContainer, compact && styles.imageCompact]}>
-        <Image source={{ uri: product.image }} style={styles.image} resizeMode="cover" />
+        <SafeImage source={{ uri: product.image }} style={styles.image} resizeMode="cover" placeholderIcon="leaf-outline" />
         {product.discount && !isOutOfStock ? (
           <View style={styles.discountBadge}>
             <Text style={styles.discountText}>{product.discount}</Text>
@@ -311,13 +312,18 @@ const styles = StyleSheet.create({
   qtyBtn: {
     paddingHorizontal: 8,
     paddingVertical: 6,
-    backgroundColor: colors.primary
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center'
   },
   qtyText: {
     fontSize: 13,
-    fontWeight: '500',
+    fontWeight: '700',
     color: '#ffffff',
-    minWidth: 20,
-    textAlign: 'center'
+    minWidth: 24,
+    paddingHorizontal: 2,
+    textAlign: 'center',
+    includeFontPadding: false,
+    lineHeight: 16
   }
 });

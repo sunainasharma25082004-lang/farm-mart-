@@ -8,7 +8,8 @@ import {
   Linking,
   StatusBar,
   Platform,
-  Animated
+  Animated,
+  ActivityIndicator
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Header } from '../../components/Header';
@@ -17,6 +18,7 @@ import { apiService } from '../../services/api';
 import { useCustomerSocket } from '../../context/SocketContext';
 import { useApp } from '../../context/AppContext';
 import { colors } from '../../theme/colors';
+import { isValidRiderFix, isRealisticMovement, validCoordinates } from '../../utils/trackingUtils';
 
 const TRACKING_STEPS = [
   { key: 'NEW_ORDER', title: 'Placed', icon: 'receipt-outline' },
@@ -26,6 +28,13 @@ const TRACKING_STEPS = [
   { key: 'OUT_FOR_DELIVERY', title: 'On Way', icon: 'bicycle-outline' },
   { key: 'DELIVERED', title: 'Delivered', icon: 'home-outline' }
 ];
+
+const getStepIndex = (status) => {
+  if (status === 'RIDER_ASSIGNED') return 3.3;
+  if (status === 'RIDER_ARRIVED_STORE') return 3.7;
+  const idx = TRACKING_STEPS.findIndex((s) => s.key === status);
+  return idx >= 0 ? idx : 0;
+};
 
 const AnimatedLiveStepper = ({ steps, currentStepIdx }) => {
   const progressAnim = useRef(new Animated.Value(currentStepIdx)).current;
@@ -119,35 +128,185 @@ export const OrderTrackingScreen = ({ route, navigation }) => {
   const { isAuthenticated, userProfile } = useApp();
   const [activeOrder, setActiveOrder] = useState(null);
   const [orders, setOrders] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const { activeOrderUpdate, riderLocationUpdate, trackOrder } = useCustomerSocket();
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [, setIsRefreshing] = useState(false);
+  const { activeOrderUpdate, riderLocationUpdate, trackOrder, leaveOrder, reconnectCount } = useCustomerSocket();
   const [riderLiveLocation, setRiderLiveLocation] = useState(null);
+  const [travelledTrail, setTravelledTrail] = useState([]);
+  const [nowTs, setNowTs] = useState(Date.now());
 
+  const initialRouteParamHandledRef = useRef(null);
+  const lastTrackedOrderIdRef = useRef(null);
+  const lastAcceptedTsRef = useRef(0);
+  const prevRiderFixRef = useRef(null);
+  const consecutiveRejectionsRef = useRef(0);
+  const isMountedRef = useRef(true);
+
+  // Keep a 1-second clock to render fresh elapsed seconds
   useEffect(() => {
-    if (riderLocationUpdate && activeOrder?._id && String(riderLocationUpdate.orderId) === String(activeOrder._id)) {
-      setRiderLiveLocation(riderLocationUpdate);
+    const clockTimer = setInterval(() => {
+      if (isMountedRef.current) setNowTs(Date.now());
+    }, 1000);
+    return () => clearInterval(clockTimer);
+  }, []);
+
+  // Cleanup live tracking on unmount
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      leaveOrder();
+    };
+  }, [leaveOrder]);
+
+  // On reconnect, fetch an authorized latest-location snapshot from the server
+  useEffect(() => {
+    if (reconnectCount > 1 && activeOrder?._id) {
+      console.log('⚡ [OrderTrackingScreen] Reconnected to socket, fetching authorized snapshot for order:', activeOrder._id);
+      apiService.getOrderLocation(activeOrder._id).then((res) => {
+        if (!isMountedRef.current || !res?.success) return;
+        const snap = res;
+        setActiveOrder((prev) => (prev ? {
+          ...prev,
+          status: snap.status || prev.status,
+          rider: snap.rider || prev.rider,
+          riderLocation: snap.riderLocation || prev.riderLocation,
+          deliveryRoute: snap.deliveryRoute || prev.deliveryRoute
+        } : null));
+
+        if (snap.riderLocation && isValidRiderFix(snap.riderLocation, activeOrder, lastAcceptedTsRef.current)) {
+          const ts = new Date(snap.riderLocation.at).getTime();
+          lastAcceptedTsRef.current = ts;
+          prevRiderFixRef.current = snap.riderLocation;
+          consecutiveRejectionsRef.current = 0;
+          setRiderLiveLocation(snap.riderLocation);
+        }
+
+        if (Array.isArray(snap.deliveryRoute) && snap.deliveryRoute.length > 0) {
+          setTravelledTrail(
+            snap.deliveryRoute.map((pt) => ({
+              lat: pt.lat,
+              lng: pt.lng,
+              latitude: pt.lat,
+              longitude: pt.lng
+            }))
+          );
+        }
+      }).catch((err) => {
+        console.warn('⚡ [OrderTrackingScreen] Failed to fetch snapshot on reconnect:', err);
+      });
     }
-  }, [riderLocationUpdate, activeOrder?._id]);
+  }, [reconnectCount, activeOrder?._id]);
 
-  // Reset and synchronize orders whenever auth or current logged-in user changes
+  // Handle live rider GPS updates with strict validation
   useEffect(() => {
-    if (!isAuthenticated) {
-      setOrders([]);
-      setActiveOrder(null);
-      setIsLoading(false);
+    if (!riderLocationUpdate || !activeOrder?._id) return;
+
+    // 1. Validate fix matches active order, assigned rider, valid coordinates, strictly increasing timestamp
+    if (!isValidRiderFix(riderLocationUpdate, activeOrder, lastAcceptedTsRef.current)) {
       return;
     }
 
-    // Immediately clear previous user's order data
-    setOrders([]);
-    setActiveOrder(null);
-    fetchMyOrders();
+    // 2. Filter out unrealistic GPS teleportation / sensor jumps (> 130 km/h) with outage & bad-fix recovery
+    if (!isRealisticMovement(prevRiderFixRef.current, riderLocationUpdate, consecutiveRejectionsRef.current)) {
+      consecutiveRejectionsRef.current += 1;
+      console.warn(`[OrderTrackingScreen] Rejected unrealistic jump fix (streak: ${consecutiveRejectionsRef.current}):`, riderLocationUpdate);
+      return;
+    }
 
-    const interval = setInterval(fetchMyOrders, 8000);
-    return () => clearInterval(interval);
-  }, [isAuthenticated, userProfile?._id, userProfile?.id, userProfile?.phone]);
+    consecutiveRejectionsRef.current = 0;
+    const ts = new Date(riderLocationUpdate.at).getTime();
+    lastAcceptedTsRef.current = ts;
+    prevRiderFixRef.current = riderLocationUpdate;
+    setRiderLiveLocation(riderLocationUpdate);
 
-  // Handle route params order safely with strict customer identity check
+    // Append to travelled trail for display on map
+    setTravelledTrail((prev) => [
+      ...prev,
+      {
+        lat: riderLocationUpdate.lat,
+        lng: riderLocationUpdate.lng,
+        latitude: riderLocationUpdate.lat,
+        longitude: riderLocationUpdate.lng
+      }
+    ]);
+  }, [riderLocationUpdate, activeOrder]);
+
+  // Join order tracking room only when tracked order ID actually changes
+  useEffect(() => {
+    const currentId = activeOrder?._id ? String(activeOrder._id) : null;
+    if (currentId && currentId !== lastTrackedOrderIdRef.current) {
+      lastTrackedOrderIdRef.current = currentId;
+      lastAcceptedTsRef.current = 0;
+      prevRiderFixRef.current = null;
+      setRiderLiveLocation(null);
+
+      // If activeOrder already has riderLocation snapshot, seed it
+      if (activeOrder.riderLocation && validCoordinates(activeOrder.riderLocation.lat, activeOrder.riderLocation.lng)) {
+        const ts = activeOrder.riderLocation.at ? new Date(activeOrder.riderLocation.at).getTime() : Date.now();
+        lastAcceptedTsRef.current = ts;
+        prevRiderFixRef.current = activeOrder.riderLocation;
+        setRiderLiveLocation(activeOrder.riderLocation);
+      }
+
+      // Initialize travelled trail from existing route points if present
+      if (Array.isArray(activeOrder.deliveryRoute) && activeOrder.deliveryRoute.length > 0) {
+        setTravelledTrail(
+          activeOrder.deliveryRoute.map((pt) => ({
+            lat: pt.lat,
+            lng: pt.lng,
+            latitude: pt.lat,
+            longitude: pt.lng
+          }))
+        );
+      } else {
+        setTravelledTrail([]);
+      }
+
+      trackOrder(currentId);
+    }
+  }, [activeOrder?._id, trackOrder]);
+
+  // Live Socket Status update listener
+  useEffect(() => {
+    if (activeOrderUpdate && (activeOrderUpdate.orderId || activeOrderUpdate.orderNumber)) {
+      const isTarget =
+        (activeOrder?._id && String(activeOrder._id) === String(activeOrderUpdate.orderId)) ||
+        (activeOrder?.orderNumber && activeOrder.orderNumber === activeOrderUpdate.orderNumber);
+
+      if (isTarget) {
+        console.log('⚡ Updating active order state from socket:', activeOrderUpdate.status);
+        setActiveOrder((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            status: activeOrderUpdate.status || prev.status,
+            rejectionReason: activeOrderUpdate.rejectionReason !== undefined ? activeOrderUpdate.rejectionReason : prev.rejectionReason,
+            statusHistory: activeOrderUpdate.statusHistory || prev.statusHistory,
+            rider: activeOrderUpdate.rider || prev.rider
+          };
+        });
+      }
+
+      setOrders((prev) =>
+        prev.map((o) => {
+          const match =
+            (o._id && String(o._id) === String(activeOrderUpdate.orderId)) ||
+            (o.orderNumber && o.orderNumber === activeOrderUpdate.orderNumber);
+          return match
+            ? {
+                ...o,
+                status: activeOrderUpdate.status || o.status,
+                rejectionReason: activeOrderUpdate.rejectionReason !== undefined ? activeOrderUpdate.rejectionReason : o.rejectionReason,
+                rider: activeOrderUpdate.rider || o.rider
+              }
+            : o;
+        })
+      );
+    }
+  }, [activeOrderUpdate, activeOrder?._id, activeOrder?.orderNumber]);
+
+  // Handle route params order safely on mount or when route param targets a new order
   useEffect(() => {
     let routeOrder = route.params?.order;
     const routeOrderId = route.params?.orderId;
@@ -159,83 +318,68 @@ export const OrderTrackingScreen = ({ route, navigation }) => {
       }
     }
 
-    if (routeOrder && typeof routeOrder === 'object' && routeOrder._id) {
+    const targetOrderId = routeOrder?._id ? String(routeOrder._id) : (routeOrderId ? String(routeOrderId) : null);
+    if (!targetOrderId) return;
+
+    if (initialRouteParamHandledRef.current === targetOrderId) {
+      return;
+    }
+
+    if (routeOrder && typeof routeOrder === 'object') {
       const currentUserId = (userProfile?._id || userProfile?.id)?.toString();
       const currentUserPhone = userProfile?.phone?.toString();
       const orderCustId = (routeOrder.customer?._id || routeOrder.customer)?.toString();
       const orderCustPhone = (routeOrder.customer?.phone || routeOrder.customerPhone)?.toString();
 
       const isMine =
+        !currentUserId ||
         (currentUserId && orderCustId === currentUserId) ||
         (currentUserPhone && orderCustPhone === currentUserPhone);
 
       if (isMine) {
-        setActiveOrder(routeOrder);
+        initialRouteParamHandledRef.current = targetOrderId;
+        setActiveOrder((prev) => {
+          if (prev && String(prev._id) === targetOrderId) return prev;
+          return routeOrder;
+        });
         setOrders((prev) => {
-          const exists = prev.some((o) => String(o._id) === String(routeOrder._id));
+          const exists = prev.some((o) => String(o._id) === targetOrderId);
           return exists ? prev : [routeOrder, ...prev];
         });
+        setIsInitialLoading(false);
       }
-    } else if (routeOrderId && orders.length > 0) {
-      const match = orders.find((o) => String(o._id) === String(routeOrderId));
-      if (match) {
-        setActiveOrder(match);
-      }
+    } else if (routeOrderId) {
+      initialRouteParamHandledRef.current = targetOrderId;
+      setActiveOrder((prev) => {
+        if (prev && String(prev._id) === targetOrderId) return prev;
+        return prev;
+      });
     }
-  }, [route.params?.order, route.params?.orderId, orders, userProfile?._id, userProfile?.id, userProfile?.phone]);
+  }, [route.params?.order, route.params?.orderId, userProfile?._id, userProfile?.id, userProfile?.phone]);
 
-  useEffect(() => {
-    if (activeOrder?._id) {
-      setRiderLiveLocation(null);
-      trackOrder(activeOrder._id);
-    }
-  }, [activeOrder?._id]);
-
-  // Live Socket Status update listener
-  useEffect(() => {
-    if (activeOrderUpdate && (activeOrderUpdate.orderId || activeOrderUpdate.orderNumber)) {
-      const isTarget =
-        (activeOrder?._id && String(activeOrder._id) === String(activeOrderUpdate.orderId)) ||
-        (activeOrder?.orderNumber && activeOrder.orderNumber === activeOrderUpdate.orderNumber);
-
-      if (isTarget) {
-        console.log('⚡ Updating active order state from socket:', activeOrderUpdate.status);
-        setActiveOrder((prev) => ({
-          ...prev,
-          status: activeOrderUpdate.status,
-          rejectionReason: activeOrderUpdate.rejectionReason,
-          statusHistory: activeOrderUpdate.statusHistory || prev?.statusHistory
-        }));
-      }
-
-      setOrders((prev) =>
-        prev.map((o) => {
-          const match =
-            (o._id && String(o._id) === String(activeOrderUpdate.orderId)) ||
-            (o.orderNumber && o.orderNumber === activeOrderUpdate.orderNumber);
-          return match
-            ? { ...o, status: activeOrderUpdate.status, rejectionReason: activeOrderUpdate.rejectionReason }
-            : o;
-        })
-      );
-    }
-  }, [activeOrderUpdate, activeOrder?._id, activeOrder?.orderNumber]);
-
-  const fetchMyOrders = async () => {
+  const fetchMyOrders = async (isInitial = false) => {
     if (!isAuthenticated) {
       setOrders([]);
       setActiveOrder(null);
+      setIsInitialLoading(false);
+      setIsRefreshing(false);
       return;
     }
 
+    if (isInitial && !activeOrder) {
+      setIsInitialLoading(true);
+    } else {
+      setIsRefreshing(true);
+    }
+
     try {
-      setIsLoading(true);
       const res = await apiService.getCustomerOrders();
+      if (!isMountedRef.current) return;
+
       if (res && (res.success || res.ok) && Array.isArray(res.orders)) {
         const currentUserId = (userProfile?._id || userProfile?.id)?.toString();
         const currentUserPhone = userProfile?.phone?.toString();
 
-        // Strict customer isolation filter (flow safeguard)
         const myOrders = res.orders.filter((o) => {
           const orderCustId = (o.customer?._id || o.customer)?.toString();
           const orderCustPhone = (o.customer?.phone || o.customerPhone)?.toString();
@@ -245,40 +389,55 @@ export const OrderTrackingScreen = ({ route, navigation }) => {
           if (currentUserPhone && orderCustPhone) {
             return orderCustPhone === currentUserPhone;
           }
-          return true; // Already verified by backend JWT session
+          return true;
         });
 
         setOrders(myOrders);
         if (myOrders.length > 0) {
           setActiveOrder((prev) => {
-            if (prev) {
+            if (prev?._id) {
               const matched = myOrders.find((o) => String(o._id) === String(prev._id));
-              if (matched) return matched;
+              if (matched) {
+                const prevStep = getStepIndex(prev.status);
+                const matchedStep = getStepIndex(matched.status);
+                return {
+                  ...prev,
+                  ...matched,
+                  status: matchedStep >= prevStep ? matched.status : prev.status
+                };
+              }
             }
             return myOrders[0];
           });
-        } else {
-          setActiveOrder(null);
         }
-      } else {
-        setOrders([]);
-        setActiveOrder(null);
       }
     } catch (e) {
-      console.warn('Failed to fetch customer orders:', e);
-      setOrders([]);
-      setActiveOrder(null);
+      console.warn('Failed to fetch customer orders (preserving displayed order):', e);
     } finally {
-      setIsLoading(false);
+      if (isMountedRef.current) {
+        setIsInitialLoading(false);
+        setIsRefreshing(false);
+      }
     }
   };
 
-  const getStepIndex = (status) => {
-    if (status === 'RIDER_ASSIGNED') return 3.3;
-    if (status === 'RIDER_ARRIVED_STORE') return 3.7;
-    const idx = TRACKING_STEPS.findIndex((s) => s.key === status);
-    return idx >= 0 ? idx : 0;
-  };
+  // Reset and synchronize orders whenever auth changes
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setOrders([]);
+      setActiveOrder(null);
+      setIsInitialLoading(false);
+      return;
+    }
+
+    fetchMyOrders(true);
+
+    const interval = setInterval(() => {
+      fetchMyOrders(false);
+    }, 8000);
+
+    return () => clearInterval(interval);
+  }, [isAuthenticated, userProfile?._id, userProfile?.id]);
 
   const currentStepIdx = getStepIndex(activeOrder?.status || 'NEW_ORDER');
 
@@ -540,13 +699,46 @@ export const OrderTrackingScreen = ({ route, navigation }) => {
                   </TouchableOpacity>
                 </View>
 
-                {/* Live GPS Telemetry Bar */}
-                <View style={styles.liveGpsBar}>
-                  <View style={styles.liveGpsPulseDot} />
-                  <Text style={styles.liveGpsText}>
-                    LIVE GPS: {riderLiveLocation ? `Moving at ${riderLiveLocation.speed || 18} km/h` : 'Signal active • ~8-12 mins away'}
-                  </Text>
-                </View>
+                {/* Live GPS Telemetry Bar - consistent freshness and truthful speed */}
+                {(() => {
+                  const fixTs = riderLiveLocation?.at ? new Date(riderLiveLocation.at).getTime() : 0;
+                  const ageSeconds = fixTs ? Math.max(0, Math.floor((nowTs - fixTs) / 1000)) : null;
+                  const isGpsOffline = ageSeconds === null || ageSeconds >= 60;
+                  const isGpsStale = ageSeconds !== null && ageSeconds >= 15 && ageSeconds < 60;
+
+                  return (
+                    <View style={[styles.liveGpsBar, isGpsOffline ? { backgroundColor: '#f1f5f9' } : isGpsStale ? { backgroundColor: '#fffbeb' } : {}]}>
+                      <View
+                        style={[
+                          styles.liveGpsPulseDot,
+                          isGpsOffline
+                            ? { backgroundColor: '#94a3b8' }
+                            : isGpsStale
+                            ? { backgroundColor: '#d97706' }
+                            : { backgroundColor: '#16a34a' }
+                        ]}
+                      />
+                      <Text
+                        style={[
+                          styles.liveGpsText,
+                          isGpsOffline
+                            ? { color: '#64748b' }
+                            : isGpsStale
+                            ? { color: '#92400e' }
+                            : { color: '#15803d' }
+                        ]}
+                      >
+                        {!riderLiveLocation
+                          ? 'Waiting for rider GPS signal...'
+                          : isGpsOffline
+                          ? `Rider GPS offline • Last fix ${Math.floor(ageSeconds / 60)}m ago`
+                          : isGpsStale
+                          ? `GPS signal stale • Last update ${ageSeconds}s ago`
+                          : `LIVE GPS: ${riderLiveLocation.speed > 1.5 ? `Moving at ~${Math.round(riderLiveLocation.speed)} km/h` : 'Stationary at stop'} • ${ageSeconds === 0 ? 'Just now' : `${ageSeconds}s ago`}`}
+                      </Text>
+                    </View>
+                  );
+                })()}
               </View>
             )}
 
@@ -556,6 +748,7 @@ export const OrderTrackingScreen = ({ route, navigation }) => {
                 order={activeOrder}
                 riderLocation={riderLiveLocation}
                 rider={activeOrder.rider}
+                travelledTrail={travelledTrail}
               />
             )}
 
@@ -619,12 +812,17 @@ export const OrderTrackingScreen = ({ route, navigation }) => {
 
               <TouchableOpacity
                 style={styles.refreshOrderBtn}
-                onPress={fetchMyOrders}
+                onPress={() => fetchMyOrders(false)}
                 activeOpacity={0.7}
               >
                 <Ionicons name="refresh" size={16} color="#475569" />
               </TouchableOpacity>
             </View>
+          </View>
+        ) : isInitialLoading ? (
+          <View style={styles.loadingWrap}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={styles.loadingText}>Loading live tracking...</Text>
           </View>
         ) : (
           <View style={styles.emptyCard}>
@@ -912,6 +1110,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#e2e8f0'
+  },
+  loadingWrap: {
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    padding: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    minHeight: 220
+  },
+  loadingText: {
+    fontSize: 14,
+    color: '#64748b',
+    fontWeight: '600',
+    marginTop: 12
   },
   emptyCardTitle: {
     fontSize: 18,

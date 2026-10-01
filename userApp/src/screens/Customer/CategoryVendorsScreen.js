@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Image,
   ActivityIndicator,
   StatusBar,
   Platform
@@ -14,30 +13,47 @@ import { Ionicons } from '@expo/vector-icons';
 import { apiService } from '../../services/api';
 import { useCart } from '../../context/CartContext';
 import { colors } from '../../theme/colors';
+import { SafeImage, isValidImageUri } from '../../components/common/SafeImage';
 
 export const CategoryVendorsScreen = ({ route, navigation }) => {
   const category = route.params?.category || { name: 'Stores', slug: 'fruits-vegetables' };
   const [vendors, setVendors] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [errorState, setErrorState] = useState(null); // null | 'NETWORK_ERROR'
   const { billSummary } = useCart();
+
+  const isConfiguredOnly = category?.isAvailableInDb === false;
 
   useEffect(() => {
     fetchVendors();
-  }, [category?.slug]);
+  }, [category?.slug, category?.isAvailableInDb]);
 
   const fetchVendors = async () => {
+    setErrorState(null);
+
+    // If category is a configured browse category not yet seeded in database
+    if (isConfiguredOnly || !category?.slug) {
+      setIsLoading(false);
+      setVendors([]);
+      return;
+    }
+
     try {
       setIsLoading(true);
       const res = await apiService.getCategoryVendors(category.slug);
-      if (res.success && Array.isArray(res.vendors)) {
+      if (res.isNetworkError) {
+        setErrorState('NETWORK_ERROR');
+        setVendors([]);
+      } else if (res.success && Array.isArray(res.vendors)) {
         setVendors(res.vendors);
       } else {
-        // Fallback to all vendors
-        const allRes = await apiService.getVendors();
-        if (allRes.success) setVendors(allRes.vendors);
+        // Genuinely empty category or not found in DB - honest empty state, do NOT show unrelated stores
+        setVendors([]);
       }
     } catch (err) {
       console.warn('Failed to load vendors:', err);
+      setErrorState('NETWORK_ERROR');
+      setVendors([]);
     } finally {
       setIsLoading(false);
     }
@@ -58,7 +74,13 @@ export const CategoryVendorsScreen = ({ route, navigation }) => {
         </TouchableOpacity>
         <View style={styles.headerTitleWrap}>
           <Text style={styles.headerTitle}>{category.name}</Text>
-          <Text style={styles.headerSub}>Available stores nearby</Text>
+          <Text style={styles.headerSub}>
+            {isLoading
+              ? 'Finding local stores & farmers...'
+              : isConfiguredOnly
+              ? 'Category overview'
+              : `${vendors.length} ${vendors.length === 1 ? 'store' : 'stores'} available`}
+          </Text>
         </View>
       </View>
 
@@ -66,6 +88,22 @@ export const CategoryVendorsScreen = ({ route, navigation }) => {
         <View style={styles.loadingBox}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Finding local stores & farmers...</Text>
+        </View>
+      ) : errorState === 'NETWORK_ERROR' ? (
+        <View style={styles.emptyBox}>
+          <Ionicons name="cloud-offline-outline" size={48} color="#ef4444" />
+          <Text style={styles.emptyTitle}>Connection Error</Text>
+          <Text style={styles.emptySub}>
+            Unable to connect to service. Please check your internet connection and retry.
+          </Text>
+          <TouchableOpacity
+            style={styles.retryBtn}
+            onPress={fetchVendors}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="reload-outline" size={16} color="#ffffff" />
+            <Text style={styles.retryBtnText}>Retry Connection</Text>
+          </TouchableOpacity>
         </View>
       ) : (
         <ScrollView
@@ -77,9 +115,26 @@ export const CategoryVendorsScreen = ({ route, navigation }) => {
         >
           {vendors.length === 0 ? (
             <View style={styles.emptyBox}>
-              <Ionicons name="storefront-outline" size={48} color="#94a3b8" />
-              <Text style={styles.emptyTitle}>No Stores Found</Text>
-              <Text style={styles.emptySub}>No vendors available in this category right now.</Text>
+              <Ionicons
+                name={isConfiguredOnly ? 'time-outline' : 'storefront-outline'}
+                size={48}
+                color="#94a3b8"
+              />
+              <Text style={styles.emptyTitle}>
+                {isConfiguredOnly ? 'Category Coming Soon' : 'No Stores Available'}
+              </Text>
+              <Text style={styles.emptySub}>
+                {isConfiguredOnly
+                  ? `We are currently onboarding verified local partners and farm stores for ${category.name}. Check back soon!`
+                  : `No partners in your delivery zone currently offer items in ${category.name}.`}
+              </Text>
+              <TouchableOpacity
+                style={styles.browseCatalogBtn}
+                onPress={() => navigation.navigate('Catalog')}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.browseCatalogBtnText}>Browse All Stores</Text>
+              </TouchableOpacity>
             </View>
           ) : (
             vendors.map((vendor) => {
@@ -92,13 +147,16 @@ export const CategoryVendorsScreen = ({ route, navigation }) => {
                   activeOpacity={0.9}
                 >
                   <View style={styles.bannerContainer}>
-                    <Image
+                    <SafeImage
                       source={{
                         uri:
-                          vendor.banner ||
-                          'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=800&auto=format&fit=crop&q=80'
+                          isValidImageUri(vendor.banner)
+                            ? vendor.banner
+                            : 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=800&auto=format&fit=crop&q=80'
                       }}
                       style={styles.bannerImg}
+                      placeholderIcon="storefront-outline"
+                      placeholderIconSize={36}
                     />
                     {!isOpen && (
                       <View style={styles.closedOverlay}>
@@ -231,7 +289,39 @@ const styles = StyleSheet.create({
   emptySub: {
     fontSize: 13,
     color: '#64748b',
-    marginTop: 4
+    marginTop: 4,
+    textAlign: 'center',
+    lineHeight: 18,
+    maxWidth: 280
+  },
+  retryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#15803d',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+    marginTop: 16
+  },
+  retryBtnText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '700'
+  },
+  browseCatalogBtn: {
+    backgroundColor: '#f1f5f9',
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 10,
+    marginTop: 18,
+    borderWidth: 1,
+    borderColor: '#cbd5e1'
+  },
+  browseCatalogBtnText: {
+    color: '#0f172a',
+    fontSize: 13,
+    fontWeight: '700'
   },
   vendorCard: {
     backgroundColor: '#ffffff',

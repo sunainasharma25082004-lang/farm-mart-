@@ -44,7 +44,7 @@ export async function reverseGeocode(lat, lng) {
   const apiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_WEB_KEY || process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
   if (apiKey) {
     try {
-      const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${apiKey}`;
+      const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${apiKey}&language=en`;
       const resp = await fetch(url);
       const data = await resp.json();
       if (data.status === 'OK' && data.results?.length) {
@@ -56,7 +56,7 @@ export async function reverseGeocode(lat, lng) {
           if (comp.types.includes('administrative_area_level_1')) state = comp.long_name;
           if (comp.types.includes('postal_code')) pincode = comp.long_name;
         });
-        if (address) return { address, area, city, state, pincode, lat, lng };
+        if (address) return { address, area, city, state, pincode, lat: Number(lat), lng: Number(lng) };
       }
     } catch (e) {
       console.warn('Google REST geocode error, using fallback:', e.message || e);
@@ -65,7 +65,7 @@ export async function reverseGeocode(lat, lng) {
 
   // 3. Fallback: High-precision OpenStreetMap Reverse Geocode
   try {
-    const osmUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`;
+    const osmUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&accept-language=en`;
     const osmResp = await fetch(osmUrl, {
       headers: { 'Accept': 'application/json', 'User-Agent': 'FarmartUserApp/1.0' }
     });
@@ -86,11 +86,11 @@ export async function reverseGeocode(lat, lng) {
   }
 
   return {
-    address: address || `Location (${lat.toFixed(4)}, ${lng.toFixed(4)})`,
-    area,
-    city: city || 'Current City',
-    state,
-    pincode,
+    address: address || '',
+    area: area || '',
+    city: city || '',
+    state: state || '',
+    pincode: pincode || '',
     lat,
     lng
   };
