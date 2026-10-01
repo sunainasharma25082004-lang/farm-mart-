@@ -1,16 +1,23 @@
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import mongoose from 'mongoose';
 import User from '../models/User.js';
 import Vendor from '../models/Vendor.js';
 import RefreshToken from '../models/RefreshToken.js';
+import Order from '../models/Order.js';
+import Cart from '../models/Cart.js';
+import { getIO } from '../socket/index.js';
 
-const JWT_ACCESS_SECRET =
-  process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET || 'sfarmart_jwt_access_secret_2026_super_secure_key';
+const getJwtAccessSecret = () => process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET;
 const OTP_DEV_MODE = process.env.NODE_ENV !== 'production' && process.env.OTP_DEV_MODE === 'true';
 
 // Helper: generate 15-minute access token
 export const generateAccessToken = (user) => {
+  const secret = getJwtAccessSecret();
+  if (!secret) {
+    throw new Error('JWT_ACCESS_SECRET is required to sign access tokens');
+  }
   return jwt.sign(
     {
       sub: user._id || user.id,
@@ -19,13 +26,17 @@ export const generateAccessToken = (user) => {
       phone: user.phone,
       ver: 1
     },
-    JWT_ACCESS_SECRET,
+    secret,
     { expiresIn: '15m' }
   );
 };
 
 // Helper: generate 30-day rotating refresh token & store hash
 export const generateRefreshToken = async (user, deviceId = 'default', userAgent = '') => {
+  if (!mongoose.connection || mongoose.connection.readyState !== 1) {
+    throw new Error('Database connection required for session persistence');
+  }
+
   const rawToken = crypto.randomBytes(64).toString('hex');
   const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
   const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
@@ -405,30 +416,216 @@ export const updateProfile = async (req, res) => {
 
 /**
  * POST /api/auth/account/delete
- * Requires Auth (Play Store requirement)
+ * Authenticated customer account deletion (Apple Review Guideline 5.1.1(v) & Google Play compliance).
+ * - Enforces customer ownership (strictly operates on req.user._id; never accepts client-provided IDs)
+ * - Restricts to CUSTOMER role
+ * - Rejects deletion if customer has active in-progress orders
+ * - Scrubs customer PII from past orders (anonymizing recipient details while keeping financial records for tax/accounting audit)
+ * - Deletes customer cart and all refresh tokens
+/**
+ * POST /api/auth/account/delete
+ * Customer Account Deletion & Anonymization Flow (Apple App Store Guideline 5.1.1(v))
+ *
+ * Concurrency & Transactional Invariants:
+ * - Coordinates via atomic write lock to the ACTIVE User document inside a MongoDB transaction.
+ * - Conflicting User write ($inc: { orderRevision: 1 }, status: 'DELETED') is acquired BEFORE checking active orders.
+ * - Active orders are evaluated using that same session.
+ * - If active order exists, transaction aborts, rolling back User status so customer remains ACTIVE (409 Conflict).
+ * - If deletion wins, createOrder's conditional write fails, rolling back stock deduction (403 Forbidden).
+ * - All MongoDB operations (order scrubbing, cart delete, refresh token delete, user delete) occur in ONE transaction.
+ * - Database failures roll back the entire deletion to prevent dangling or partially deleted accounts.
+ * - Success is reported only after successful transaction commit.
+ * - Sockets are disconnected AFTER commit; socket errors do not fail the committed deletion response.
  */
 export const deleteAccount = async (req, res) => {
+  let session = null;
   try {
-    const userId = req.user._id || req.user.id;
-    const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ ok: false, success: false, message: 'User not found' });
+    const userId = req.user?._id || req.user?.id;
+    if (!userId) {
+      return res.status(401).json({
+        ok: false,
+        success: false,
+        code: 'AUTH_REQUIRED',
+        message: 'Authentication required to delete account'
+      });
+    }
 
-    // Soft delete immediately
-    user.status = 'DELETED';
-    user.deletedAt = new Date();
-    await user.save();
+    if (req.user?.role && req.user?.role !== 'CUSTOMER') {
+      return res.status(403).json({
+        ok: false,
+        success: false,
+        code: 'FORBIDDEN_ROLE',
+        message: 'Only customer accounts can be deleted via this flow. Partners and riders must contact support.'
+      });
+    }
 
-    // Revoke all tokens
-    await RefreshToken.updateMany({ user: userId }, { revokedAt: new Date() });
+    // 1. Initialize MongoDB session strictly required for atomic multi-document transaction
+    try {
+      if (typeof mongoose.startSession === 'function') {
+        session = await mongoose.startSession();
+      }
+    } catch (sessionErr) {
+      console.error('Failed to start MongoDB session for account deletion:', sessionErr?.message || sessionErr);
+      return res.status(503).json({
+        ok: false,
+        success: false,
+        code: 'SERVICE_UNAVAILABLE',
+        message: 'Account deletion service is temporarily unavailable. Database transaction could not be initialized.'
+      });
+    }
 
-    return res.json({
+    if (!session || typeof session.withTransaction !== 'function') {
+      if (session) {
+        try { await session.endSession(); } catch (e) { /* ignore */ }
+      }
+      return res.status(503).json({
+        ok: false,
+        success: false,
+        code: 'TRANSACTIONS_UNSUPPORTED',
+        message: 'Account deletion requires a MongoDB deployment supporting multi-document transactions.'
+      });
+    }
+
+    let isAlreadyDeleted = false;
+
+    try {
+      await session.withTransaction(async () => {
+        // 1. Acquire conflicting User write inside transaction BEFORE checking active orders.
+        // This coordinates with createOrder's transaction on the same User document.
+        const userLock = await User.findOneAndUpdate(
+          { _id: userId, status: 'ACTIVE' },
+          { $set: { status: 'DELETED', deletedAt: new Date() }, $inc: { orderRevision: 1 } },
+          { new: true, session }
+        );
+
+        if (!userLock) {
+          const existing = await User.findById(userId).session(session);
+
+          if (!existing) {
+            isAlreadyDeleted = true;
+            return;
+          }
+          if (existing.status !== 'DELETED') {
+            const err = new Error(`Account status is ${existing.status.toLowerCase()}`);
+            err.code = 'ACCOUNT_INACTIVE';
+            throw err;
+          }
+          // If status is already DELETED (e.g. from an interrupted retry), proceed with full cleanup in this transaction
+        }
+
+        // 2. Check active orders using that SAME session
+        const ACTIVE_ORDER_STATUSES = [
+          'NEW_ORDER',
+          'ACCEPTED',
+          'PREPARING',
+          'READY_FOR_RIDER',
+          'RIDER_ASSIGNED',
+          'RIDER_ARRIVED_STORE',
+          'OUT_FOR_DELIVERY'
+        ];
+
+        const activeOrder = await Order.findOne({
+          customer: userId,
+          status: { $in: ACTIVE_ORDER_STATUSES }
+        }).session(session);
+
+        if (activeOrder) {
+          const err = new Error('Cannot delete account while an order is currently active.');
+          err.code = 'ACTIVE_ORDER_EXISTS';
+          throw err;
+        }
+
+        // 3. Anonymize personal delivery info, GPS coordinates, route breadcrumbs & client IDs
+        // Retains financial totals, items, and tax breakdown for statutory audit compliance
+        await Order.updateMany(
+          { customer: userId },
+          {
+            $set: {
+              'address.name': 'Customer (Deleted)',
+              'address.phone': '0000000000',
+              'address.line1': 'Redacted for privacy (Account Deleted)',
+              'address.lat': null,
+              'address.lng': null,
+              clientOrderId: null,
+              deliveryRoute: [],
+              riderLocation: null,
+              pickupOtp: '0000',
+              deliveryOtp: '0000'
+            }
+          },
+          { session }
+        );
+
+        // 4. Clear active customer cart
+        await Cart.deleteMany({ user: userId }, { session });
+
+        // 5. Invalidate and remove all refresh tokens
+        await RefreshToken.deleteMany({ user: userId }, { session });
+
+        // 6. Permanently delete User record inside the transaction
+        // Frees phone unique index for safe re-registration without schema or collision errors
+        await User.deleteOne({ _id: userId }, { session });
+      });
+    } finally {
+      // 4. Separate transaction outcome from session cleanup:
+      // An endSession failure after confirmed commit must NOT change successful deletion into an HTTP failure.
+      try {
+        await session.endSession();
+      } catch (endSessionErr) {
+        console.warn('MongoDB endSession cleanup warning (post-commit/abort):', endSessionErr?.message || endSessionErr);
+      }
+    }
+
+    if (isAlreadyDeleted) {
+      return res.status(200).json({
+        ok: true,
+        success: true,
+        code: 'ACCOUNT_ALREADY_DELETED',
+        message: 'Account has already been permanently deleted.'
+      });
+    }
+
+    // 7. Disconnect sockets AFTER transaction commit.
+    // A socket disconnect failure must NOT fail the committed database deletion response.
+    try {
+      const io = getIO ? getIO() : null;
+      if (io) {
+        io.in(`customer:${userId}`).disconnectSockets(true);
+      }
+    } catch (sockErr) {
+      console.warn('Socket disconnect warning after account deletion commit:', sockErr?.message || sockErr);
+    }
+
+    return res.status(200).json({
       ok: true,
       success: true,
-      message: 'Account successfully soft-deleted. Personal data scheduled for purge.'
+      code: 'ACCOUNT_DELETED',
+      message: 'Account and associated personal data successfully deleted.'
     });
   } catch (err) {
+    if (err.code === 'ACTIVE_ORDER_EXISTS') {
+      return res.status(409).json({
+        ok: false,
+        success: false,
+        code: 'ACTIVE_ORDER_EXISTS',
+        message: 'Cannot delete account while an order is currently being prepared or delivered. Please wait until your order is completed or cancelled.'
+      });
+    }
+    if (err.code === 'ACCOUNT_INACTIVE') {
+      return res.status(403).json({
+        ok: false,
+        success: false,
+        code: 'ACCOUNT_INACTIVE',
+        message: err.message
+      });
+    }
     console.error('deleteAccount error:', err);
-    return res.status(500).json({ ok: false, success: false, message: 'Could not delete account' });
+    return res.status(500).json({
+      ok: false,
+      success: false,
+      code: 'SERVER_ERROR',
+      message: 'Failed to delete account. Please try again.'
+    });
   }
 };
 
@@ -450,6 +647,15 @@ export const customerLogin = async (req, res) => {
         success: false,
         code: 'USER_NOT_FOUND',
         message: 'Customer account not found. Please register on the Sign Up tab.'
+      });
+    }
+
+    if (user.status !== 'ACTIVE') {
+      return res.status(403).json({
+        ok: false,
+        success: false,
+        code: 'ACCOUNT_INACTIVE',
+        message: `Your account is ${user.status.toLowerCase()}. Please contact support.`
       });
     }
 
@@ -523,6 +729,11 @@ export const vendorLogin = async (req, res) => {
       }
     }
 
+    const secret = getJwtAccessSecret();
+    if (!secret) {
+      throw new Error('JWT_ACCESS_SECRET is required to sign access tokens');
+    }
+
     const token = jwt.sign(
       {
         id: vendor._id,
@@ -531,7 +742,7 @@ export const vendorLogin = async (req, res) => {
         phone: vendor.phone,
         name: vendor.storeName
       },
-      JWT_ACCESS_SECRET,
+      secret,
       { expiresIn: '30d' }
     );
 
